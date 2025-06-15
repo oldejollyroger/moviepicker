@@ -10,30 +10,24 @@ const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const TMDB_PROFILE_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w185';
 const TMDB_THUMBNAIL_BASE_URL = 'https://image.tmdb.org/t/p/w92';
 
-const CURATED_COUNTRY_LIST = new Set([
-  'AR', 'AU', 'AT', 'BE', 'BR', 'CA', 'CL', 'CO', 'CZ', 'DK', 'EG', 'FI', 'FR', 'DE', 'GR', 'HK',
-  'HU', 'IN', 'ID', 'IE', 'IL', 'IT', 'JP', 'MY', 'MX', 'NL', 'NZ', 'NG', 'NO', 'PE', 'PH', 'PL',
-  'PT', 'RO', 'RU', 'SA', 'SG', 'ZA', 'KR', 'ES', 'SE', 'CH', 'TW', 'TH', 'TR', 'AE', 'GB', 'US'
-]);
+const FAVORITE_PLATFORMS_KEY = 'favoriteMoviePlatforms';
 
 const THEMES = [
     { id: 'theme-purple', color: '#8b5cf6' },
     { id: 'theme-ocean', color: '#22d3ee' },
     { id: 'theme-forest', color: '#22c55e' },
     { id: 'theme-volcano', color: '#dc2626' },
-     { id: 'theme-sunset', color: '#f97316' }, // New
-    { id: 'theme-cyberpunk', color: '#d946ef' }, // New
-
+    { id: 'theme-sunset', color: '#f97316' },
+    { id: 'theme-cyberpunk', color: '#d946ef' },
 ];
 
 const translations = {
     es: {
         title: 'Movie Randomizer', subtitle: '¿Qué vemos esta noche?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros',
         sortBy: 'Ordenar por:', sortOptions: [ { name: 'Popularidad', id: 'popularity.desc' }, { name: 'Mejor Calificación', id: 'vote_average.desc' }, { name: 'Fecha de Estreno', id: 'primary_release_date.desc' } ],
-        region: 'País:', selectRegionPrompt: 'Por favor, selecciona tu país para empezar', platform: 'Plataformas:', platformSearchPlaceholder: 'Buscar plataforma...', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:',
+        region: 'País:', selectRegionPrompt: 'Por favor, selecciona tu país para empezar', platform: 'Plataformas (Opcional):', platformSearchPlaceholder: 'Buscar plataforma...', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:',
         decade: 'Década:', allDecades: 'Cualquiera', minRating: 'Calificación Mínima:',
         surpriseMe: '¡Sorpréndeme!', goBack: 'Atrás', searching: 'Buscando...',
-        installApp: 'Instalar App',
         searchPlaceholder: 'O busca una película específica...',
         noMoviesFound: 'No se encontraron películas con los filtros actuales. ¡Prueba con otros!', cardYear: 'Año:', cardDuration: 'Duración:',
         cardRating: 'Nota TMDb:', cardDirector: 'Director:', cardGenres: 'Géneros:', cardAvailableOn: 'Disponible en (Suscripción):',
@@ -45,10 +39,9 @@ const translations = {
     en: {
         title: 'Movie Randomizer', subtitle: "What should we watch tonight?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters',
         sortBy: 'Sort by:', sortOptions: [ { name: 'Popularity', id: 'popularity.desc' }, { name: 'Top Rated', id: 'vote_average.desc' }, { name: 'Release Date', id: 'primary_release_date.desc' } ],
-        region: 'Country:', selectRegionPrompt: 'Please select your country to begin', platform: 'Platforms:', platformSearchPlaceholder: 'Search platform...', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:',
+        region: 'Country:', selectRegionPrompt: 'Please select your country to begin', platform: 'Platforms (Optional):', platformSearchPlaceholder: 'Search platform...', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:',
         decade: 'Decade:', allDecades: 'Any', minRating: 'Minimum Rating:',
         surpriseMe: 'Surprise Me!', goBack: 'Back', searching: 'Searching...',
-        installApp: 'Install App',
         searchPlaceholder: 'Or search for a specific movie...',
         noMoviesFound: 'No movies found with the current filters. Try changing them!', cardYear: 'Year:', cardDuration: 'Duration:',
         cardRating: 'TMDb Rating:', cardDirector: 'Director:', cardGenres: 'Genres:', cardAvailableOn: 'Available on (Subscription):',
@@ -65,11 +58,12 @@ const App = () => {
   const [theme, setTheme] = useState(() => localStorage.getItem('movieRandomizerTheme') || 'theme-purple');
   const t = translations[language]; 
   
-  const [userRegion, setUserRegion] = useState(null);
+  const [userRegion, setUserRegion] = useState('US');
   const [availableRegions, setAvailableRegions] = useState([]);
   const [platformOptions, setPlatformOptions] = useState([]);
   
   const [platformSearchQuery, setPlatformSearchQuery] = useState('');
+  const [favoritePlatforms, setFavoritePlatforms] = useState(() => new Set());
 
   const [allMovies, setAllMovies] = useState([]);
   const [selectedMovie, setSelectedMovie] = useState(null);
@@ -96,40 +90,12 @@ const App = () => {
   const [isSearching, setIsSearching] = useState(false);
   const searchRef = useRef(null);
 
-  // HIGHLIGHT: New state to hold the PWA install event
-  const [installPromptEvent, setInstallPromptEvent] = useState(null);
-
   const WATCHED_MOVIES_KEY = 'watchedUserMoviesRandomizer_TMDb_v8';
   const [watchedMovies, setWatchedMovies] = useState({});
   const [sessionShownMovies, setSessionShownMovies] = useState(new Set());
 
   // --- Effects ---
   
-  // HIGHLIGHT: This new useEffect handles the Service Worker and PWA install prompt.
-  useEffect(() => {
-    // Register the Service Worker
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/moviepicker/sw.js') // IMPORTANT: Path must match your repo name
-                .then(registration => console.log('Service Worker registered:', registration))
-                .catch(err => console.error('Service Worker registration failed:', err));
-        });
-    }
-
-    // Listen for the browser's install prompt
-    const beforeInstallPromptHandler = (e) => {
-        e.preventDefault(); // Prevent the browser's default prompt
-        setInstallPromptEvent(e); // Save the event so we can trigger it later
-        console.log('`beforeinstallprompt` event fired.');
-    };
-
-    window.addEventListener('beforeinstallprompt', beforeInstallPromptHandler);
-
-    return () => {
-        window.removeEventListener('beforeinstallprompt', beforeInstallPromptHandler);
-    };
-  }, []);
-
   useEffect(() => {
     const initializeApp = async () => {
         if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
@@ -151,18 +117,20 @@ const App = () => {
             const regionsData = await regionsResponse.json();
             const genresData = await genresResponse.json();
 
-            const curatedRegions = regionsData
-                .filter(r => CURATED_COUNTRY_LIST.has(r.iso_3166_1))
-                .sort((a, b) => a.english_name.localeCompare(b.english_name));
-            setAvailableRegions(curatedRegions);
-
+            setAvailableRegions(regionsData.sort((a, b) => a.english_name.localeCompare(b.english_name)));
             setGenresMap(genresData.genres.reduce((acc, genre) => ({ ...acc, [genre.id]: genre.name }), {}));
             
+            const detectedLanguage = navigator.language.split('-')[0];
+            if (detectedLanguage === 'es') {
+                setUserRegion('ES');
+                setLanguage('es');
+            } else {
+                setUserRegion('US');
+                setLanguage('en');
+            }
         } catch (err) {
             console.error("Error during app initialization:", err);
             setError(err.message);
-        } finally {
-            setIsLoading(false);
         }
     };
     initializeApp();
@@ -185,7 +153,8 @@ const App = () => {
                 .sort((a, b) => (a.display_priorities[userRegion]) - (b.display_priorities[userRegion]))
                 .map(provider => ({
                     id: provider.provider_id.toString(),
-                    name: provider.provider_name
+                    name: provider.provider_name,
+                    priority: provider.display_priorities[userRegion]
                 }));
             
             setPlatformOptions(regionalProviders);
@@ -199,6 +168,19 @@ const App = () => {
     document.documentElement.className = theme;
     localStorage.setItem('movieRandomizerTheme', theme);
   }, [theme]);
+  
+  useEffect(() => {
+    try {
+        const savedFavorites = localStorage.getItem(FAVORITE_PLATFORMS_KEY);
+        if (savedFavorites) {
+            setFavoritePlatforms(new Set(JSON.parse(savedFavorites)));
+        }
+    } catch (e) { console.error("Could not load favorite platforms:", e); }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(FAVORITE_PLATFORMS_KEY, JSON.stringify([...favoritePlatforms]));
+  }, [favoritePlatforms]);
 
   useEffect(() => {
     if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE' || Object.keys(genresMap).length === 0) return;
@@ -444,21 +426,6 @@ const App = () => {
   const handleRegionChange = (newRegion) => { setUserRegion(newRegion); };
   const handleSearchChange = (e) => { setSearchQuery(e.target.value); };
   
-  // HIGHLIGHT: New handler for the install button
-  const handleInstallClick = () => {
-    if (installPromptEvent) {
-        installPromptEvent.prompt();
-        installPromptEvent.userChoice.then(choiceResult => {
-            if (choiceResult.outcome === 'accepted') {
-                console.log('User accepted the install prompt');
-            } else {
-                console.log('User dismissed the install prompt');
-            }
-            setInstallPromptEvent(null);
-        });
-    }
-  };
-  
   const handleSearchResultClick = (movie) => {
     const formattedMovie = {
         id: movie.id.toString(),
@@ -522,8 +489,10 @@ const App = () => {
   
   const handlePlatformSearchChange = (e) => { setPlatformSearchQuery(e.target.value); };
 
-  const filteredPlatforms = useMemo(() => {
-    return platformOptions.filter(p => p.name.toLowerCase().includes(platformSearchQuery.toLowerCase()));
+  const filteredAndSortedPlatforms = useMemo(() => {
+    return platformOptions
+        .filter(p => p.name.toLowerCase().includes(platformSearchQuery.toLowerCase()))
+        .sort((a, b) => a.priority - b.priority);
   }, [platformOptions, platformSearchQuery]);
 
   const closeModal = () => setModalMovie(null);
@@ -564,16 +533,7 @@ const App = () => {
 
   return (
     <div className="min-h-screen p-4 sm:p-8 font-sans app-container relative">
-      <div className="absolute top-4 right-4 flex items-center gap-4 z-10">
-        {installPromptEvent && (
-            <button onClick={handleInstallClick} className="px-3 py-2 text-sm font-bold text-white bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] rounded-full shadow-lg hover:scale-105 transition-transform">
-                {t.installApp}
-            </button>
-        )}
-        <div className="flex items-center gap-1 bg-[var(--color-card-bg)] p-1 rounded-full">{THEMES.map(themeOption => (<button key={themeOption.id} onClick={() => setTheme(themeOption.id)} className={`w-6 h-6 rounded-full transition-transform duration-150 ${theme === themeOption.id ? 'scale-125 ring-2 ring-white' : ''}`} style={{backgroundColor: themeOption.color}}></button>))}</div>
-        <div className="flex items-center bg-[var(--color-card-bg)] p-1 rounded-full"><button onClick={() => handleLanguageChange('es')} className={`lang-btn ${language === 'es' ? 'lang-btn-active' : 'lang-btn-inactive'}`}>Español</button><button onClick={() => handleLanguageChange('en')} className={`lang-btn ${language === 'en' ? 'lang-btn-active' : 'lang-btn-inactive'}`}>English</button></div>
-      </div>
-
+      <div className="absolute top-4 right-4 flex items-center gap-4 z-10"><div className="flex items-center gap-1 bg-[var(--color-card-bg)] p-1 rounded-full">{THEMES.map(themeOption => (<button key={themeOption.id} onClick={() => setTheme(themeOption.id)} className={`w-6 h-6 rounded-full transition-transform duration-150 ${theme === themeOption.id ? 'scale-125 ring-2 ring-white' : ''}`} style={{backgroundColor: themeOption.color}}></button>))}</div><div className="flex items-center bg-[var(--color-card-bg)] p-1 rounded-full"><button onClick={() => handleLanguageChange('es')} className={`lang-btn ${language === 'es' ? 'lang-btn-active' : 'lang-btn-inactive'}`}>Español</button><button onClick={() => handleLanguageChange('en')} className={`lang-btn ${language === 'en' ? 'lang-btn-active' : 'lang-btn-inactive'}`}>English</button></div></div>
       <header className="text-center mb-8 pt-16"><h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)]">{t.title}</h1><h2 className="text-xl sm:text-2xl text-[var(--color-text-secondary)] mt-2">{t.subtitle}</h2><div ref={searchRef} className="relative max-w-lg mx-auto mt-6"><input type="text" value={searchQuery} onChange={handleSearchChange} placeholder={t.searchPlaceholder} className="w-full p-3 pl-10 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-full focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"/><div className="absolute top-0 left-0 inline-flex items-center p-3">{isSearching ? <div className="small-loader !m-0 !w-5 !h-5"></div> : <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>}</div>{searchResults.length > 0 && (<ul className="absolute w-full mt-2 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg shadow-lg z-20 max-h-80 overflow-y-auto">{searchResults.map(movie => (<li key={movie.id} onClick={() => handleSearchResultClick(movie)} className="p-3 hover:bg-[var(--color-bg)] cursor-pointer flex items-center gap-4"><img src={movie.poster_path ? `${TMDB_THUMBNAIL_BASE_URL}${movie.poster_path}` : 'https://placehold.co/92x138/4A5568/FFFFFF?text=?'} alt={movie.title} className="w-12 h-auto rounded-md" /><div className="text-left"><p className="font-semibold text-[var(--color-text-primary)]">{movie.title}</p><p className="text-sm text-[var(--color-text-secondary)]">{movie.release_date?.split('-')[0]}</p></div></li>))}</ul>)}</div></header>
       <div className="mb-8 p-6 bg-[var(--color-header-bg)] rounded-xl shadow-2xl"><div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-semibold text-[var(--color-accent-text)]">{t.advancedFilters}</h2><button onClick={handleClearFilters} className="text-xs bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1 px-3 rounded-lg transition-colors">{t.clearFilters}</button></div><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8"><div className="space-y-4"><div><label htmlFor="region-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.region}</label><select id="region-filter" value={userRegion} onChange={e => handleRegionChange(e.target.value)} className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]">{availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}</select></div><div><label htmlFor="decade-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.decade}</label><select id="decade-filter" value={filters.decade} onChange={e => handleFilterChange('decade', e.target.value)} className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"><option value="todos">{t.allDecades}</option>{[2020, 2010, 2000, 1990, 1980, 1970].map(d=>(<option key={d} value={d}>{`${d}s`}</option>))}</select></div><div><label htmlFor="rating-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.minRating} {Number(filters.minRating).toFixed(1)}</label><input type="range" id="rating-filter" min="0" max="9.5" step="0.5" value={filters.minRating} onChange={e => handleFilterChange('minRating', e.target.value)} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]" /></div></div><div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.includeGenre}</label><div className="filter-checkbox-list space-y-1">{Object.entries(genresMap).sort(([,a],[,b]) => a.localeCompare(b)).map(([id, name]) => (<div key={`inc-${id}`} className="flex items-center"><input id={`inc-genre-${id}`} type="checkbox" checked={filters.genre.includes(id)} onChange={() => handleGenreChange(id, 'genre')} disabled={filters.excludeGenres.includes(id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)] disabled:opacity-50"/><label htmlFor={`inc-genre-${id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.excludeGenres.includes(id) ? 'opacity-50' : ''}`}>{name}</label></div>))}</div></div><div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.excludeGenre}</label><div className="filter-checkbox-list space-y-1">{Object.entries(genresMap).sort(([,a],[,b]) => a.localeCompare(b)).map(([id, name]) => (<div key={`ex-${id}`} className="flex items-center"><input id={`ex-genre-${id}`} type="checkbox" checked={filters.excludeGenres.includes(id)} onChange={() => handleGenreChange(id, 'excludeGenres')} disabled={filters.genre.includes(id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-red-600 focus:ring-red-500 accent-red-600 disabled:opacity-50"/><label htmlFor={`ex-genre-${id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.genre.includes(id) ? 'opacity-50' : ''}`}>{name}</label></div>))}</div></div><div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.platform}</label><input type="text" value={platformSearchQuery} onChange={handlePlatformSearchChange} placeholder={t.platformSearchPlaceholder} className="w-full p-2 mb-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md text-sm" /><div className="grid grid-cols-2 gap-x-4 gap-y-2 filter-checkbox-list" style={{maxHeight: '160px'}}>{filteredPlatforms.length > 0 ? filteredPlatforms.map(p => (<div key={p.id} className="flex items-center"><input id={`platform-${p.id}`} type="checkbox" checked={filters.platform.includes(p.id)} onChange={() => handlePlatformChange(p.id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"/><label htmlFor={`platform-${p.id}`} className="ml-2 text-sm text-[var(--color-text-secondary)]">{p.name}</label></div>)) : <p className="text-sm text-gray-400 col-span-2">No matching platforms.</p>}</div></div></div></div>
       <div className="text-center mb-10 flex justify-center items-center gap-4"><button onClick={handleGoBack} disabled={movieHistory.length === 0} className="p-4 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg shadow-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button><button onClick={handleRandomMovie} disabled={isLoading || allMovies.length === 0} className={`px-8 py-4 bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-150 text-xl disabled:opacity-50 disabled:cursor-not-allowed`}>{isLoading ? t.searching : t.surpriseMe}</button></div>

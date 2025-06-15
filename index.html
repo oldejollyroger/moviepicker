@@ -3,44 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>What are we watching tonight?</title>
+    <title>Movie Randomizer</title>
+
+    <!-- PWA Manifest and Theme Color -->
     <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#8b5cf6">
+    <link rel="apple-touch-icon" href="icon-192.png">
 
-    <!-- The <base> tag has been REMOVED as it is not the correct solution. -->
-
-    <!-- External CSS file -->
     <link rel="stylesheet" href="style.css">
-
-    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 
-      HIGHLIGHT: All external library scripts now have the 'defer' attribute.
-      This ensures they download but wait to execute until the page is fully parsed,
-      and they will execute in the order they appear here.
-    -->
-    <!-- React CDN -->
+    <!-- React and Babel Libraries -->
     <script src="https://unpkg.com/react@17/umd/react.development.js" defer></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" defer></script>
-    
-    <!-- Babel CDN (to transpile JSX in the browser) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js" defer></script>
-    <!-- In index.html, inside the <head> section -->
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body class="bg-[var(--color-bg)] text-[var(--color-text-primary)] transition-colors duration-300">
     
     <div id="root"></div>
 
-    <!-- 
-      HIGHLIGHT: Your main script is now at the END of the body and also has 'defer'.
-      This is the modern web performance best practice. It ensures that the React,
-      ReactDOM, and Babel objects exist before this script tries to use them.
-      The type="text/babel" is still required for Babel to process the file.
-    -->
-   <script src="config.js" defer></script>
-<!-- This is the NEW, CACHE-BUSTING line -->
-<script type="text/babel" src="script.js?v=1.2" defer></script>
+    <script src="config.js" defer></script>
+    <script type="text/babel" src="script.js?v=2.0" defer></script> <!-- Cache-busting version updated -->
 </body>
 </html>

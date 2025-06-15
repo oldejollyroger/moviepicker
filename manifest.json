@@ -5,6 +5,7 @@
   "display": "standalone",
   "background_color": "#111827",
   "theme_color": "#8b5cf6",
+  "description": "Find a random movie to watch tonight!",
   "icons": [
     {
       "src": "icon-192.png",
