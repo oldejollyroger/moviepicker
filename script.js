@@ -84,7 +84,7 @@ const App = () => {
   // This effect sequence ensures data loads in the correct order.
   useEffect(() => {
     // 1. Check for API Key first.
-    if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
+    if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === '22f17214f2c35b01940cdfed47d738c2') {
         setError("API Key not found. Please check config.js.");
         setIsLoading(false);
         return;
@@ -133,7 +133,7 @@ const App = () => {
 
   // HIGHLIGHT: This is the new, simplified, and correct logic for fetching platforms.
   useEffect(() => {
-    if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
+    if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === '22f17214f2c35b01940cdfed47d738c2') return;
     
     setFilters(f => ({ ...f, platform: [] }));
 
