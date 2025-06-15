@@ -10,7 +10,12 @@ const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const TMDB_PROFILE_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w185';
 const TMDB_THUMBNAIL_BASE_URL = 'https://image.tmdb.org/t/p/w92';
 
-const FAVORITE_PLATFORMS_KEY = 'favoriteMoviePlatforms';
+// HIGHLIGHT: A curated list of ~50 countries for a cleaner dropdown.
+const CURATED_COUNTRY_LIST = new Set([
+  'AR', 'AU', 'AT', 'BE', 'BR', 'CA', 'CL', 'CO', 'CZ', 'DK', 'EG', 'FI', 'FR', 'DE', 'GR', 'HK',
+  'HU', 'IN', 'ID', 'IE', 'IL', 'IT', 'JP', 'MY', 'MX', 'NL', 'NZ', 'NG', 'NO', 'PE', 'PH', 'PL',
+  'PT', 'RO', 'RU', 'SA', 'SG', 'ZA', 'KR', 'ES', 'SE', 'CH', 'TW', 'TH', 'TR', 'AE', 'GB', 'US'
+]);
 
 const THEMES = [
     { id: 'theme-purple', color: '#8b5cf6' },
@@ -23,7 +28,7 @@ const translations = {
     es: {
         title: 'Movie Randomizer', subtitle: '¿Qué vemos esta noche?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros',
         sortBy: 'Ordenar por:', sortOptions: [ { name: 'Popularidad', id: 'popularity.desc' }, { name: 'Mejor Calificación', id: 'vote_average.desc' }, { name: 'Fecha de Estreno', id: 'primary_release_date.desc' } ],
-        region: 'País:', platform: 'Plataformas:', platformSearchPlaceholder: 'Buscar plataforma...', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:',
+        region: 'País:', selectRegionPrompt: 'Por favor, selecciona tu país para empezar', platform: 'Plataformas:', platformSearchPlaceholder: 'Buscar plataforma...', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:',
         decade: 'Década:', allDecades: 'Cualquiera', minRating: 'Calificación Mínima:',
         surpriseMe: '¡Sorpréndeme!', goBack: 'Atrás', searching: 'Buscando...',
         searchPlaceholder: 'O busca una película específica...',
@@ -37,7 +42,7 @@ const translations = {
     en: {
         title: 'Movie Randomizer', subtitle: "What should we watch tonight?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters',
         sortBy: 'Sort by:', sortOptions: [ { name: 'Popularity', id: 'popularity.desc' }, { name: 'Top Rated', id: 'vote_average.desc' }, { name: 'Release Date', id: 'primary_release_date.desc' } ],
-        region: 'Country:', platform: 'Platforms:', platformSearchPlaceholder: 'Search platform...', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:',
+        region: 'Country:', selectRegionPrompt: 'Please select your country to begin', platform: 'Platforms:', platformSearchPlaceholder: 'Search platform...', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:',
         decade: 'Decade:', allDecades: 'Any', minRating: 'Minimum Rating:',
         surpriseMe: 'Surprise Me!', goBack: 'Back', searching: 'Searching...',
         searchPlaceholder: 'Or search for a specific movie...',
@@ -56,13 +61,12 @@ const App = () => {
   const [theme, setTheme] = useState(() => localStorage.getItem('movieRandomizerTheme') || 'theme-purple');
   const t = translations[language]; 
   
-  const [userRegion, setUserRegion] = useState('US');
+  // HIGHLIGHT: userRegion now starts as null, forcing a selection.
+  const [userRegion, setUserRegion] = useState(null);
   const [availableRegions, setAvailableRegions] = useState([]);
   const [platformOptions, setPlatformOptions] = useState([]);
   
-  // HIGHLIGHT: New state for platform search and favorites
   const [platformSearchQuery, setPlatformSearchQuery] = useState('');
-  const [favoritePlatforms, setFavoritePlatforms] = useState(() => new Set());
 
   const [allMovies, setAllMovies] = useState([]);
   const [selectedMovie, setSelectedMovie] = useState(null);
@@ -116,20 +120,19 @@ const App = () => {
             const regionsData = await regionsResponse.json();
             const genresData = await genresResponse.json();
 
-            setAvailableRegions(regionsData.sort((a, b) => a.english_name.localeCompare(b.english_name)));
+            // HIGHLIGHT: Filter countries against our curated list
+            const curatedRegions = regionsData
+                .filter(r => CURATED_COUNTRY_LIST.has(r.iso_3166_1))
+                .sort((a, b) => a.english_name.localeCompare(b.english_name));
+            setAvailableRegions(curatedRegions);
+
             setGenresMap(genresData.genres.reduce((acc, genre) => ({ ...acc, [genre.id]: genre.name }), {}));
             
-            const detectedLanguage = navigator.language.split('-')[0];
-            if (detectedLanguage === 'es') {
-                setUserRegion('ES');
-                setLanguage('es');
-            } else {
-                setUserRegion('US');
-                setLanguage('en');
-            }
         } catch (err) {
             console.error("Error during app initialization:", err);
             setError(err.message);
+        } finally {
+            setIsLoading(false);
         }
     };
     initializeApp();
@@ -167,21 +170,8 @@ const App = () => {
     document.documentElement.className = theme;
     localStorage.setItem('movieRandomizerTheme', theme);
   }, [theme]);
-  
-  // HIGHLIGHT: Effect for managing favorite platforms in localStorage
-  useEffect(() => {
-    try {
-        const savedFavorites = localStorage.getItem(FAVORITE_PLATFORMS_KEY);
-        if (savedFavorites) {
-            setFavoritePlatforms(new Set(JSON.parse(savedFavorites)));
-        }
-    } catch (e) { console.error("Could not load favorite platforms:", e); }
-  }, []);
 
-  useEffect(() => {
-    localStorage.setItem(FAVORITE_PLATFORMS_KEY, JSON.stringify([...favoritePlatforms]));
-  }, [favoritePlatforms]);
-
+  // Main movie fetching effect
   useEffect(() => {
     if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE' || Object.keys(genresMap).length === 0) return;
 
@@ -193,10 +183,11 @@ const App = () => {
             providersToQuery.push('1899');
         }
         
-        let baseDiscoverUrl = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${langParam}&vote_count.gte=${voteCount}&watch_region=${userRegion}&with_watch_monetization_types=flatrate`;
+        let baseDiscoverUrl = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${langParam}&vote_count.gte=${voteCount}&watch_region=${userRegion}`;
         
+        // Only include subscription platforms if any are selected
         if (providersToQuery.length > 0) {
-            baseDiscoverUrl += `&with_watch_providers=${providersToQuery.join('|')}`;
+            baseDiscoverUrl += `&with_watch_providers=${providersToQuery.join('|')}&with_watch_monetization_types=flatrate`;
         }
 
         if (filters.genre.length > 0) baseDiscoverUrl += `&with_genres=${filters.genre.join(',')}`;
@@ -455,33 +446,13 @@ const App = () => {
     setIsFetchingModalDetails(false);
   };
   
-  // HIGHLIGHT: Handlers for new features
   const handlePlatformSearchChange = (e) => { setPlatformSearchQuery(e.target.value); };
   
-  const toggleFavoritePlatform = (platformId) => {
-    setFavoritePlatforms(prev => {
-        const newFavorites = new Set(prev);
-        if (newFavorites.has(platformId)) {
-            newFavorites.delete(platformId);
-        } else {
-            newFavorites.add(platformId);
-        }
-        return newFavorites;
-    });
-  };
-
-  // HIGHLIGHT: New memoized value for displaying platforms
   const filteredAndSortedPlatforms = useMemo(() => {
     return platformOptions
         .filter(p => p.name.toLowerCase().includes(platformSearchQuery.toLowerCase()))
-        .sort((a, b) => {
-            const isAFavorite = favoritePlatforms.has(a.id);
-            const isBFavorite = favoritePlatforms.has(b.id);
-            if (isAFavorite !== isBFavorite) return isAFavorite ? -1 : 1;
-            return a.priority - b.priority;
-        });
-  }, [platformOptions, platformSearchQuery, favoritePlatforms]);
-
+        .sort((a, b) => a.priority - b.priority);
+  }, [platformOptions, platformSearchQuery]);
 
   const closeModal = () => setModalMovie(null);
 
@@ -493,11 +464,33 @@ const App = () => {
   };
   
   // --- Render Logic ---
-  if (isLoading && Object.keys(genresMap).length === 0) {
+  if (isLoading && availableRegions.length === 0) {
     return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="loader"></div></div> );
   }
   if (error) {
     return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="text-center"><h1 className="text-3xl font-bold text-red-500 mb-4">Error</h1><p className="text-xl">{error}</p></div></div> );
+  }
+
+  // HIGHLIGHT: New initial screen to force country selection
+  if (!userRegion) {
+    return (
+        <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center">
+            <div className="text-center max-w-md">
+                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-4">{t.selectRegionPrompt}</h1>
+                <select 
+                    id="initial-region-filter" 
+                    onChange={e => handleRegionChange(e.target.value)}
+                    defaultValue=""
+                    className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"
+                >
+                    <option value="" disabled>-- {t.region} --</option>
+                    {availableRegions.map(region => (
+                        <option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>
+                    ))}
+                </select>
+            </div>
+        </div>
+    );
   }
 
   return (
@@ -529,9 +522,8 @@ const App = () => {
            <div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.excludeGenre}</label><div className="filter-checkbox-list space-y-1">{Object.entries(genresMap).sort(([,a],[,b]) => a.localeCompare(b)).map(([id, name]) => (<div key={`ex-${id}`} className="flex items-center"><input id={`ex-genre-${id}`} type="checkbox" checked={filters.excludeGenres.includes(id)} onChange={() => handleGenreChange(id, 'excludeGenres')} disabled={filters.genre.includes(id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-red-600 focus:ring-red-500 accent-red-600 disabled:opacity-50"/><label htmlFor={`ex-genre-${id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.genre.includes(id) ? 'opacity-50' : ''}`}>{name}</label></div>))}</div></div>
           <div>
             <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.platform}</label>
-            {/* HIGHLIGHT: New platform search bar and favorites functionality */}
             <input type="text" value={platformSearchQuery} onChange={handlePlatformSearchChange} placeholder={t.platformSearchPlaceholder} className="w-full p-2 mb-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md text-sm" />
-            <div className="filter-checkbox-list" style={{maxHeight: '160px'}}>{filteredAndSortedPlatforms.length > 0 ? filteredAndSortedPlatforms.map(p => (<div key={p.id} className="flex items-center justify-between pr-2"><div className="flex items-center"><input id={`platform-${p.id}`} type="checkbox" checked={filters.platform.includes(p.id)} onChange={() => handlePlatformChange(p.id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"/><label htmlFor={`platform-${p.id}`} className="ml-2 text-sm text-[var(--color-text-secondary)]">{p.name}</label></div><button onClick={() => toggleFavoritePlatform(p.id)} title="Mark as favorite" className="text-gray-500 hover:text-yellow-400">{favoritePlatforms.has(p.id) ? <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg> : <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.783-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>}</button></div>)) : <p className="text-sm text-gray-400 col-span-2">No matching platforms.</p>}</div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 filter-checkbox-list" style={{maxHeight: '160px'}}>{filteredAndSortedPlatforms.length > 0 ? filteredAndSortedPlatforms.map(p => (<div key={p.id} className="flex items-center justify-between pr-2"><div className="flex items-center"><input id={`platform-${p.id}`} type="checkbox" checked={filters.platform.includes(p.id)} onChange={() => handlePlatformChange(p.id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"/><label htmlFor={`platform-${p.id}`} className="ml-2 text-sm text-[var(--color-text-secondary)]">{p.name}</label></div></div>)) : <p className="text-sm text-gray-400 col-span-2">No matching platforms.</p>}</div>
           </div>
         </div>
       </div>
