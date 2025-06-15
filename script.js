@@ -51,7 +51,8 @@ const App = () => {
   const [theme, setTheme] = useState(() => localStorage.getItem('movieRandomizerTheme') || 'theme-purple');
   const t = translations[language]; 
   
-  const [userRegion, setUserRegion] = useState('US'); // Default to US, will be updated
+  // HIGHLIGHT: Default region is now hardcoded to 'US', removing the need for geolocation.
+  const [userRegion, setUserRegion] = useState('US'); 
   const [availableRegions, setAvailableRegions] = useState([]);
   const [platformOptions, setPlatformOptions] = useState([]);
 
@@ -81,14 +82,17 @@ const App = () => {
 
   // --- Effects ---
   
-  // HIGHLIGHT: Fetches official country list from TMDb
+  // HIGHLIGHT: Geolocation useEffect has been REMOVED.
+
+  // Fetches official country list from TMDb for the dropdown
   useEffect(() => {
+    // Check for API key to prevent running without it
+    if (!TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
     const fetchTMDbRegions = async () => {
         try {
             const response = await fetch(`${TMDB_BASE_URL}/configuration/countries?api_key=${TMDB_API_KEY}`);
             if (!response.ok) throw new Error("Could not fetch TMDb regions");
             const data = await response.json();
-            // Sort countries alphabetically by their English name
             const sortedRegions = data.sort((a, b) => a.english_name.localeCompare(b.english_name));
             setAvailableRegions(sortedRegions);
         } catch (err) {
@@ -98,36 +102,10 @@ const App = () => {
     fetchTMDbRegions();
   }, []);
 
-  // HIGHLIGHT: Attempts to auto-detect region, but now only to set the dropdown's default
-  useEffect(() => {
-    const geolocateUser = async () => {
-        try {
-            const timestamp = new Date().getTime(); // Cache-busting parameter
-            const response = await fetch(`https://ip-api.com/json/?fields=countryCode&_=${timestamp}`);
-            if (!response.ok) throw new Error('Geolocation failed');
-            const data = await response.json();
-            const region = data.countryCode || 'US';
-            setUserRegion(region); // This sets the selected value in our new dropdown
-
-            if (['ES', 'MX', 'AR', 'CO', 'CL', 'PE'].includes(region)) {
-                setLanguage('es');
-            } else {
-                setLanguage('en');
-            }
-        } catch (err) {
-            console.warn("Could not geolocate user, defaulting to US.", err);
-            setUserRegion('US');
-            setLanguage('en');
-        }
-    };
-    geolocateUser();
-  }, []);
-
-  // HIGHLIGHT: Fetches regional platforms dynamically when userRegion changes.
+  // Fetches regional platforms dynamically when userRegion changes.
   useEffect(() => {
     if (!userRegion || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
     
-    // When the region changes, clear any previously selected platforms for a clean state
     setFilters(f => ({ ...f, platform: [] }));
 
     const fetchRegionPlatforms = async () => {
@@ -137,7 +115,7 @@ const App = () => {
             const data = await response.json();
             
             const regionalProviders = data.results
-                .filter(p => p.display_priorities?.[userRegion] !== undefined) // Ensure it has a priority for the region
+                .filter(p => p.display_priorities?.[userRegion] !== undefined)
                 .sort((a, b) => a.display_priorities[userRegion] - b.display_priorities[userRegion])
                 .slice(0, 14)
                 .map(provider => ({
@@ -534,11 +512,9 @@ const App = () => {
         <div className="max-w-4xl mx-auto bg-[var(--color-card-bg)] rounded-xl shadow-2xl overflow-hidden mb-10">
           <div className="flex flex-col sm:flex-row">
             <div className="sm:w-1/3 flex-shrink-0">
-              {/* HIGHLIGHT: Mobile layout fix */}
               <img className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${selectedMovie.poster}`} alt={`Poster for ${selectedMovie.title}`}/>
             </div>
             <div className="p-6 sm:p-8 sm:w-2/3">
-              {/* HIGHLIGHT: Text wrapping fix */}
               <h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{selectedMovie.title}</h2>
               <p className="mt-2 text-[var(--color-text-secondary)] text-base leading-relaxed break-words">{selectedMovie.synopsis}</p>
               <div className="mt-6 space-y-4 text-sm">
