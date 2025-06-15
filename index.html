@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Randomizer</title>
-    <base href="/moviepicker/">
+
+    <!-- The <base> tag has been REMOVED as it is not the correct solution. -->
 
     <!-- External CSS file -->
     <link rel="stylesheet" href="style.css">
@@ -12,19 +13,28 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- 
+      HIGHLIGHT: All external library scripts now have the 'defer' attribute.
+      This ensures they download but wait to execute until the page is fully parsed,
+      and they will execute in the order they appear here.
+    -->
     <!-- React CDN -->
-    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/react@17/umd/react.development.js" defer></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" defer></script>
     
     <!-- Babel CDN (to transpile JSX in the browser) -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js" defer></script>
 </head>
 <body class="bg-[var(--color-bg)] text-[var(--color-text-primary)] transition-colors duration-300">
     
     <div id="root"></div>
 
-    <!-- External JavaScript file with React code -->
-    <!-- The `type="text/babel"` is crucial for Babel to process this file -->
-    <script type="text/babel" src="script.js"></script>
+    <!-- 
+      HIGHLIGHT: Your main script is now at the END of the body and also has 'defer'.
+      This is the modern web performance best practice. It ensures that the React,
+      ReactDOM, and Babel objects exist before this script tries to use them.
+      The type="text/babel" is still required for Babel to process the file.
+    -->
+    <script type="text/babel" src="script.js" defer></script>
 </body>
 </html>
