@@ -21,6 +21,9 @@ const THEMES = [
     { id: 'theme-ocean', color: '#22d3ee' },
     { id: 'theme-forest', color: '#22c55e' },
     { id: 'theme-volcano', color: '#dc2626' },
+     { id: 'theme-sunset', color: '#f97316' }, // New
+    { id: 'theme-cyberpunk', color: '#d946ef' }, // New
+
 ];
 
 const translations = {

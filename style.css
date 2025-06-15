@@ -47,6 +47,35 @@ html.theme-volcano {
     --color-accent-gradient-to: #ef4444;
     --color-border: #991b1b;
 }
+/* In style.css, add these new blocks at the end */
+
+/* --- NEW THEMES --- */
+
+html.theme-sunset {
+    --color-bg: #2b1b3d; /* Deep twilight purple */
+    --color-card-bg: #4a2c5a; /* Lighter twilight */
+    --color-header-bg: #4a2c5a;
+    --color-text-primary: #fff7ed; /* Warm off-white */
+    --color-text-secondary: #e9d5ff; /* Soft lavender */
+    --color-accent: #f97316; /* Bright orange */
+    --color-accent-text: #fdba74; /* Lighter orange */
+    --color-accent-gradient-from: #facc15; /* Saffron yellow */
+    --color-accent-gradient-to: #f43f5e; /* Rose red */
+    --color-border: #581c87; /* Deep purple */
+}
+
+html.theme-cyberpunk {
+    --color-bg: #0a0a0a; /* Near black */
+    --color-card-bg: #171717; /* Very dark gray */
+    --color-header-bg: #171717;
+    --color-text-primary: #e0f2fe; /* Icy white */
+    --color-text-secondary: #67e8f9; /* Bright cyan */
+    --color-accent: #d946ef; /* Hot pink/fuchsia */
+    --color-accent-text: #f0abfc; /* Lighter pink */
+    --color-accent-gradient-from: #d946ef; /* Hot pink */
+    --color-accent-gradient-to: #22d3ee; /* Bright cyan */
+    --color-border: #1e3a8a; /* Deep tech blue */
+}
 body, #root { min-height: 100vh; }
 #root { display: flex; flex-direction: column; }
 .app-container { flex-grow: 1; display: flex; flex-direction: column; }
