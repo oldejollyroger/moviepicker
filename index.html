@@ -5,7 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Randomizer</title>
 
-    <!-- PWA Manifest and Theme Color -->
+    <!-- HIGHLIGHT: New script to handle redirects from the 404 page -->
+    <script type="text/javascript">
+      var params = new URLSearchParams(window.location.search);
+      var path = params.get('path');
+      if (path) {
+        window.history.replaceState(null, null, '/' + 'moviepicker' + '/' + path);
+      }
+    </script>
+
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#8b5cf6">
     <link rel="apple-touch-icon" href="icon-192.png">
@@ -13,7 +21,6 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- React and Babel Libraries -->
     <script src="https://unpkg.com/react@17/umd/react.development.js" defer></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" defer></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js" defer></script>
@@ -23,6 +30,6 @@
     <div id="root"></div>
 
     <script src="config.js" defer></script>
-    <script type="text/babel" src="script.js?v=2.0" defer></script> <!-- Cache-busting version updated -->
+    <script type="text/babel" src="script.js?v=2.1" defer></script> <!-- Updated version number -->
 </body>
 </html>

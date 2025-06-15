@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Movie Randomizer - Redirecting</title>
+    <script type="text/javascript">
+      // Get the current path, including the query string
+      var path = window.location.pathname + window.location.search;
+      
+      // The name of your GitHub repository
+      var repo = '/moviepicker/';
+      
+      // If the path starts with the repo name, redirect to a special hash-based path
+      if (path.startsWith(repo)) {
+        var newPath = path.substring(repo.length);
+        window.location.href = repo + '?path=' + newPath;
+      }
+    </script>
+  </head>
+  <body>
+Oops! Something went wrong. Please try again later.
+  </body>
+</html>
