@@ -1,16 +1,13 @@
 // --- React and Hooks ---
 const { useState, useEffect, useCallback } = React;
 
-// --- CRITICAL: Add your API Key in config.js ---
-// This script assumes a file named 'config.js' exists and contains:
+// --- CRITICAL: This script assumes a file named 'config.js' exists and contains:
 // const TMDB_API_KEY = "YOUR_REAL_API_KEY";
 
 // --- Constants ---
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const TMDB_PROFILE_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w185';
-
-// HIGHLIGHT: The problematic PRIORITY_PLATFORMS list has been completely REMOVED.
 
 const THEMES = [
     { id: 'theme-purple', color: '#8b5cf6' },
@@ -74,7 +71,7 @@ const App = () => {
   };
   const [filters, setFilters] = useState(initialFilters);
   
-  const [isLoading, setIsLoading] = useState(false); // Default to false
+  const [isLoading, setIsLoading] = useState(true); // HIGHLIGHT: Start in a loading state
   const [error, setError] = useState(null);
   const [genresMap, setGenresMap] = useState({});
   
@@ -84,37 +81,57 @@ const App = () => {
 
   // --- Effects ---
   
+  // This effect sequence ensures data loads in the correct order.
   useEffect(() => {
-    if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === '22f17214f2c35b01940cdfed47d738c2') return;
-    const fetchTMDbRegions = async () => {
-        try {
-            const response = await fetch(`${TMDB_BASE_URL}/configuration/countries?api_key=${TMDB_API_KEY}`);
-            if (!response.ok) throw new Error("Could not fetch TMDb regions");
-            const data = await response.json();
-            const sortedRegions = data.sort((a, b) => a.english_name.localeCompare(b.english_name));
-            setAvailableRegions(sortedRegions);
-        } catch (err) { console.error(err); }
-    };
-    fetchTMDbRegions();
-  }, []);
-
-  useEffect(() => {
-    try {
-        const detectedLanguage = navigator.language.split('-')[0];
-        if (detectedLanguage === 'es') {
-            setUserRegion('ES');
-            setLanguage('es');
-        } else {
-            setUserRegion('US');
-            setLanguage('en');
-        }
-    } catch (e) {
-        setUserRegion('US');
-        setLanguage('en');
+    // 1. Check for API Key first.
+    if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
+        setError("API Key not found. Please check config.js.");
+        setIsLoading(false);
+        return;
     }
-  }, []);
 
-  // HIGHLIGHT: This is the new, simplified, and correct logic for fetching all platforms.
+    // 2. Fetch essential configuration data (countries and genres)
+    const fetchInitialData = async () => {
+        try {
+            const [regionsResponse, genresResponse] = await Promise.all([
+                fetch(`${TMDB_BASE_URL}/configuration/countries?api_key=${TMDB_API_KEY}`),
+                fetch(`${TMDB_BASE_URL}/genre/movie/list?api_key=${TMDB_API_KEY}&language=${language === 'es' ? 'es-ES' : 'en-US'}`)
+            ]);
+
+            if (!regionsResponse.ok) throw new Error("Could not fetch TMDb regions");
+            if (!genresResponse.ok) throw new Error("Could not fetch genres");
+
+            const regionsData = await regionsResponse.json();
+            const genresData = await genresResponse.json();
+
+            setAvailableRegions(regionsData.sort((a, b) => a.english_name.localeCompare(b.english_name)));
+            setGenresMap(genresData.genres.reduce((acc, genre) => ({ ...acc, [genre.id]: genre.name }), {}));
+
+            // 3. Set user's region based on their browser language
+            try {
+                const detectedLanguage = navigator.language.split('-')[0];
+                if (detectedLanguage === 'es') {
+                    setUserRegion('ES');
+                    setLanguage('es');
+                } else {
+                    setUserRegion('US');
+                    setLanguage('en');
+                }
+            } catch (e) {
+                setUserRegion('US');
+                setLanguage('en');
+            }
+        } catch (err) {
+            console.error("Error during initial data fetch:", err);
+            setError(err.message);
+            setIsLoading(false);
+        }
+    };
+    
+    fetchInitialData();
+  }, [language]); // Reruns if language changes
+
+  // HIGHLIGHT: This is the new, simplified, and correct logic for fetching platforms.
   useEffect(() => {
     if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
     
@@ -122,13 +139,15 @@ const App = () => {
 
     const fetchRegionPlatforms = async () => {
         try {
-            const response = await fetch(`${TMDB_BASE_URL}/watch/providers/movie?api_key=${TMDB_API_KEY}&watch_region=${userRegion}&monetization_types=flatrate`);
-            if (!response.ok) throw new Error('Failed to fetch providers');
+            const response = await fetch(`${TMDB_BASE_URL}/watch/providers/movie?api_key=${TMDB_API_KEY}&watch_region=${userRegion}`);
+            if (!response.ok) throw new Error('Failed to fetch providers for the selected region.');
             const data = await response.json();
             
-            // Get all providers for the region, sort them by the API's recommended priority, and display them.
-            const regionalProviders = data.results
-                .sort((a, b) => (a.display_priority ?? 999) - (b.display_priority ?? 999))
+            // Filter for subscription providers ('flatrate') and sort by TMDb's priority
+            const flatrateProviders = data.results.filter(p => p.display_priorities && p.display_priorities[userRegion] !== undefined);
+            
+            const regionalProviders = flatrateProviders
+                .sort((a, b) => (a.display_priorities[userRegion]) - (b.display_priorities[userRegion]))
                 .map(provider => ({
                     id: provider.provider_id.toString(),
                     name: provider.provider_name
@@ -136,8 +155,10 @@ const App = () => {
             
             setPlatformOptions(regionalProviders);
         } catch (err) {
-            console.error("Could not fetch regional platforms:", err);
-            setPlatformOptions([]);
+            console.error(err);
+            setPlatformOptions([]); // Set to empty on failure
+        } finally {
+            setIsLoading(false); // We are ready to search, or show an empty state
         }
     };
     fetchRegionPlatforms();
@@ -149,31 +170,14 @@ const App = () => {
     localStorage.setItem('movieRandomizerTheme', theme);
   }, [theme]);
   
-  useEffect(() => {
-    const langParam = language === 'es' ? 'es-ES' : 'en-US';
-    const fetchGenres = async () => {
-      if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
-      try {
-        const response = await fetch(`${TMDB_BASE_URL}/genre/movie/list?api_key=${TMDB_API_KEY}&language=${langParam}`);
-        if (!response.ok) throw new Error(`Error loading genres: ${response.statusText}`);
-        const data = await response.json();
-        setGenresMap(data.genres.reduce((acc, genre) => ({ ...acc, [genre.id]: genre.name }), {}));
-      } catch (err) {
-        console.error("Error fetching genres:", err);
-        setError(String(err).includes("401") ? "Authorization error (401). Check your TMDb API Key." : `Could not load genres. ${err.message}`);
-      }
-    };
-    fetchGenres();
-  }, [language]);
-
-  // HIGHLIGHT: The main movie fetching effect now requires a platform to be selected.
+  // Main movie fetching useEffect
   useEffect(() => {
     if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE' || Object.keys(genresMap).length === 0) return;
 
-    // This is the new rule: if no platforms are selected, do nothing.
+    // New Rule: If no platforms are selected, clear the movie list and do nothing.
     if (filters.platform.length === 0) {
         setAllMovies([]);
-        setIsLoading(false); // Ensure loading is stopped
+        setSelectedMovie(null); // Clear selected movie as well
         return;
     }
 
@@ -182,7 +186,7 @@ const App = () => {
     const discoverMovies = async (voteCount) => {
         let providersToQuery = [...filters.platform];
         if (providersToQuery.includes('384') && !providersToQuery.includes('1899')) {
-            providersToQuery.push('1899');
+            providersToQuery.push('1899'); // Handle Max/HBO Max rebrand
         }
         
         let baseDiscoverUrl = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${langParam}&vote_count.gte=${voteCount}&watch_region=${userRegion}&with_watch_monetization_types=flatrate`;
@@ -209,9 +213,7 @@ const App = () => {
             if (response.ok) {
                 const data = await response.json();
                 allResults = allResults.concat(data.results);
-            } else {
-                console.warn(`A variety search failed: ${response.statusText}`);
-            }
+            } else { console.warn(`A variety search failed: ${response.statusText}`); }
         }
         return allResults;
     };
@@ -330,9 +332,8 @@ const App = () => {
         const list = [...f[type]];
         const i = list.indexOf(genreId);
         const otherType = type === 'genre' ? 'excludeGenres' : 'genre';
-        if (i > -1) { 
-            list.splice(i, 1);
-        } else { 
+        if (i > -1) { list.splice(i, 1); } 
+        else { 
             list.push(genreId);
             const otherList = [...f[otherType]];
             const otherIndex = otherList.indexOf(genreId);
@@ -351,12 +352,11 @@ const App = () => {
       });
       resetSession();
   };
-  const handleLanguageChange = (lang) => { setLanguage(lang); resetSession(); };
+  const handleLanguageChange = (lang) => { setLanguage(lang); };
   const handleClearFilters = () => { setFilters(initialFilters); resetSession(); };
   const handleRegionChange = (newRegion) => { setUserRegion(newRegion); };
 
   const handleRandomMovie = useCallback(() => {
-    // This button should only be clickable if there are movies, so we don't need to check for empty array.
     const now = Date.now();
     const availableMovies = allMovies.filter(m => !(watchedMovies[m.id] && watchedMovies[m.id] > now));
     let sessionAvailable = availableMovies.filter(m => !sessionShownMovies.has(m.id));
@@ -366,10 +366,7 @@ const App = () => {
         sessionAvailable = availableMovies;
     }
     
-    if (sessionAvailable.length === 0) { 
-        setSelectedMovie(null);
-        return; 
-    }
+    if (sessionAvailable.length === 0) { setSelectedMovie(null); return; }
     
     const newMovie = sessionAvailable[Math.floor(Math.random() * sessionAvailable.length)];
     if (newMovie) {
@@ -414,9 +411,8 @@ const App = () => {
   };
   
   // --- Render Logic ---
-  const isAppReady = genresMap && Object.keys(genresMap).length > 0 && userRegion;
+  const isAppReady = genresMap && Object.keys(genresMap).length > 0 && userRegion && availableRegions.length > 0;
   if (!isAppReady) {
-    // Initial loading state for fetching genres and region
     if (error) { return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="text-center"><h1 className="text-3xl font-bold text-red-500 mb-4">Error</h1><p className="text-xl">{error}</p></div></div> );}
     return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="loader"></div></div> );
   }
@@ -523,7 +519,7 @@ const App = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
         </button>
-        <button onClick={handleRandomMovie} disabled={isLoading || allMovies.length === 0 || filters.platform.length === 0}
+        <button onClick={handleRandomMovie} disabled={isLoading || filters.platform.length === 0}
           className={`px-8 py-4 bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-150 text-xl disabled:opacity-50 disabled:cursor-not-allowed`}>
           {isLoading ? t.searching : t.surpriseMe}
         </button>
@@ -674,7 +670,7 @@ const App = () => {
         </div>
       )}
 
-      {allMovies.length === 0 && !isLoading && <div className="text-center text-gray-400 mt-10 text-lg">{t.noMoviesFound}</div>}
+      {allMovies.length === 0 && !isLoading && filters.platform.length > 0 && <div className="text-center text-gray-400 mt-10 text-lg">{t.noMoviesFound}</div>}
        <footer className="text-center mt-12 py-6 text-sm text-[var(--color-text-subtle)]">
         <p>{t.footer} <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-text)] hover:underline">TMDb</a>.</p>
       </footer>
