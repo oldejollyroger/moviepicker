@@ -25,7 +25,6 @@ const THEMES = [
     { id: 'theme-cyberpunk', color: '#d946ef' },
 ];
 
-// HIGHLIGHT: Added new key for the welcome message
 const translations = {
     es: {
         title: 'Movie Randomizer', subtitle: '¿Qué vemos esta noche?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros',
@@ -96,7 +95,6 @@ const App = () => {
   const [isSearching, setIsSearching] = useState(false);
   const searchRef = useRef(null);
   
-  // HIGHLIGHT: New state to track if a search has been performed
   const [hasSearched, setHasSearched] = useState(false);
 
   const WATCHED_MOVIES_KEY = 'watchedUserMoviesRandomizer_TMDb_v8';
@@ -130,7 +128,6 @@ const App = () => {
                 .filter(r => CURATED_COUNTRY_LIST.has(r.iso_3166_1))
                 .sort((a, b) => a.english_name.localeCompare(b.english_name));
             setAvailableRegions(curatedRegions);
-
             setGenresMap(genresData.genres.reduce((acc, genre) => ({ ...acc, [genre.id]: genre.name }), {}));
             
         } catch (err) {
@@ -147,6 +144,9 @@ const App = () => {
     if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
     
     setFilters(f => ({ ...f, platform: [] }));
+    setAllMovies([]); // Clear movies when region changes
+    setSelectedMovie(null);
+    setHasSearched(false);
 
     const fetchRegionPlatforms = async () => {
         try {
@@ -155,13 +155,9 @@ const App = () => {
             const data = await response.json();
             
             const flatrateProviders = data.results.filter(p => p.display_priorities?.[userRegion] !== undefined);
-            
             const regionalProviders = flatrateProviders
                 .sort((a, b) => (a.display_priorities[userRegion]) - (b.display_priorities[userRegion]))
-                .map(provider => ({
-                    id: provider.provider_id.toString(),
-                    name: provider.provider_name,
-                }));
+                .map(provider => ({ id: provider.provider_id.toString(), name: provider.provider_name }));
             
             setPlatformOptions(regionalProviders);
         } catch (err) { console.error(err); setPlatformOptions([]); }
@@ -175,16 +171,17 @@ const App = () => {
     localStorage.setItem('movieRandomizerTheme', theme);
   }, [theme]);
   
-  const discoverMovies = useCallback(async () => {
-    if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
-    
+  // HIGHLIGHT: This is the single, centralized function for fetching movies.
+  const discoverAndSetMovies = useCallback(async () => {
+    if (!userRegion || !genresMap || Object.keys(genresMap).length === 0) return;
+
     setIsLoading(true);
     setError(null);
     setSelectedMovie(null);
     setHasSearched(true); // Mark that a search has been initiated
 
     const langParam = language === 'es' ? 'es-ES' : 'en-US';
-    
+
     const fetchPage = async (voteCount) => {
         let providersToQuery = [...filters.platform];
         if (providersToQuery.includes('384') && !providersToQuery.includes('1899')) {
@@ -204,10 +201,10 @@ const App = () => {
             const year = parseInt(filters.decade);
             baseDiscoverUrl += `&primary_release_date.gte=${year}-01-01&primary_release_date.lte=${year + 9}-12-31`;
         }
-
+        
         const sortOptionsForVariety = ['popularity.desc', 'vote_average.desc', 'revenue.desc'];
         const fetchPromises = sortOptionsForVariety.map(sortBy => {
-            const randomPage = Math.floor(Math.random() * 10) + 1;
+            const randomPage = Math.floor(Math.random() * 20) + 1;
             return fetch(`${baseDiscoverUrl}&sort_by=${sortBy}&page=${randomPage}`);
         });
 
@@ -221,12 +218,11 @@ const App = () => {
         }
         return allResults;
     };
-    
+
     try {
         let initialResults = await fetchPage(100);
-
         if (initialResults.length === 0) {
-            initialResults = await fetchPage(0); 
+            initialResults = await fetchPage(0);
         }
 
         const uniqueResults = Array.from(new Set(initialResults.map(m => m.id))).map(id => initialResults.find(m => m.id === id));
@@ -241,7 +237,19 @@ const App = () => {
                 genres: movie.genre_ids.map(id => genresMap[id]).filter(Boolean) || ["Desconocido"],
                 poster: movie.poster_path,
             }));
-        setAllMovies(transformedMovies);
+
+        const now = Date.now();
+        const unwatchedMovies = transformedMovies.filter(m => !(watchedMovies[m.id] && watchedMovies[m.id] > now));
+        
+        setAllMovies(unwatchedMovies);
+        
+        if (unwatchedMovies.length > 0) {
+            const newMovie = unwatchedMovies[Math.floor(Math.random() * unwatchedMovies.length)];
+            setSelectedMovie(newMovie);
+            setSessionShownMovies(prev => new Set(prev).add(newMovie.id));
+        } else {
+            setSelectedMovie(null); // Explicitly set to null if no movies are found
+        }
     } catch (err) {
         console.error("Error discovering movies:", err);
         setError(String(err).includes("401") ? "Authorization error (401). Check your TMDb API Key." : `Could not discover movies. ${err.message}`);
@@ -249,7 +257,7 @@ const App = () => {
     } finally {
         setIsLoading(false);
     }
-  }, [filters, language, userRegion, genresMap]);
+  }, [filters, language, userRegion, genresMap, watchedMovies]);
 
 
   useEffect(() => {
@@ -434,26 +442,6 @@ const App = () => {
     setSearchResults([]);
   };
 
-  const handleRandomMovie = useCallback(() => {
-    const now = Date.now();
-    const availableMovies = allMovies.filter(m => !(watchedMovies[m.id] && watchedMovies[m.id] > now));
-    let sessionAvailable = availableMovies.filter(m => !sessionShownMovies.has(m.id));
-    
-    if (sessionAvailable.length === 0 && availableMovies.length > 0) {
-        setSessionShownMovies(new Set());
-        sessionAvailable = availableMovies;
-    }
-    
-    if (sessionAvailable.length === 0) { setSelectedMovie(null); return; }
-    
-    const newMovie = sessionAvailable[Math.floor(Math.random() * sessionAvailable.length)];
-    if (newMovie) {
-        if(selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]);
-        setSelectedMovie(newMovie);
-        setSessionShownMovies(prevSet => new Set(prevSet).add(newMovie.id));
-    }
-  }, [allMovies, watchedMovies, sessionShownMovies, selectedMovie]);
-
   const handleGoBack = () => {
       if (movieHistory.length === 0) return;
       const newHistory = [...movieHistory];
@@ -467,7 +455,7 @@ const App = () => {
     if(!movieId) return;
     const threeMonths = 3 * 30 * 24 * 60 * 60 * 1000;
     setWatchedMovies(prev => ({...prev, [movieId]: Date.now() + threeMonths}));
-    discoverMovies(); 
+    discoverAndSetMovies(); 
   };
   
   const handleSimilarMovieClick = async (movie) => {
@@ -526,7 +514,7 @@ const App = () => {
       <div className="absolute top-4 right-4 flex items-center gap-4 z-10"><div className="flex items-center gap-1 bg-[var(--color-card-bg)] p-1 rounded-full">{THEMES.map(themeOption => (<button key={themeOption.id} onClick={() => setTheme(themeOption.id)} className={`w-6 h-6 rounded-full transition-transform duration-150 ${theme === themeOption.id ? 'scale-125 ring-2 ring-white' : ''}`} style={{backgroundColor: themeOption.color}}></button>))}</div><div className="flex items-center bg-[var(--color-card-bg)] p-1 rounded-full"><button onClick={() => handleLanguageChange('es')} className={`lang-btn ${language === 'es' ? 'lang-btn-active' : 'lang-btn-inactive'}`}>Español</button><button onClick={() => handleLanguageChange('en')} className={`lang-btn ${language === 'en' ? 'lang-btn-active' : 'lang-btn-inactive'}`}>English</button></div></div>
       <header className="text-center mb-8 pt-16"><h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)]">{t.title}</h1><h2 className="text-xl sm:text-2xl text-[var(--color-text-secondary)] mt-2">{t.subtitle}</h2><div ref={searchRef} className="relative max-w-lg mx-auto mt-6"><input type="text" value={searchQuery} onChange={handleSearchChange} placeholder={t.searchPlaceholder} className="w-full p-3 pl-10 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-full focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"/><div className="absolute top-0 left-0 inline-flex items-center p-3">{isSearching ? <div className="small-loader !m-0 !w-5 !h-5"></div> : <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>}</div>{searchResults.length > 0 && (<ul className="absolute w-full mt-2 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg shadow-lg z-20 max-h-80 overflow-y-auto">{searchResults.map(movie => (<li key={movie.id} onClick={() => handleSearchResultClick(movie)} className="p-3 hover:bg-[var(--color-bg)] cursor-pointer flex items-center gap-4"><img src={movie.poster_path ? `${TMDB_THUMBNAIL_BASE_URL}${movie.poster_path}` : 'https://placehold.co/92x138/4A5568/FFFFFF?text=?'} alt={movie.title} className="w-12 h-auto rounded-md" /><div className="text-left"><p className="font-semibold text-[var(--color-text-primary)]">{movie.title}</p><p className="text-sm text-[var(--color-text-secondary)]">{movie.release_date?.split('-')[0]}</p></div></li>))}</ul>)}</div></header>
       <div className="mb-8 p-6 bg-[var(--color-header-bg)] rounded-xl shadow-2xl"><div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-semibold text-[var(--color-accent-text)]">{t.advancedFilters}</h2><button onClick={handleClearFilters} className="text-xs bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1 px-3 rounded-lg transition-colors">{t.clearFilters}</button></div><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8"><div className="space-y-4"><div><label htmlFor="region-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.region}</label><select id="region-filter" value={userRegion} onChange={e => handleRegionChange(e.target.value)} className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]">{availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}</select></div><div><label htmlFor="decade-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.decade}</label><select id="decade-filter" value={filters.decade} onChange={e => handleFilterChange('decade', e.target.value)} className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"><option value="todos">{t.allDecades}</option>{[2020, 2010, 2000, 1990, 1980, 1970].map(d=>(<option key={d} value={d}>{`${d}s`}</option>))}</select></div><div><label htmlFor="rating-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.minRating} {Number(filters.minRating).toFixed(1)}</label><input type="range" id="rating-filter" min="0" max="9.5" step="0.5" value={filters.minRating} onChange={e => handleFilterChange('minRating', e.target.value)} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]" /></div></div><div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.includeGenre}</label><div className="filter-checkbox-list space-y-1">{Object.entries(genresMap).sort(([,a],[,b]) => a.localeCompare(b)).map(([id, name]) => (<div key={`inc-${id}`} className="flex items-center"><input id={`inc-genre-${id}`} type="checkbox" checked={filters.genre.includes(id)} onChange={() => handleGenreChange(id, 'genre')} disabled={filters.excludeGenres.includes(id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)] disabled:opacity-50"/><label htmlFor={`inc-genre-${id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.excludeGenres.includes(id) ? 'opacity-50' : ''}`}>{name}</label></div>))}</div></div><div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.excludeGenre}</label><div className="filter-checkbox-list space-y-1">{Object.entries(genresMap).sort(([,a],[,b]) => a.localeCompare(b)).map(([id, name]) => (<div key={`ex-${id}`} className="flex items-center"><input id={`ex-genre-${id}`} type="checkbox" checked={filters.excludeGenres.includes(id)} onChange={() => handleGenreChange(id, 'excludeGenres')} disabled={filters.genre.includes(id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-red-600 focus:ring-red-500 accent-red-600 disabled:opacity-50"/><label htmlFor={`ex-genre-${id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.genre.includes(id) ? 'opacity-50' : ''}`}>{name}</label></div>))}</div></div><div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.platform}</label><input type="text" value={platformSearchQuery} onChange={handlePlatformSearchChange} placeholder={t.platformSearchPlaceholder} className="w-full p-2 mb-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md text-sm" /><div className="grid grid-cols-2 gap-x-4 gap-y-2 filter-checkbox-list" style={{maxHeight: '160px'}}>{filteredPlatforms.length > 0 ? filteredPlatforms.map(p => (<div key={p.id} className="flex items-center"><input id={`platform-${p.id}`} type="checkbox" checked={filters.platform.includes(p.id)} onChange={() => handlePlatformChange(p.id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"/><label htmlFor={`platform-${p.id}`} className="ml-2 text-sm text-[var(--color-text-secondary)]">{p.name}</label></div>)) : <p className="text-sm text-gray-400 col-span-2">No matching platforms.</p>}</div></div></div></div>
-      <div className="text-center mb-10 flex justify-center items-center gap-4"><button onClick={handleGoBack} disabled={movieHistory.length === 0} className="p-4 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg shadow-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button><button onClick={() => discoverMovies()} disabled={isLoading} className={`px-8 py-4 bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-150 text-xl disabled:opacity-50 disabled:cursor-not-allowed`}>{isLoading ? t.searching : t.surpriseMe}</button></div>
+      <div className="text-center mb-10 flex justify-center items-center gap-4"><button onClick={handleGoBack} disabled={movieHistory.length === 0} className="p-4 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg shadow-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button><button onClick={discoverAndSetMovies} disabled={isLoading} className={`px-8 py-4 bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-150 text-xl disabled:opacity-50 disabled:cursor-not-allowed`}>{isLoading ? t.searching : t.surpriseMe}</button></div>
       {selectedMovie ? ( <div className="max-w-4xl mx-auto bg-[var(--color-card-bg)] rounded-xl shadow-2xl overflow-hidden mb-10"><div className="flex flex-col sm:flex-row"><div className="sm:w-1/3 flex-shrink-0"><img className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${selectedMovie.poster}`} alt={`Poster for ${selectedMovie.title}`}/></div><div className="p-6 sm:p-8 sm:w-2/3"><h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{selectedMovie.title}</h2><p className="mt-2 text-[var(--color-text-secondary)] text-base leading-relaxed break-words">{selectedMovie.synopsis}</p><div className="mt-6 space-y-4 text-sm"><p><strong className="text-[var(--color-accent-text)]">{t.cardYear}</strong> {selectedMovie.year}</p>{isFetchingDetails ? <div className="inline-flex items-center"><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong><div className="small-loader"></div></div> : movieDetails.duration && <p><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong> {formatDuration(movieDetails.duration)}</p>}<p><strong className="text-[var(--color-accent-text)]">{t.cardRating}</strong> {selectedMovie.imdbRating}/10 ⭐</p>{isFetchingDetails ? null : movieDetails.director?.name && <p><strong className="text-[var(--color-accent-text)]">{t.cardDirector}</strong> {movieDetails.director.name}</p>}<p><strong className="text-[var(--color-accent-text)]">{t.cardGenres}</strong> {selectedMovie.genres.join(', ')}</p><div><strong className="text-[var(--color-accent-text)]">{`${t.cardAvailableOn} ${userRegion}`} </strong>{isFetchingDetails ? <div className="small-loader"></div> : movieDetails.providers?.length > 0 ? movieDetails.providers.map(p => ( <img key={p.provider_id} src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/> )) : <span className="text-[var(--color-text-secondary)]">{t.cardStreamingNotFound}</span>}</div>{isFetchingDetails ? null : movieDetails.rentalProviders?.length > 0 && (<div><strong className="text-[var(--color-accent-text)]">{t.cardAvailableToRent}</strong><div className="mt-1">{movieDetails.rentalProviders.map(p => ( <img key={p.provider_id} src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/> ))}</div></div>)}<div className="mt-4"><strong className="text-[var(--color-accent-text)] block mb-1">{t.cardCast}</strong>{isFetchingDetails ? <div className="small-loader"></div> : movieDetails.cast?.length > 0 ? ( <div className="flex flex-wrap gap-x-4 gap-y-2">{movieDetails.cast.map(actor => ( <div key={actor.id} className="flex flex-col items-center text-center w-20"><img src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1"/><span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span></div> ))}</div> ) : <span className="text-xs text-[var(--color-text-secondary)]">{t.cardCastNotFound}</span>}</div></div><button onClick={() => handleMarkAsWatched(selectedMovie.id)} className="mt-8 w-full py-3 px-4 bg-red-600/80 hover:bg-red-600 text-white font-bold rounded-lg shadow-md transition-colors">{t.cardMarkAsWatched}</button></div></div><div className="p-6 bg-[var(--color-bg)] border-t border-[var(--color-border)]"><h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-3">{t.cardSimilarMovies}</h3>{isFetchingDetails ? <div className="flex justify-center"><div className="small-loader"></div></div> :  movieDetails.similar?.length > 0 ? ( <div className="grid grid-cols-3 md:grid-cols-5 gap-4 place-items-center">{movieDetails.similar.map(movie => ( <button key={movie.id} onClick={() => handleSimilarMovieClick(movie)} className="w-full text-center hover:scale-105 transition-transform duration-150 group"><img src={movie.poster_path ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}` : 'https://placehold.co/200x300/4A5568/FFFFFF?text=No+Poster'} alt={movie.title} className="rounded-lg mb-1 w-full h-auto object-cover"/><span className="text-xs text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-text)] transition-colors">{movie.title}</span></button> ))}</div> ) : <p className="text-[var(--color-text-secondary)] text-sm">{t.noMoviesFound}</p>}</div>{(isFetchingDetails || movieDetails.trailerKey) && ( <div className="p-6 bg-[var(--color-card-bg)]/50"><h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-2">{t.cardTrailer}</h3>{isFetchingDetails ? <div className="small-loader"></div> : movieDetails.trailerKey ? <div className="trailer-responsive rounded-lg overflow-hidden"><iframe src={`https://www.youtube.com/embed/${movieDetails.trailerKey}`} title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe></div> : <p className="text-[var(--color-text-secondary)]">{t.cardTrailerNotFound}</p>}</div> )}</div> ) : ( <div className="text-center text-gray-400 mt-10 text-lg">{hasSearched && allMovies.length === 0 && !isLoading ? t.noMoviesFound : !hasSearched && t.welcomeMessage}</div> )}
       {modalMovie && (<div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={closeModal}><div className="bg-[var(--color-card-bg)] rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}><button onClick={closeModal} className="absolute top-3 right-3 text-white bg-gray-900 rounded-full p-1 hover:bg-gray-700 z-10"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>{isFetchingModalDetails ? <div className="h-96 flex items-center justify-center"><div className="loader"></div></div> : (<div className="max-w-4xl mx-auto rounded-xl shadow-2xl overflow-hidden"><div className="flex flex-col sm:flex-row"><div className="sm:w-1/3 flex-shrink-0"><img className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${modalMovie.poster_path}`} alt={`Poster for ${modalMovie.title}`}/></div><div className="p-6 sm:p-8 sm:w-2/3"><h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{modalMovie.title}</h2><p className="mt-2 text-[var(--color-text-secondary)] text-base leading-relaxed break-words">{modalMovie.overview}</p><div className="mt-6 space-y-2 text-sm"><p><strong className="text-[var(--color-accent-text)]">{t.cardYear}</strong> {modalMovie.release_date?.split('-')[0]}</p>{modalMovie.duration && <p><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong> {formatDuration(modalMovie.duration)}</p>}<p><strong className="text-[var(--color-accent-text)]">{t.cardRating}</strong> {modalMovie.vote_average?.toFixed(1)}/10 ⭐</p>{modalMovie.director?.name && <p><strong className="text-[var(--color-accent-text)]">{t.cardDirector}</strong> {modalMovie.director.name}</p>}<p><strong className="text-[var(--color-accent-text)]">{t.cardGenres}</strong> {modalMovie.genres?.map(g => g.name).join(', ')}</p><div><strong className="text-[var(--color-accent-text)]">{`${t.cardAvailableOn} ${userRegion}`} </strong>{modalMovie.providers?.length > 0 ? modalMovie.providers.map(p => ( <img key={p.provider_id} src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/> )) : <span className="text-[var(--color-text-secondary)]">{t.cardStreamingNotFound}</span>}</div><div className="mt-4"><strong className="text-[var(--color-accent-text)] block mb-1">{t.cardCast}</strong>{modalMovie.cast?.length > 0 ? ( <div className="flex flex-wrap gap-x-4 gap-y-2">{modalMovie.cast.map(actor => ( <div key={actor.id} className="flex flex-col items-center text-center w-20"><img src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1"/><span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span></div> ))}</div> ) : <span className="text-xs text-[var(--color-text-secondary)]">{t.cardCastNotFound}</span>}</div></div></div></div>{modalMovie.trailerKey && (<div className="p-6 bg-[var(--color-card-bg)]/50"><h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-2">{t.cardTrailer}</h3><div className="trailer-responsive rounded-lg overflow-hidden"><iframe src={`https://www.youtube.com/embed/${modalMovie.trailerKey}`} title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe></div></div>)}</div>)}</div></div>)}
       <footer className="text-center mt-12 py-6 text-sm text-[var(--color-text-subtle)]"><p>{t.footer} <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-text)] hover:underline">TMDb</a>.</p></footer>
