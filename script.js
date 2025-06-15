@@ -9,6 +9,29 @@ const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const TMDB_PROFILE_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w185';
 
+// HIGHLIGHT: This is our new curated list of priority platforms.
+// It includes global giants and key regional services.
+const PRIORITY_PLATFORMS = [
+    // Global Giants
+    { name: 'Netflix', id: '8' },
+    { name: 'Prime Video', id: '9' },
+    { name: 'Disney+', id: '337' },
+    { name: 'Max', id: '384' },
+    { name: 'Apple TV+', id: '350' },
+    { name: 'SkyShowtime', id: '1771' },
+    
+    // Key Regional Platforms - We will add more to this list as needed.
+    { name: 'Movistar+', id: '149', regions: ['ES'] },
+    { name: 'RTVE Play', id: '286', regions: ['ES'] },
+    { name: 'Filmin', id: '64', regions: ['ES', 'PT'] },
+    { name: 'Hulu', id: '15', regions: ['US'] },
+    { name: 'BBC iPlayer', id: '3', regions: ['GB'] },
+    { name: 'Crave', id: '230', regions: ['CA'] },
+    
+    // Legacy ID for data integrity when searching for "Max"
+    { name: 'HBO Max', id: '1899', isLegacy: true },
+];
+
 const THEMES = [
     { id: 'theme-purple', color: '#8b5cf6' },
     { id: 'theme-ocean', color: '#22d3ee' },
@@ -51,8 +74,7 @@ const App = () => {
   const [theme, setTheme] = useState(() => localStorage.getItem('movieRandomizerTheme') || 'theme-purple');
   const t = translations[language]; 
   
-  // HIGHLIGHT: Default region is now hardcoded to 'US', removing the need for geolocation.
-  const [userRegion, setUserRegion] = useState('US'); 
+  const [userRegion, setUserRegion] = useState('US');
   const [availableRegions, setAvailableRegions] = useState([]);
   const [platformOptions, setPlatformOptions] = useState([]);
 
@@ -82,11 +104,7 @@ const App = () => {
 
   // --- Effects ---
   
-  // HIGHLIGHT: Geolocation useEffect has been REMOVED.
-
-  // Fetches official country list from TMDb for the dropdown
   useEffect(() => {
-    // Check for API key to prevent running without it
     if (!TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
     const fetchTMDbRegions = async () => {
         try {
@@ -95,14 +113,28 @@ const App = () => {
             const data = await response.json();
             const sortedRegions = data.sort((a, b) => a.english_name.localeCompare(b.english_name));
             setAvailableRegions(sortedRegions);
-        } catch (err) {
-            console.error(err);
-        }
+        } catch (err) { console.error(err); }
     };
     fetchTMDbRegions();
   }, []);
 
-  // Fetches regional platforms dynamically when userRegion changes.
+  useEffect(() => {
+    try {
+        const detectedLanguage = navigator.language.split('-')[0];
+        if (detectedLanguage === 'es') {
+            setUserRegion('ES');
+            setLanguage('es');
+        } else {
+            setUserRegion('US');
+            setLanguage('en');
+        }
+    } catch (e) {
+        setUserRegion('US');
+        setLanguage('en');
+    }
+  }, []);
+
+  // HIGHLIGHT: This effect now uses the "Hybrid" logic to build the platform list.
   useEffect(() => {
     if (!userRegion || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
     
@@ -114,15 +146,33 @@ const App = () => {
             if (!response.ok) throw new Error('Failed to fetch providers');
             const data = await response.json();
             
-            const regionalProviders = data.results
-                .filter(p => p.display_priorities?.[userRegion] !== undefined)
-                .sort((a, b) => a.display_priorities[userRegion] - b.display_priorities[userRegion])
-                .slice(0, 14)
-                .map(provider => ({
-                    id: provider.provider_id.toString(),
-                    name: provider.provider_name
-                }));
-            setPlatformOptions(regionalProviders);
+            const apiProviders = data.results;
+            const availableProviderIds = new Set(apiProviders.map(p => p.provider_id.toString()));
+            const finalPlatformOptions = [];
+            const addedIds = new Set();
+            const MAX_PLATFORMS = 14;
+
+            // 1. Add our curated, high-priority platforms first if they are available in the region
+            PRIORITY_PLATFORMS.forEach(p => {
+                if (!p.isLegacy && availableProviderIds.has(p.id) && (!p.regions || p.regions.includes(userRegion))) {
+                    finalPlatformOptions.push({ id: p.id, name: p.name });
+                    addedIds.add(p.id);
+                }
+            });
+
+            // 2. Fill the rest of the spots with other popular platforms from the API
+            const otherAvailableProviders = apiProviders.sort((a, b) => (a.display_priorities?.[userRegion] ?? 999) - (b.display_priorities?.[userRegion] ?? 999));
+
+            for (const provider of otherAvailableProviders) {
+                if (finalPlatformOptions.length >= MAX_PLATFORMS) break;
+                const providerId = provider.provider_id.toString();
+                if (!addedIds.has(providerId)) {
+                    finalPlatformOptions.push({ id: providerId, name: provider.provider_name });
+                    addedIds.add(providerId);
+                }
+            }
+            
+            setPlatformOptions(finalPlatformOptions);
         } catch (err) {
             console.error("Could not fetch regional platforms:", err);
             setPlatformOptions([]);
@@ -429,7 +479,6 @@ const App = () => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8">
           <div className="space-y-4">
-            {/* HIGHLIGHT: New Region Selector Dropdown */}
             <div>
               <label htmlFor="region-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.region}</label>
               <select id="region-filter" value={userRegion} onChange={e => handleRegionChange(e.target.value)}
