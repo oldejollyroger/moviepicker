@@ -1,13 +1,14 @@
 // --- React and Hooks ---
-const { useState, useEffect, useCallback } = React;
+const { useState, useEffect, useCallback, useRef } = React;
 
-// --- CRITICAL: This script assumes a file named 'config.js' exists and contains:
+// --- This script assumes a file named 'config.js' exists and contains:
 // const TMDB_API_KEY = "YOUR_REAL_API_KEY";
 
 // --- Constants ---
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const TMDB_PROFILE_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w185';
+const TMDB_THUMBNAIL_BASE_URL = 'https://image.tmdb.org/t/p/w92';
 
 const THEMES = [
     { id: 'theme-purple', color: '#8b5cf6' },
@@ -16,13 +17,15 @@ const THEMES = [
     { id: 'theme-volcano', color: '#dc2626' },
 ];
 
+// HIGHLIGHT: Updated platform label and added search-related text
 const translations = {
     es: {
         title: 'Movie Randomizer', subtitle: '¿Qué vemos esta noche?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros',
         sortBy: 'Ordenar por:', sortOptions: [ { name: 'Popularidad', id: 'popularity.desc' }, { name: 'Mejor Calificación', id: 'vote_average.desc' }, { name: 'Fecha de Estreno', id: 'primary_release_date.desc' } ],
-        region: 'País:', platform: 'Plataformas (Selecciona al menos una):', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:',
+        region: 'País:', platform: 'Plataformas (Opcional):', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:',
         decade: 'Década:', allDecades: 'Cualquiera', minRating: 'Calificación Mínima:',
         surpriseMe: '¡Sorpréndeme!', goBack: 'Atrás', searching: 'Buscando...',
+        searchPlaceholder: 'O busca una película específica...',
         noMoviesFound: 'No se encontraron películas con los filtros actuales. ¡Prueba con otros!', cardYear: 'Año:', cardDuration: 'Duración:',
         cardRating: 'Nota TMDb:', cardDirector: 'Director:', cardGenres: 'Géneros:', cardAvailableOn: 'Disponible en (Suscripción):',
         cardAvailableToRent: 'Disponible para Alquilar/Comprar:',
@@ -33,9 +36,10 @@ const translations = {
     en: {
         title: 'Movie Randomizer', subtitle: "What should we watch tonight?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters',
         sortBy: 'Sort by:', sortOptions: [ { name: 'Popularity', id: 'popularity.desc' }, { name: 'Top Rated', id: 'vote_average.desc' }, { name: 'Release Date', id: 'primary_release_date.desc' } ],
-        region: 'Country:', platform: 'Platforms (Select at least one):', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:',
+        region: 'Country:', platform: 'Platforms (Optional):', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:',
         decade: 'Decade:', allDecades: 'Any', minRating: 'Minimum Rating:',
         surpriseMe: 'Surprise Me!', goBack: 'Back', searching: 'Searching...',
+        searchPlaceholder: 'Or search for a specific movie...',
         noMoviesFound: 'No movies found with the current filters. Try changing them!', cardYear: 'Year:', cardDuration: 'Duration:',
         cardRating: 'TMDb Rating:', cardDirector: 'Director:', cardGenres: 'Genres:', cardAvailableOn: 'Available on (Subscription):',
         cardAvailableToRent: 'Available for Rent or Buy:',
@@ -71,69 +75,64 @@ const App = () => {
   };
   const [filters, setFilters] = useState(initialFilters);
   
-  const [isLoading, setIsLoading] = useState(true); // HIGHLIGHT: Start in a loading state
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [genresMap, setGenresMap] = useState({});
   
+  // HIGHLIGHT: New state for the search bar
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchRef = useRef(null);
+
   const WATCHED_MOVIES_KEY = 'watchedUserMoviesRandomizer_TMDb_v8';
   const [watchedMovies, setWatchedMovies] = useState({});
   const [sessionShownMovies, setSessionShownMovies] = useState(new Set());
 
   // --- Effects ---
   
-  // This effect sequence ensures data loads in the correct order.
   useEffect(() => {
-    // 1. Check for API Key first.
-    if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === '22f17214f2c35b01940cdfed47d738c2') {
-        setError("API Key not found. Please check config.js.");
-        setIsLoading(false);
-        return;
-    }
-
-    // 2. Fetch essential configuration data (countries and genres)
-    const fetchInitialData = async () => {
+    const initializeApp = async () => {
+        if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
+            setError("API Key not found or is placeholder. Please check config.js and your deployment secrets.");
+            setIsLoading(false);
+            return;
+        }
+        
         try {
+            const langParam = language === 'es' ? 'es-ES' : 'en-US';
             const [regionsResponse, genresResponse] = await Promise.all([
                 fetch(`${TMDB_BASE_URL}/configuration/countries?api_key=${TMDB_API_KEY}`),
-                fetch(`${TMDB_BASE_URL}/genre/movie/list?api_key=${TMDB_API_KEY}&language=${language === 'es' ? 'es-ES' : 'en-US'}`)
+                fetch(`${TMDB_BASE_URL}/genre/movie/list?api_key=${TMDB_API_KEY}&language=${langParam}`)
             ]);
 
             if (!regionsResponse.ok) throw new Error("Could not fetch TMDb regions");
-            if (!genresResponse.ok) throw new Error("Could not fetch genres");
+            if (!genresResponse.ok) throw new Error(`Could not fetch genres (Lang: ${langParam})`);
 
             const regionsData = await regionsResponse.json();
             const genresData = await genresResponse.json();
 
             setAvailableRegions(regionsData.sort((a, b) => a.english_name.localeCompare(b.english_name)));
             setGenresMap(genresData.genres.reduce((acc, genre) => ({ ...acc, [genre.id]: genre.name }), {}));
-
-            // 3. Set user's region based on their browser language
-            try {
-                const detectedLanguage = navigator.language.split('-')[0];
-                if (detectedLanguage === 'es') {
-                    setUserRegion('ES');
-                    setLanguage('es');
-                } else {
-                    setUserRegion('US');
-                    setLanguage('en');
-                }
-            } catch (e) {
+            
+            const detectedLanguage = navigator.language.split('-')[0];
+            if (detectedLanguage === 'es') {
+                setUserRegion('ES');
+                setLanguage('es');
+            } else {
                 setUserRegion('US');
                 setLanguage('en');
             }
         } catch (err) {
-            console.error("Error during initial data fetch:", err);
+            console.error("Error during app initialization:", err);
             setError(err.message);
-            setIsLoading(false);
         }
     };
-    
-    fetchInitialData();
-  }, [language]); // Reruns if language changes
+    initializeApp();
+  }, [language]);
 
-  // HIGHLIGHT: This is the new, simplified, and correct logic for fetching platforms.
   useEffect(() => {
-    if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === '22f17214f2c35b01940cdfed47d738c2') return;
+    if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
     
     setFilters(f => ({ ...f, platform: [] }));
 
@@ -143,23 +142,13 @@ const App = () => {
             if (!response.ok) throw new Error('Failed to fetch providers for the selected region.');
             const data = await response.json();
             
-            // Filter for subscription providers ('flatrate') and sort by TMDb's priority
-            const flatrateProviders = data.results.filter(p => p.display_priorities && p.display_priorities[userRegion] !== undefined);
-            
+            const flatrateProviders = data.results.filter(p => p.display_priorities?.[userRegion] !== undefined);
             const regionalProviders = flatrateProviders
                 .sort((a, b) => (a.display_priorities[userRegion]) - (b.display_priorities[userRegion]))
-                .map(provider => ({
-                    id: provider.provider_id.toString(),
-                    name: provider.provider_name
-                }));
+                .map(provider => ({ id: provider.provider_id.toString(), name: provider.provider_name }));
             
             setPlatformOptions(regionalProviders);
-        } catch (err) {
-            console.error(err);
-            setPlatformOptions([]); // Set to empty on failure
-        } finally {
-            setIsLoading(false); // We are ready to search, or show an empty state
-        }
+        } catch (err) { console.error(err); setPlatformOptions([]); }
     };
     fetchRegionPlatforms();
   }, [userRegion]);
@@ -170,28 +159,24 @@ const App = () => {
     localStorage.setItem('movieRandomizerTheme', theme);
   }, [theme]);
   
-  // Main movie fetching useEffect
+  // Main movie fetching effect for "Surprise Me"
   useEffect(() => {
     if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE' || Object.keys(genresMap).length === 0) return;
-
-    // New Rule: If no platforms are selected, clear the movie list and do nothing.
-    if (filters.platform.length === 0) {
-        setAllMovies([]);
-        setSelectedMovie(null); // Clear selected movie as well
-        return;
-    }
 
     const langParam = language === 'es' ? 'es-ES' : 'en-US';
     
     const discoverMovies = async (voteCount) => {
         let providersToQuery = [...filters.platform];
         if (providersToQuery.includes('384') && !providersToQuery.includes('1899')) {
-            providersToQuery.push('1899'); // Handle Max/HBO Max rebrand
+            providersToQuery.push('1899');
         }
         
         let baseDiscoverUrl = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${langParam}&vote_count.gte=${voteCount}&watch_region=${userRegion}&with_watch_monetization_types=flatrate`;
         
-        baseDiscoverUrl += `&with_watch_providers=${providersToQuery.join('|')}`;
+        // HIGHLIGHT: This now conditionally adds the platform filter
+        if (providersToQuery.length > 0) {
+            baseDiscoverUrl += `&with_watch_providers=${providersToQuery.join('|')}`;
+        }
 
         if (filters.genre.length > 0) baseDiscoverUrl += `&with_genres=${filters.genre.join(',')}`;
         if (filters.excludeGenres.length > 0) baseDiscoverUrl += `&without_genres=${filters.excludeGenres.join(',')}`;
@@ -226,7 +211,6 @@ const App = () => {
             let initialResults = await discoverMovies(100);
 
             if (initialResults.length === 0) {
-                console.log("Initial search found no movies. Retrying with ultimate fallback filter (vote_count=0)...");
                 initialResults = await discoverMovies(0); 
             }
 
@@ -253,7 +237,45 @@ const App = () => {
     };
 
     fetchAndSetMovies();
-  }, [filters, genresMap, language, userRegion]);
+  }, [filters, language, userRegion]);
+
+  // HIGHLIGHT: New debounced search effect
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+        setSearchResults([]);
+        return;
+    }
+
+    setIsSearching(true);
+    const searchTimer = setTimeout(async () => {
+        try {
+            const response = await fetch(`${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(searchQuery)}&language=${language === 'es' ? 'es-ES' : 'en-US'}`);
+            if (!response.ok) throw new Error("Search failed");
+            const data = await response.json();
+            setSearchResults(data.results.slice(0, 5)); // Show top 5 results
+        } catch (err) {
+            console.error("Search error:", err);
+            setSearchResults([]);
+        } finally {
+            setIsSearching(false);
+        }
+    }, 300); // 300ms debounce delay
+
+    return () => clearTimeout(searchTimer);
+  }, [searchQuery, language]);
+  
+  // HIGHLIGHT: New effect to handle clicking outside the search box
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+        if (searchRef.current && !searchRef.current.contains(event.target)) {
+            setSearchResults([]);
+        }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const fetchFullMovieDetails = useCallback(async (movieId, lang) => {
     try {
@@ -262,7 +284,6 @@ const App = () => {
         const data = await res.json();
         
         const regionProviders = data['watch/providers']?.results?.[userRegion];
-        
         const rentProviders = regionProviders?.rent || [];
         const buyProviders = regionProviders?.buy || [];
         const combinedPayProviders = [...rentProviders, ...buyProviders];
@@ -310,10 +331,7 @@ const App = () => {
           Object.entries(parsed).filter(([_, expiryTimestamp]) => expiryTimestamp > now)
         );
         setWatchedMovies(validWatched);
-      } catch (e) {
-        console.error("Failed to parse watched movies from localStorage", e);
-        localStorage.removeItem(WATCHED_MOVIES_KEY);
-      }
+      } catch (e) { console.error(e); }
     }
   }, []);
 
@@ -355,6 +373,27 @@ const App = () => {
   const handleLanguageChange = (lang) => { setLanguage(lang); };
   const handleClearFilters = () => { setFilters(initialFilters); resetSession(); };
   const handleRegionChange = (newRegion) => { setUserRegion(newRegion); };
+  
+  const handleSearchChange = (e) => { setSearchQuery(e.target.value); };
+  
+  const handleSearchResultClick = (movie) => {
+    // Transform the search result into the same format as our other movies
+    const formattedMovie = {
+        id: movie.id.toString(),
+        title: movie.title,
+        synopsis: movie.overview,
+        year: movie.release_date ? parseInt(movie.release_date.split('-')[0]) : null,
+        imdbRating: movie.vote_average.toFixed(1),
+        genres: movie.genre_ids.map(id => genresMap[id]).filter(Boolean) || ["Desconocido"],
+        poster: movie.poster_path,
+    };
+    if (selectedMovie) {
+        setMovieHistory(prev => [...prev, selectedMovie]);
+    }
+    setSelectedMovie(formattedMovie);
+    setSearchQuery(''); // Clear search bar
+    setSearchResults([]); // Hide results dropdown
+  };
 
   const handleRandomMovie = useCallback(() => {
     const now = Date.now();
@@ -411,10 +450,11 @@ const App = () => {
   };
   
   // --- Render Logic ---
-  const isAppReady = genresMap && Object.keys(genresMap).length > 0 && userRegion && availableRegions.length > 0;
-  if (!isAppReady) {
-    if (error) { return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="text-center"><h1 className="text-3xl font-bold text-red-500 mb-4">Error</h1><p className="text-xl">{error}</p></div></div> );}
+  if (isLoading && Object.keys(genresMap).length === 0) {
     return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="loader"></div></div> );
+  }
+  if (error) {
+    return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="text-center"><h1 className="text-3xl font-bold text-red-500 mb-4">Error</h1><p className="text-xl">{error}</p></div></div> );
   }
 
   return (
@@ -436,15 +476,39 @@ const App = () => {
           {t.title}
         </h1>
         <h2 className="text-xl sm:text-2xl text-[var(--color-text-secondary)] mt-2">{t.subtitle}</h2>
+        
+        {/* HIGHLIGHT: New Search Bar Component */}
+        <div ref={searchRef} className="relative max-w-lg mx-auto mt-6">
+            <input
+                type="text"
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder={t.searchPlaceholder}
+                className="w-full p-3 pl-10 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-full focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"
+            />
+            <div className="absolute top-0 left-0 inline-flex items-center p-3">
+                {isSearching ? <div className="small-loader !m-0 !w-5 !h-5"></div> : <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>}
+            </div>
+            {searchResults.length > 0 && (
+                <ul className="absolute w-full mt-2 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg shadow-lg z-20 max-h-80 overflow-y-auto">
+                    {searchResults.map(movie => (
+                        <li key={movie.id} onClick={() => handleSearchResultClick(movie)} className="p-3 hover:bg-[var(--color-bg)] cursor-pointer flex items-center gap-4">
+                            <img src={movie.poster_path ? `${TMDB_THUMBNAIL_BASE_URL}${movie.poster_path}` : 'https://placehold.co/92x138/4A5568/FFFFFF?text=?'} alt={movie.title} className="w-12 h-auto rounded-md" />
+                            <div className="text-left">
+                                <p className="font-semibold text-[var(--color-text-primary)]">{movie.title}</p>
+                                <p className="text-sm text-[var(--color-text-secondary)]">{movie.release_date?.split('-')[0]}</p>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
       </header>
 
-      {/* Filter Controls Component */}
       <div className="mb-8 p-6 bg-[var(--color-header-bg)] rounded-xl shadow-2xl">
         <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-semibold text-[var(--color-accent-text)]">{t.advancedFilters}</h2>
-            <button onClick={handleClearFilters} className="text-xs bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1 px-3 rounded-lg transition-colors">
-                {t.clearFilters}
-            </button>
+            <button onClick={handleClearFilters} className="text-xs bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1 px-3 rounded-lg transition-colors">{t.clearFilters}</button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8">
           <div className="space-y-4">
@@ -452,9 +516,7 @@ const App = () => {
               <label htmlFor="region-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.region}</label>
               <select id="region-filter" value={userRegion} onChange={e => handleRegionChange(e.target.value)}
                 className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]">
-                {availableRegions.map(region => (
-                    <option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>
-                ))}
+                {availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}
               </select>
             </div>
             <div>
@@ -475,202 +537,33 @@ const App = () => {
           <div>
               <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.includeGenre}</label>
               <div className="filter-checkbox-list space-y-1">
-                  {Object.entries(genresMap).sort(([,a],[,b]) => a.localeCompare(b)).map(([id, name]) => (
-                      <div key={`inc-${id}`} className="flex items-center">
-                          <input id={`inc-genre-${id}`} type="checkbox" checked={filters.genre.includes(id)} onChange={() => handleGenreChange(id, 'genre')}
-                                 disabled={filters.excludeGenres.includes(id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)] disabled:opacity-50"/>
-                          <label htmlFor={`inc-genre-${id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.excludeGenres.includes(id) ? 'opacity-50' : ''}`}>{name}</label>
-                      </div>
-                  ))}
+                  {Object.entries(genresMap).sort(([,a],[,b]) => a.localeCompare(b)).map(([id, name]) => (<div key={`inc-${id}`} className="flex items-center"><input id={`inc-genre-${id}`} type="checkbox" checked={filters.genre.includes(id)} onChange={() => handleGenreChange(id, 'genre')} disabled={filters.excludeGenres.includes(id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)] disabled:opacity-50"/><label htmlFor={`inc-genre-${id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.excludeGenres.includes(id) ? 'opacity-50' : ''}`}>{name}</label></div>))}
               </div>
           </div>
            <div>
               <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.excludeGenre}</label>
               <div className="filter-checkbox-list space-y-1">
-                 {Object.entries(genresMap).sort(([,a],[,b]) => a.localeCompare(b)).map(([id, name]) => (
-                     <div key={`ex-${id}`} className="flex items-center">
-                         <input id={`ex-genre-${id}`} type="checkbox" checked={filters.excludeGenres.includes(id)} onChange={() => handleGenreChange(id, 'excludeGenres')}
-                                disabled={filters.genre.includes(id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-red-600 focus:ring-red-500 accent-red-600 disabled:opacity-50"/>
-                         <label htmlFor={`ex-genre-${id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.genre.includes(id) ? 'opacity-50' : ''}`}>{name}</label>
-                     </div>
-                 ))}
+                 {Object.entries(genresMap).sort(([,a],[,b]) => a.localeCompare(b)).map(([id, name]) => (<div key={`ex-${id}`} className="flex items-center"><input id={`ex-genre-${id}`} type="checkbox" checked={filters.excludeGenres.includes(id)} onChange={() => handleGenreChange(id, 'excludeGenres')} disabled={filters.genre.includes(id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-red-600 focus:ring-red-500 accent-red-600 disabled:opacity-50"/><label htmlFor={`ex-genre-${id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.genre.includes(id) ? 'opacity-50' : ''}`}>{name}</label></div>))}
               </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.platform}</label>
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 filter-checkbox-list" style={{maxHeight: '200px'}}>
-              {platformOptions.length > 0 ? platformOptions.map(p => (
-                <div key={p.id} className="flex items-center">
-                  <input id={`platform-${p.id}`} type="checkbox" checked={filters.platform.includes(p.id)} onChange={() => handlePlatformChange(p.id)}
-                    className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"/>
-                  <label htmlFor={`platform-${p.id}`} className="ml-2 text-sm text-[var(--color-text-secondary)]">{p.name}</label>
-                </div>
-              )) : <p className="text-sm text-gray-400 col-span-2">Loading platforms for {userRegion || 'your region'}...</p>}
+              {platformOptions.length > 0 ? platformOptions.map(p => (<div key={p.id} className="flex items-center"><input id={`platform-${p.id}`} type="checkbox" checked={filters.platform.includes(p.id)} onChange={() => handlePlatformChange(p.id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"/><label htmlFor={`platform-${p.id}`} className="ml-2 text-sm text-[var(--color-text-secondary)]">{p.name}</label></div>)) : <p className="text-sm text-gray-400 col-span-2">Platforms for {userRegion}...</p>}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Action Buttons */}
       <div className="text-center mb-10 flex justify-center items-center gap-4">
-        <button onClick={handleGoBack} disabled={movieHistory.length === 0}
-          className="p-4 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg shadow-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-        </button>
-        <button onClick={handleRandomMovie} disabled={isLoading || filters.platform.length === 0}
-          className={`px-8 py-4 bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-150 text-xl disabled:opacity-50 disabled:cursor-not-allowed`}>
-          {isLoading ? t.searching : t.surpriseMe}
-        </button>
+        <button onClick={handleGoBack} disabled={movieHistory.length === 0} className="p-4 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg shadow-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
+        <button onClick={handleRandomMovie} disabled={isLoading || allMovies.length === 0} className={`px-8 py-4 bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-150 text-xl disabled:opacity-50 disabled:cursor-not-allowed`}>{isLoading ? t.searching : t.surpriseMe}</button>
       </div>
 
-      {/* Main Movie Card */}
-      {selectedMovie && (
-        <div className="max-w-4xl mx-auto bg-[var(--color-card-bg)] rounded-xl shadow-2xl overflow-hidden mb-10">
-          <div className="flex flex-col sm:flex-row">
-            <div className="sm:w-1/3 flex-shrink-0">
-              <img className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${selectedMovie.poster}`} alt={`Poster for ${selectedMovie.title}`}/>
-            </div>
-            <div className="p-6 sm:p-8 sm:w-2/3">
-              <h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{selectedMovie.title}</h2>
-              <p className="mt-2 text-[var(--color-text-secondary)] text-base leading-relaxed break-words">{selectedMovie.synopsis}</p>
-              <div className="mt-6 space-y-4 text-sm">
-                <p><strong className="text-[var(--color-accent-text)]">{t.cardYear}</strong> {selectedMovie.year}</p>
-                {isFetchingDetails ? <div className="inline-flex items-center"><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong><div className="small-loader"></div></div> :
-                  movieDetails.duration && <p><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong> {formatDuration(movieDetails.duration)}</p>
-                }
-                <p><strong className="text-[var(--color-accent-text)]">{t.cardRating}</strong> {selectedMovie.imdbRating}/10 ⭐</p>
-                {isFetchingDetails ? null : movieDetails.director?.name && <p><strong className="text-[var(--color-accent-text)]">{t.cardDirector}</strong> {movieDetails.director.name}</p>}
-                <p><strong className="text-[var(--color-accent-text)]">{t.cardGenres}</strong> {selectedMovie.genres.join(', ')}</p>
-                
-                <div>
-                    <strong className="text-[var(--color-accent-text)]">{`${t.cardAvailableOn} ${userRegion}`} </strong>
-                    {isFetchingDetails ? <div className="small-loader"></div> : 
-                        movieDetails.providers?.length > 0 ? movieDetails.providers.map(p => (
-                            <img key={p.provider_id} src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/>
-                        )) : <span className="text-[var(--color-text-secondary)]">{t.cardStreamingNotFound}</span>
-                    }
-                </div>
+      {selectedMovie ? ( <div className="max-w-4xl mx-auto bg-[var(--color-card-bg)] rounded-xl shadow-2xl overflow-hidden mb-10"><div className="flex flex-col sm:flex-row"><div className="sm:w-1/3 flex-shrink-0"><img className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${selectedMovie.poster}`} alt={`Poster for ${selectedMovie.title}`}/></div><div className="p-6 sm:p-8 sm:w-2/3"><h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{selectedMovie.title}</h2><p className="mt-2 text-[var(--color-text-secondary)] text-base leading-relaxed break-words">{selectedMovie.synopsis}</p><div className="mt-6 space-y-4 text-sm"><p><strong className="text-[var(--color-accent-text)]">{t.cardYear}</strong> {selectedMovie.year}</p>{isFetchingDetails ? <div className="inline-flex items-center"><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong><div className="small-loader"></div></div> : movieDetails.duration && <p><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong> {formatDuration(movieDetails.duration)}</p>}<p><strong className="text-[var(--color-accent-text)]">{t.cardRating}</strong> {selectedMovie.imdbRating}/10 ⭐</p>{isFetchingDetails ? null : movieDetails.director?.name && <p><strong className="text-[var(--color-accent-text)]">{t.cardDirector}</strong> {movieDetails.director.name}</p>}<p><strong className="text-[var(--color-accent-text)]">{t.cardGenres}</strong> {selectedMovie.genres.join(', ')}</p><div><strong className="text-[var(--color-accent-text)]">{`${t.cardAvailableOn} ${userRegion}`} </strong>{isFetchingDetails ? <div className="small-loader"></div> : movieDetails.providers?.length > 0 ? movieDetails.providers.map(p => ( <img key={p.provider_id} src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/> )) : <span className="text-[var(--color-text-secondary)]">{t.cardStreamingNotFound}</span>}</div>{isFetchingDetails ? null : movieDetails.rentalProviders?.length > 0 && (<div><strong className="text-[var(--color-accent-text)]">{t.cardAvailableToRent}</strong><div className="mt-1">{movieDetails.rentalProviders.map(p => ( <img key={p.provider_id} src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/> ))}</div></div>)}<div className="mt-4"><strong className="text-[var(--color-accent-text)] block mb-1">{t.cardCast}</strong>{isFetchingDetails ? <div className="small-loader"></div> : movieDetails.cast?.length > 0 ? ( <div className="flex flex-wrap gap-x-4 gap-y-2">{movieDetails.cast.map(actor => ( <div key={actor.id} className="flex flex-col items-center text-center w-20"><img src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1"/><span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span></div> ))}</div> ) : <span className="text-xs text-[var(--color-text-secondary)]">{t.cardCastNotFound}</span>}</div></div><button onClick={() => handleMarkAsWatched(selectedMovie.id)} className="mt-8 w-full p-2 bg-red-600/80 hover:bg-red-600 text-white font-semibold rounded-lg shadow-md transition-colors flex flex-col items-center group"><svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg><span className="text-xs mt-1">{t.cardMarkAsWatched}</span></button></div></div><div className="p-6 bg-[var(--color-bg)] border-t border-[var(--color-border)]"><h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-3">{t.cardSimilarMovies}</h3>{isFetchingDetails ? <div className="flex justify-center"><div className="small-loader"></div></div> :  movieDetails.similar?.length > 0 ? ( <div className="flex overflow-x-auto space-x-4 pb-2">{movieDetails.similar.map(movie => ( <button key={movie.id} onClick={() => handleSimilarMovieClick(movie)} className="flex-shrink-0 w-28 text-center hover:scale-105 transition-transform duration-150 group"><img src={movie.poster_path ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}` : 'https://placehold.co/200x300/4A5568/FFFFFF?text=No+Poster'} alt={movie.title} className="rounded-lg mb-1 w-full h-auto object-cover"/><span className="text-xs text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-text)] transition-colors">{movie.title}</span></button> ))}</div> ) : <p className="text-[var(--color-text-secondary)] text-sm">{t.noMoviesFound}</p>}</div>{(isFetchingDetails || movieDetails.trailerKey) && ( <div className="p-6 bg-[var(--color-card-bg)]/50"><h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-2">{t.cardTrailer}</h3>{isFetchingDetails ? <div className="small-loader"></div> : movieDetails.trailerKey ? <div className="trailer-responsive rounded-lg overflow-hidden"><iframe src={`https://www.youtube.com/embed/${movieDetails.trailerKey}`} title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe></div> : <p className="text-[var(--color-text-secondary)]">{t.cardTrailerNotFound}</p>}</div> )}</div> ) : ( <div className="text-center text-gray-400 mt-10 text-lg">{allMovies.length === 0 && !isLoading ? t.noMoviesFound : ""}</div> )}
 
-                {isFetchingDetails ? null : movieDetails.rentalProviders?.length > 0 && (
-                    <div>
-                        <strong className="text-[var(--color-accent-text)]">{t.cardAvailableToRent}</strong>
-                        <div className="mt-1">
-                            {movieDetails.rentalProviders.map(p => (
-                                <img key={p.provider_id} src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/>
-                            ))}
-                        </div>
-                    </div>
-                )}
-                
-                <div className="mt-4">
-                    <strong className="text-[var(--color-accent-text)] block mb-1">{t.cardCast}</strong>
-                    {isFetchingDetails ? <div className="small-loader"></div> :
-                        movieDetails.cast?.length > 0 ? (
-                            <div className="flex flex-wrap gap-x-4 gap-y-2">
-                                {movieDetails.cast.map(actor => (
-                                    <div key={actor.id} className="flex flex-col items-center text-center w-20">
-                                        <img src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1"/>
-                                        <span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : <span className="text-xs text-[var(--color-text-secondary)]">{t.cardCastNotFound}</span>
-                    }
-                </div>
-              </div>
-              <button onClick={() => handleMarkAsWatched(selectedMovie.id)} className="mt-8 w-full p-2 bg-red-600/80 hover:bg-red-600 text-white font-semibold rounded-lg shadow-md transition-colors flex flex-col items-center group">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                </svg>
-                <span className="text-xs mt-1">{t.cardMarkAsWatched}</span>
-              </button>
-            </div>
-          </div>
-          <div className="p-6 bg-[var(--color-bg)] border-t border-[var(--color-border)]">
-              <h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-3">{t.cardSimilarMovies}</h3>
-              {isFetchingDetails ? <div className="flex justify-center"><div className="small-loader"></div></div> : 
-                  movieDetails.similar?.length > 0 ? (
-                  <div className="flex overflow-x-auto space-x-4 pb-2">
-                     {movieDetails.similar.map(movie => (
-                        <button key={movie.id} onClick={() => handleSimilarMovieClick(movie)} className="flex-shrink-0 w-28 text-center hover:scale-105 transition-transform duration-150 group">
-                           <img src={movie.poster_path ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}` : 'https://placehold.co/200x300/4A5568/FFFFFF?text=No+Poster'} alt={movie.title} className="rounded-lg mb-1 w-full h-auto object-cover"/>
-                           <span className="text-xs text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-text)] transition-colors">{movie.title}</span>
-                        </button>
-                     ))}
-                  </div>
-               ) : <p className="text-[var(--color-text-secondary)] text-sm">{t.noMoviesFound}</p>}
-          </div>
-          {(isFetchingDetails || movieDetails.trailerKey) && (
-            <div className="p-6 bg-[var(--color-card-bg)]/50">
-                <h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-2">{t.cardTrailer}</h3>
-                {isFetchingDetails ? <div className="small-loader"></div> :
-                    movieDetails.trailerKey ? <div className="trailer-responsive rounded-lg overflow-hidden"><iframe src={`https://www.youtube.com/embed/${movieDetails.trailerKey}`} title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe></div>
-                    : <p className="text-[var(--color-text-secondary)]">{t.cardTrailerNotFound}</p>
-                }
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Modal for similar movies */}
-      {modalMovie && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={closeModal}>
-            <div className="bg-[var(--color-card-bg)] rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}>
-                <button onClick={closeModal} className="absolute top-3 right-3 text-white bg-gray-900 rounded-full p-1 hover:bg-gray-700 z-10">
-                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                </button>
-                {isFetchingModalDetails ? <div className="h-96 flex items-center justify-center"><div className="loader"></div></div> : (
-                    <div className="max-w-4xl mx-auto rounded-xl shadow-2xl overflow-hidden">
-                      <div className="flex flex-col sm:flex-row">
-                        <div className="sm:w-1/3 flex-shrink-0">
-                          <img className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${modalMovie.poster_path}`} alt={`Poster for ${modalMovie.title}`}/>
-                        </div>
-                        <div className="p-6 sm:p-8 sm:w-2/3">
-                          <h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{modalMovie.title}</h2>
-                          <p className="mt-2 text-[var(--color-text-secondary)] text-base leading-relaxed break-words">{modalMovie.overview}</p>
-                          <div className="mt-6 space-y-2 text-sm">
-                            <p><strong className="text-[var(--color-accent-text)]">{t.cardYear}</strong> {modalMovie.release_date?.split('-')[0]}</p>
-                            {modalMovie.duration && <p><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong> {formatDuration(modalMovie.duration)}</p>}
-                            <p><strong className="text-[var(--color-accent-text)]">{t.cardRating}</strong> {modalMovie.vote_average?.toFixed(1)}/10 ⭐</p>
-                            {modalMovie.director?.name && <p><strong className="text-[var(--color-accent-text)]">{t.cardDirector}</strong> {modalMovie.director.name}</p>}
-                            <p><strong className="text-[var(--color-accent-text)]">{t.cardGenres}</strong> {modalMovie.genres?.map(g => g.name).join(', ')}</p>
-                            <div>
-                                <strong className="text-[var(--color-accent-text)]">{`${t.cardAvailableOn} ${userRegion}`} </strong>
-                                {modalMovie.providers?.length > 0 ? modalMovie.providers.map(p => (
-                                    <img key={p.provider_id} src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/>
-                                )) : <span className="text-[var(--color-text-secondary)]">{t.cardStreamingNotFound}</span>}
-                            </div>
-                            <div className="mt-4">
-                                <strong className="text-[var(--color-accent-text)] block mb-1">{t.cardCast}</strong>
-                                {modalMovie.cast?.length > 0 ? (
-                                    <div className="flex flex-wrap gap-x-4 gap-y-2">
-                                        {modalMovie.cast.map(actor => (
-                                            <div key={actor.id} className="flex flex-col items-center text-center w-20">
-                                                <img src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1"/>
-                                                <span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : <span className="text-xs text-[var(--color-text-secondary)]">{t.cardCastNotFound}</span>}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      {modalMovie.trailerKey && (
-                        <div className="p-6 bg-[var(--color-card-bg)]/50">
-                            <h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-2">{t.cardTrailer}</h3>
-                            <div className="trailer-responsive rounded-lg overflow-hidden"><iframe src={`https://www.youtube.com/embed/${modalMovie.trailerKey}`} title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe></div>
-                        </div>
-                      )}
-                    </div>
-                )}
-            </div>
-        </div>
-      )}
-
-      {allMovies.length === 0 && !isLoading && filters.platform.length > 0 && <div className="text-center text-gray-400 mt-10 text-lg">{t.noMoviesFound}</div>}
+      {modalMovie && (<div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={closeModal}><div className="bg-[var(--color-card-bg)] rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}><button onClick={closeModal} className="absolute top-3 right-3 text-white bg-gray-900 rounded-full p-1 hover:bg-gray-700 z-10"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>{isFetchingModalDetails ? <div className="h-96 flex items-center justify-center"><div className="loader"></div></div> : (<div className="max-w-4xl mx-auto rounded-xl shadow-2xl overflow-hidden"><div className="flex flex-col sm:flex-row"><div className="sm:w-1/3 flex-shrink-0"><img className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${modalMovie.poster_path}`} alt={`Poster for ${modalMovie.title}`}/></div><div className="p-6 sm:p-8 sm:w-2/3"><h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{modalMovie.title}</h2><p className="mt-2 text-[var(--color-text-secondary)] text-base leading-relaxed break-words">{modalMovie.overview}</p><div className="mt-6 space-y-2 text-sm"><p><strong className="text-[var(--color-accent-text)]">{t.cardYear}</strong> {modalMovie.release_date?.split('-')[0]}</p>{modalMovie.duration && <p><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong> {formatDuration(modalMovie.duration)}</p>}<p><strong className="text-[var(--color-accent-text)]">{t.cardRating}</strong> {modalMovie.vote_average?.toFixed(1)}/10 ⭐</p>{modalMovie.director?.name && <p><strong className="text-[var(--color-accent-text)]">{t.cardDirector}</strong> {modalMovie.director.name}</p>}<p><strong className="text-[var(--color-accent-text)]">{t.cardGenres}</strong> {modalMovie.genres?.map(g => g.name).join(', ')}</p><div><strong className="text-[var(--color-accent-text)]">{`${t.cardAvailableOn} ${userRegion}`} </strong>{modalMovie.providers?.length > 0 ? modalMovie.providers.map(p => ( <img key={p.provider_id} src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/> )) : <span className="text-[var(--color-text-secondary)]">{t.cardStreamingNotFound}</span>}</div><div className="mt-4"><strong className="text-[var(--color-accent-text)] block mb-1">{t.cardCast}</strong>{modalMovie.cast?.length > 0 ? ( <div className="flex flex-wrap gap-x-4 gap-y-2">{modalMovie.cast.map(actor => ( <div key={actor.id} className="flex flex-col items-center text-center w-20"><img src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1"/><span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span></div> ))}</div> ) : <span className="text-xs text-[var(--color-text-secondary)]">{t.cardCastNotFound}</span>}</div></div></div></div>{modalMovie.trailerKey && (<div className="p-6 bg-[var(--color-card-bg)]/50"><h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-2">{t.cardTrailer}</h3><div className="trailer-responsive rounded-lg overflow-hidden"><iframe src={`https://www.youtube.com/embed/${modalMovie.trailerKey}`} title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe></div></div>)}</div>)}</div></div>)}
+      
        <footer className="text-center mt-12 py-6 text-sm text-[var(--color-text-subtle)]">
         <p>{t.footer} <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-text)] hover:underline">TMDb</a>.</p>
       </footer>
