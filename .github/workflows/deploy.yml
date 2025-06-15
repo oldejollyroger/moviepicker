@@ -1,4 +1,3 @@
-# THIS IS THE FINAL, CORRECT VERSION TO USE
 name: Deploy to GitHub Pages
 
 on:
@@ -17,9 +16,10 @@ jobs:
       - name: Checkout 🛎️
         uses: actions/checkout@v4
 
-      - name: Replace API Key Placeholder 🔑
+      - name: Replace API Key Placeholder in config.js 🔑
         run: |
-          sed -i 's|YOUR_TMDB_API_KEY_HERE|${{ secrets.VITE_TMDB_API_KEY }}|g' script.js
+          # HIGHLIGHT: We are now editing the simple config.js file, which is much more reliable.
+          sed -i 's|YOUR_TMDB_API_KEY_HERE|${{ secrets.VITE_TMDB_API_KEY }}|g' config.js
       
       - name: Setup Pages 📄
         uses: actions/configure-pages@v5
