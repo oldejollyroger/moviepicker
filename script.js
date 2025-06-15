@@ -1,8 +1,9 @@
 // --- React and Hooks ---
 const { useState, useEffect, useCallback } = React;
 
-// --- CRITICAL: Add your API Key here ---
-const TMDB_API_KEY = '22f17214f2c35b01940cdfed47d738c2'; // <--- Make sure your key is here
+// --- CRITICAL: Add your API Key in config.js ---
+// This script assumes a file named 'config.js' exists and contains:
+// const TMDB_API_KEY = "YOUR_REAL_API_KEY";
 
 // --- Constants ---
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -22,7 +23,7 @@ const translations = {
     es: {
         title: 'Movie Randomizer', subtitle: '¿Qué vemos esta noche?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros',
         sortBy: 'Ordenar por:', sortOptions: [ { name: 'Popularidad', id: 'popularity.desc' }, { name: 'Mejor Calificación', id: 'vote_average.desc' }, { name: 'Fecha de Estreno', id: 'primary_release_date.desc' } ],
-        region: 'País:', platform: 'Plataformas:', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:',
+        region: 'País:', platform: 'Plataformas (Selecciona al menos una):', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:',
         decade: 'Década:', allDecades: 'Cualquiera', minRating: 'Calificación Mínima:',
         surpriseMe: '¡Sorpréndeme!', goBack: 'Atrás', searching: 'Buscando...',
         noMoviesFound: 'No se encontraron películas con los filtros actuales. ¡Prueba con otros!', cardYear: 'Año:', cardDuration: 'Duración:',
@@ -35,7 +36,7 @@ const translations = {
     en: {
         title: 'Movie Randomizer', subtitle: "What should we watch tonight?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters',
         sortBy: 'Sort by:', sortOptions: [ { name: 'Popularity', id: 'popularity.desc' }, { name: 'Top Rated', id: 'vote_average.desc' }, { name: 'Release Date', id: 'primary_release_date.desc' } ],
-        region: 'Country:', platform: 'Platforms:', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:',
+        region: 'Country:', platform: 'Platforms (Select at least one):', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:',
         decade: 'Decade:', allDecades: 'Any', minRating: 'Minimum Rating:',
         surpriseMe: 'Surprise Me!', goBack: 'Back', searching: 'Searching...',
         noMoviesFound: 'No movies found with the current filters. Try changing them!', cardYear: 'Year:', cardDuration: 'Duration:',
@@ -73,7 +74,7 @@ const App = () => {
   };
   const [filters, setFilters] = useState(initialFilters);
   
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // Default to false
   const [error, setError] = useState(null);
   const [genresMap, setGenresMap] = useState({});
   
@@ -84,7 +85,7 @@ const App = () => {
   // --- Effects ---
   
   useEffect(() => {
-    if (!TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
+    if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === '22f17214f2c35b01940cdfed47d738c2') return;
     const fetchTMDbRegions = async () => {
         try {
             const response = await fetch(`${TMDB_BASE_URL}/configuration/countries?api_key=${TMDB_API_KEY}`);
@@ -113,21 +114,21 @@ const App = () => {
     }
   }, []);
 
-  // HIGHLIGHT: This is the new, simplified, and correct logic for fetching platforms.
+  // HIGHLIGHT: This is the new, simplified, and correct logic for fetching all platforms.
   useEffect(() => {
-    if (!userRegion || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
+    if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
     
     setFilters(f => ({ ...f, platform: [] }));
 
     const fetchRegionPlatforms = async () => {
         try {
-            const response = await fetch(`${TMDB_BASE_URL}/watch/providers/movie?api_key=${TMDB_API_KEY}&watch_region=${userRegion}`);
+            const response = await fetch(`${TMDB_BASE_URL}/watch/providers/movie?api_key=${TMDB_API_KEY}&watch_region=${userRegion}&monetization_types=flatrate`);
             if (!response.ok) throw new Error('Failed to fetch providers');
             const data = await response.json();
             
             // Get all providers for the region, sort them by the API's recommended priority, and display them.
             const regionalProviders = data.results
-                .sort((a, b) => (a.display_priorities?.[userRegion] ?? 999) - (b.display_priorities?.[userRegion] ?? 999))
+                .sort((a, b) => (a.display_priority ?? 999) - (b.display_priority ?? 999))
                 .map(provider => ({
                     id: provider.provider_id.toString(),
                     name: provider.provider_name
@@ -151,7 +152,7 @@ const App = () => {
   useEffect(() => {
     const langParam = language === 'es' ? 'es-ES' : 'en-US';
     const fetchGenres = async () => {
-      if (!TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
+      if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
       try {
         const response = await fetch(`${TMDB_BASE_URL}/genre/movie/list?api_key=${TMDB_API_KEY}&language=${langParam}`);
         if (!response.ok) throw new Error(`Error loading genres: ${response.statusText}`);
@@ -165,8 +166,16 @@ const App = () => {
     fetchGenres();
   }, [language]);
 
+  // HIGHLIGHT: The main movie fetching effect now requires a platform to be selected.
   useEffect(() => {
-    if (!userRegion || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE' || Object.keys(genresMap).length === 0) return;
+    if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE' || Object.keys(genresMap).length === 0) return;
+
+    // This is the new rule: if no platforms are selected, do nothing.
+    if (filters.platform.length === 0) {
+        setAllMovies([]);
+        setIsLoading(false); // Ensure loading is stopped
+        return;
+    }
 
     const langParam = language === 'es' ? 'es-ES' : 'en-US';
     
@@ -176,11 +185,9 @@ const App = () => {
             providersToQuery.push('1899');
         }
         
-        let baseDiscoverUrl = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${langParam}&vote_count.gte=${voteCount}&watch_region=${userRegion}&watch_monetization_types=flatrate`;
+        let baseDiscoverUrl = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${langParam}&vote_count.gte=${voteCount}&watch_region=${userRegion}&with_watch_monetization_types=flatrate`;
         
-        if (providersToQuery.length > 0) {
-            baseDiscoverUrl += `&with_watch_providers=${providersToQuery.join('|')}`;
-        }
+        baseDiscoverUrl += `&with_watch_providers=${providersToQuery.join('|')}`;
 
         if (filters.genre.length > 0) baseDiscoverUrl += `&with_genres=${filters.genre.join(',')}`;
         if (filters.excludeGenres.length > 0) baseDiscoverUrl += `&without_genres=${filters.excludeGenres.join(',')}`;
@@ -216,7 +223,7 @@ const App = () => {
         try {
             let initialResults = await discoverMovies(100);
 
-            if (initialResults.length === 0 && filters.platform.length > 0) {
+            if (initialResults.length === 0) {
                 console.log("Initial search found no movies. Retrying with ultimate fallback filter (vote_count=0)...");
                 initialResults = await discoverMovies(0); 
             }
@@ -349,6 +356,7 @@ const App = () => {
   const handleRegionChange = (newRegion) => { setUserRegion(newRegion); };
 
   const handleRandomMovie = useCallback(() => {
+    // This button should only be clickable if there are movies, so we don't need to check for empty array.
     const now = Date.now();
     const availableMovies = allMovies.filter(m => !(watchedMovies[m.id] && watchedMovies[m.id] > now));
     let sessionAvailable = availableMovies.filter(m => !sessionShownMovies.has(m.id));
@@ -359,7 +367,7 @@ const App = () => {
     }
     
     if (sessionAvailable.length === 0) { 
-        setSelectedMovie(null); 
+        setSelectedMovie(null);
         return; 
     }
     
@@ -406,8 +414,12 @@ const App = () => {
   };
   
   // --- Render Logic ---
-  if (error) { return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="text-center"><h1 className="text-3xl font-bold text-red-500 mb-4">Error</h1><p className="text-xl">{error}</p></div></div> );}
-  if (!genresMap || Object.keys(genresMap).length === 0 || !userRegion) { return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="loader"></div></div> ); }
+  const isAppReady = genresMap && Object.keys(genresMap).length > 0 && userRegion;
+  if (!isAppReady) {
+    // Initial loading state for fetching genres and region
+    if (error) { return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="text-center"><h1 className="text-3xl font-bold text-red-500 mb-4">Error</h1><p className="text-xl">{error}</p></div></div> );}
+    return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="loader"></div></div> );
+  }
 
   return (
     <div className="min-h-screen p-4 sm:p-8 font-sans app-container relative">
@@ -490,7 +502,6 @@ const App = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.platform}</label>
-            {/* HIGHLIGHT: The platform list is now inside its own scrollable container */}
             <div className="grid grid-cols-2 gap-x-4 gap-y-2 filter-checkbox-list" style={{maxHeight: '200px'}}>
               {platformOptions.length > 0 ? platformOptions.map(p => (
                 <div key={p.id} className="flex items-center">
@@ -512,7 +523,7 @@ const App = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
         </button>
-        <button onClick={handleRandomMovie} disabled={isLoading || allMovies.length === 0}
+        <button onClick={handleRandomMovie} disabled={isLoading || allMovies.length === 0 || filters.platform.length === 0}
           className={`px-8 py-4 bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-150 text-xl disabled:opacity-50 disabled:cursor-not-allowed`}>
           {isLoading ? t.searching : t.surpriseMe}
         </button>
