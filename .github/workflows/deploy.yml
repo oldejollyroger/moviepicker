@@ -27,7 +27,7 @@ jobs:
           # Use sed to find and replace the placeholder text in script.js
           # The -i flag edits the file in-place.
           # The 's|...|...|g' syntax uses pipes as delimiters to avoid issues with special characters.
-          sed -i 's|YOUR_TMDB_API_KEY_HERE|${{ secrets.VITE_TMDB_API_KEY }}|g' script.js
+          sed -i 's|22f17214f2c35b01940cdfed47d738c2|${{ secrets.VITE_TMDB_API_KEY }}|g' script.js
       
       # 3. Sets up the GitHub Pages deployment environment
       - name: Setup Pages 📄
