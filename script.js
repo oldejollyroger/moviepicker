@@ -16,6 +16,14 @@ const CURATED_COUNTRY_LIST = new Set([
   'PT', 'RO', 'RU', 'SA', 'SG', 'ZA', 'KR', 'ES', 'SE', 'CH', 'TW', 'TH', 'TR', 'AE', 'GB', 'US'
 ]);
 
+// HIGHLIGHT: This map links country codes to their primary language code.
+const REGION_LANGUAGE_MAP = {
+    'ES': 'es', 'MX': 'es', 'AR': 'es', 'CL': 'es', 'CO': 'es', 'PE': 'es',
+    'FR': 'fr', 'BE': 'fr', 'CA': 'fr', 'CH': 'fr',
+    'DE': 'de', 'AT': 'de',
+    // Default to English for all others
+};
+
 const THEMES = [
     { id: 'theme-purple', color: '#8b5cf6' },
     { id: 'theme-ocean', color: '#22d3ee' },
@@ -55,15 +63,44 @@ const translations = {
         cardStreamingNotFound: 'Not found on streaming.', cardCast: 'Main Cast:', cardCastNotFound: 'Cast not available.',
         cardMarkAsWatched: "Don't show for 3 months", cardTrailer: 'Trailer', cardTrailerNotFound: 'Trailer not available.',
         cardSimilarMovies: 'Similar Movies', footer: 'Movie data courtesy of',
+    },
+    fr: {
+        title: 'Movie Randomizer', subtitle: 'Que regardons-nous ce soir ?', advancedFilters: 'Filtres Avancés', clearFilters: 'Effacer les filtres',
+        sortBy: 'Trier par :', sortOptions: [ { name: 'Popularité', id: 'popularity.desc' }, { name: 'Meilleure note', id: 'vote_average.desc' }, { name: 'Date de sortie', id: 'primary_release_date.desc' } ],
+        region: 'Pays :', selectRegionPrompt: 'Veuillez sélectionner votre pays pour commencer', platform: 'Plateformes (Optionnel) :', platformSearchPlaceholder: 'Rechercher une plateforme...', includeGenre: 'Inclure les genres :', excludeGenre: 'Exclure les genres :',
+        decade: 'Décennie :', allDecades: 'Toutes', minRating: 'Note minimale :',
+        surpriseMe: 'Surprenez-moi !', goBack: 'Retour', searching: 'Recherche...',
+        searchPlaceholder: 'Ou recherchez un film spécifique...',
+        welcomeMessage: "Ajustez les filtres et cliquez sur 'Surprenez-moi !' pour découvrir un film !",
+        noMoviesFound: 'Aucun film trouvé avec les filtres actuels. Essayez d\'en changer !', cardYear: 'Année :', cardDuration: 'Durée :',
+        cardRating: 'Note TMDb :', cardDirector: 'Réalisateur :', cardGenres: 'Genres :', cardAvailableOn: 'Disponible sur (Abonnement) :',
+        cardAvailableToRent: 'Disponible à la location/achat :',
+        cardStreamingNotFound: 'Non trouvé en streaming.', cardCast: 'Distribution principale :', cardCastNotFound: 'Distribution non disponible.',
+        cardMarkAsWatched: 'Ne plus montrer pendant 3 mois', cardTrailer: 'Bande-annonce', cardTrailerNotFound: 'Bande-annonce non disponible.',
+        cardSimilarMovies: 'Films similaires', footer: 'Données cinématographiques gracieuseté de',
+    },
+    de: {
+        title: 'Movie Randomizer', subtitle: 'Was schauen wir heute Abend?', advancedFilters: 'Erweiterte Filter', clearFilters: 'Filter löschen',
+        sortBy: 'Sortieren nach:', sortOptions: [ { name: 'Popularität', id: 'popularity.desc' }, { name: 'Beste Bewertung', id: 'vote_average.desc' }, { name: 'Veröffentlichungsdatum', id: 'primary_release_date.desc' } ],
+        region: 'Land:', selectRegionPrompt: 'Bitte wählen Sie Ihr Land, um zu beginnen', platform: 'Plattformen (Optional):', platformSearchPlaceholder: 'Plattform suchen...', includeGenre: 'Genres einschließen:', excludeGenre: 'Genres ausschließen:',
+        decade: 'Jahrzehnt:', allDecades: 'Alle', minRating: 'Mindestbewertung:',
+        surpriseMe: 'Überrasch mich!', goBack: 'Zurück', searching: 'Suche...',
+        searchPlaceholder: 'Oder suche nach einem bestimmten Film...',
+        welcomeMessage: "Passen Sie die Filter an und klicken Sie auf 'Überrasch mich!', um einen Film zu entdecken!",
+        noMoviesFound: 'Keine Filme mit den aktuellen Filtern gefunden. Versuchen Sie, sie zu ändern!', cardYear: 'Jahr:', cardDuration: 'Dauer:',
+        cardRating: 'TMDb-Bewertung:', cardDirector: 'Regisseur:', cardGenres: 'Genres:', cardAvailableOn: 'Verfügbar auf (Abonnement):',
+        cardAvailableToRent: 'Zum Mieten/Kaufen verfügbar:',
+        cardStreamingNotFound: 'Nicht im Streaming gefunden.', cardCast: 'Hauptbesetzung:', cardCastNotFound: 'Besetzung nicht verfügbar.',
+        cardMarkAsWatched: '3 Monate nicht anzeigen', cardTrailer: 'Trailer', cardTrailerNotFound: 'Trailer nicht verfügbar.',
+        cardSimilarMovies: 'Ähnliche Filme', footer: 'Filmdaten mit freundlicher Genehmigung von',
     }
 };
 
 const App = () => {
   // --- State Management ---
-  // HIGHLIGHT: language now starts as null to force a choice
-  const [language, setLanguage] = useState(null);
+  const [language, setLanguage] = useState('en'); // Defaults to English, will be updated
   const [theme, setTheme] = useState(() => localStorage.getItem('movieRandomizerTheme') || 'theme-purple');
-  const t = translations[language] || translations['en']; // Default to English if language is not set yet
+  const t = translations[language] || translations['en']; 
   
   const [userRegion, setUserRegion] = useState(null);
   const [availableRegions, setAvailableRegions] = useState([]);
@@ -105,9 +142,6 @@ const App = () => {
   // --- Effects ---
   
   useEffect(() => {
-    // Only run this effect if a language has been chosen
-    if (!language) return;
-
     const initializeApp = async () => {
         if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
             setError("API Key not found or is placeholder. Please check config.js and your deployment secrets.");
@@ -180,7 +214,7 @@ const App = () => {
     setSelectedMovie(null);
     setHasSearched(true);
 
-    const langParam = language === 'es' ? 'es-ES' : 'en-US';
+    const langParam = language === 'es' ? 'es-ES' : language === 'fr' ? 'fr-FR' : language === 'de' ? 'de-DE' : 'en-US';
     
     const fetchPage = async (voteCount) => {
         let providersToQuery = [...filters.platform];
@@ -298,7 +332,8 @@ const App = () => {
 
   const fetchFullMovieDetails = useCallback(async (movieId, lang) => {
     try {
-        const res = await fetch(`${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,videos,watch/providers,keywords,similar`);
+        const langParam = lang === 'es' ? 'es-ES' : lang === 'fr' ? 'fr-FR' : lang === 'de' ? 'de-DE' : 'en-US';
+        const res = await fetch(`${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=${langParam}&append_to_response=credits,videos,watch/providers,keywords,similar`);
         if (!res.ok) throw new Error(`Details: ${res.statusText}`);
         const data = await res.json();
         
@@ -340,10 +375,10 @@ const App = () => {
         const keywords = data.keywords?.keywords || [];
         const companies = data.production_companies || [];
         
-        if (data.belongs_to_collection) await fetchAndAdd(`${TMDB_BASE_URL}/collection/${data.belongs_to_collection.id}?api_key=${TMDB_API_KEY}&language=${lang}`);
-        if (keywords.length > 0) await fetchAndAdd(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${lang}&with_keywords=${keywords[0].id}&sort_by=popularity.desc`);
-        if (companies.length > 0) await fetchAndAdd(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${lang}&with_companies=${companies[0].id}&sort_by=popularity.desc`);
-        if (similarMovies.length < MAX_SIMILAR) await fetchAndAdd(`${TMDB_BASE_URL}/movie/${movieId}/similar?api_key=${TMDB_API_KEY}&language=${lang}`);
+        if (data.belongs_to_collection) await fetchAndAdd(`${TMDB_BASE_URL}/collection/${data.belongs_to_collection.id}?api_key=${TMDB_API_KEY}&language=${langParam}`);
+        if (keywords.length > 0) await fetchAndAdd(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${langParam}&with_keywords=${keywords[0].id}&sort_by=popularity.desc`);
+        if (companies.length > 0) await fetchAndAdd(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${langParam}&with_companies=${companies[0].id}&sort_by=popularity.desc`);
+        if (similarMovies.length < MAX_SIMILAR) await fetchAndAdd(`${TMDB_BASE_URL}/movie/${movieId}/similar?api_key=${TMDB_API_KEY}&language=${langParam}`);
 
         return {
             ...data, 
@@ -363,10 +398,9 @@ const App = () => {
 
   useEffect(() => {
     if (!selectedMovie) return;
-    const langParam = language === 'es' ? 'es-ES' : 'en-US';
     setIsFetchingDetails(true);
     setMovieDetails({});
-    fetchFullMovieDetails(selectedMovie.id, langParam).then(details => {
+    fetchFullMovieDetails(selectedMovie.id, language).then(details => {
         if (details) setMovieDetails(details);
         setIsFetchingDetails(false);
     });
@@ -421,9 +455,16 @@ const App = () => {
       });
       resetSession();
   };
-  const handleLanguageSelect = (lang) => { setLanguage(lang); };
+  const handleLanguageChange = (lang) => { setLanguage(lang); };
   const handleClearFilters = () => { setFilters(initialFilters); resetSession(); };
-  const handleRegionChange = (newRegion) => { setUserRegion(newRegion); };
+  
+  // HIGHLIGHT: This handler now also sets the language based on the selected country.
+  const handleRegionChange = (newRegion) => { 
+    setUserRegion(newRegion);
+    const newLang = REGION_LANGUAGE_MAP[newRegion] || 'en';
+    setLanguage(newLang);
+  };
+
   const handleSearchChange = (e) => { setSearchQuery(e.target.value); };
   
   const handleSearchResultClick = (movie) => {
@@ -441,26 +482,6 @@ const App = () => {
     setSearchQuery('');
     setSearchResults([]);
   };
-
-  const handleRandomMovie = useCallback(() => {
-    const now = Date.now();
-    const availableMovies = allMovies.filter(m => !(watchedMovies[m.id] && watchedMovies[m.id] > now));
-    let sessionAvailable = availableMovies.filter(m => !sessionShownMovies.has(m.id));
-    
-    if (sessionAvailable.length === 0 && availableMovies.length > 0) {
-        setSessionShownMovies(new Set());
-        sessionAvailable = availableMovies;
-    }
-    
-    if (sessionAvailable.length === 0) { setSelectedMovie(null); return; }
-    
-    const newMovie = sessionAvailable[Math.floor(Math.random() * sessionAvailable.length)];
-    if (newMovie) {
-        if(selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]);
-        setSelectedMovie(newMovie);
-        setSessionShownMovies(prevSet => new Set(prevSet).add(newMovie.id));
-    }
-  }, [allMovies, watchedMovies, sessionShownMovies, selectedMovie]);
 
   const handleGoBack = () => {
       if (movieHistory.length === 0) return;
@@ -481,8 +502,7 @@ const App = () => {
   const handleSimilarMovieClick = async (movie) => {
     setIsFetchingModalDetails(true);
     setModalMovie(null);
-    const langParam = language === 'es' ? 'es-ES' : 'en-US';
-    const details = await fetchFullMovieDetails(movie.id, langParam);
+    const details = await fetchFullMovieDetails(movie.id, language);
     setModalMovie(details);
     setIsFetchingModalDetails(false);
   };
@@ -503,14 +523,15 @@ const App = () => {
   };
   
   // --- Render Logic ---
+  // HIGHLIGHT: New initial screen to force language selection
   if (!language) {
     return (
         <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center">
             <div className="text-center max-w-md">
                 <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-6">Select Your Language</h1>
                 <div className="flex justify-center gap-4">
-                    <button onClick={() => handleLanguageSelect('es')} className="px-8 py-3 bg-[var(--color-card-bg)] hover:bg-[var(--color-accent)] rounded-lg font-bold text-lg transition-colors">Español</button>
-                    <button onClick={() => handleLanguageSelect('en')} className="px-8 py-3 bg-[var(--color-card-bg)] hover:bg-[var(--color-accent)] rounded-lg font-bold text-lg transition-colors">English</button>
+                    <button onClick={() => setLanguage('es')} className="px-8 py-3 bg-[var(--color-card-bg)] hover:bg-[var(--color-accent)] rounded-lg font-bold text-lg transition-colors">Español</button>
+                    <button onClick={() => setLanguage('en')} className="px-8 py-3 bg-[var(--color-card-bg)] hover:bg-[var(--color-accent)] rounded-lg font-bold text-lg transition-colors">English</button>
                 </div>
             </div>
         </div>
