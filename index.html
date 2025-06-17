@@ -5,31 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Randomizer</title>
 
-    <!-- PWA links have been REMOVED to fix loading issues -->
+    <!-- HIGHLIGHT: Added a cache-busting version number to the CSS file -->
+    <link rel="stylesheet" href="style.css?v=4.0">
 
-    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- React and Babel Libraries -->
     <script src="https://unpkg.com/react@17/umd/react.development.js" defer></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" defer></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js" defer></script>
-
-    <!-- Google Fonts -->
-     <meta name="google-adsense-account" content="ca-pub-9236124863128436">
-
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9236124863128436"
-     crossorigin="anonymous"></script>
-
-    <!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "cbbedf50dc4e4db2aae172c600c516c4"}'></script><!-- End Cloudflare Web Analytics -->
 </head>
 <body class="bg-[var(--color-bg)] text-[var(--color-text-primary)] transition-colors duration-300">
     
     <div id="root"></div>
 
-    <!-- The config file is loaded first, then the main script. -->
-    <!-- The version number is updated to v3.0 to force a cache refresh. -->
+    <!-- 
+      The config file is loaded first.
+      The ?v=4.0 on script.js forces the browser to download the newest version.
+    -->
     <script src="config.js" defer></script>
-<script type="text/babel" src="script.js?v=4.0" defer></script>
+    <script type="text/babel" src="script.js?v=4.0" defer></script>
 </body>
 </html>
