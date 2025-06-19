@@ -1,9 +1,12 @@
+# --- START: THIS IS THE ONLY CONTENT THAT SHOULD BE IN THIS FILE ---
+
 name: Deploy to GitHub Pages
 
 on:
   push:
     branches: [ main ]
 
+# Allow this job to clone the repo and create a page deployment
 permissions:
   contents: read
   pages: write
@@ -11,24 +14,34 @@ permissions:
 
 jobs:
   build-and-deploy:
+    # HIGHLIGHT: This 'environment' section is the critical fix.
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
+      # 1. Checks out your repository code
       - name: Checkout 🛎️
         uses: actions/checkout@v4
 
-      - name: Replace API Key Placeholder in script.js 🔑
+      # 2. Replaces the API key placeholder in the main script file
+      - name: Replace API Key Placeholder 🔑
         run: |
-          # HIGHLIGHT: We are now editing the main script.js file directly.
           sed -i 's|YOUR_TMDB_API_KEY_HERE|${{ secrets.VITE_TMDB_API_KEY }}|g' script.js
       
+      # 3. Sets up the GitHub Pages deployment environment
       - name: Setup Pages 📄
         uses: actions/configure-pages@v5
 
+      # 4. "Builds" the artifact (prepares the folder for upload)
       - name: Upload artifact 📦
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
       
+      # 5. Deploys the artifact to GitHub Pages
       - name: Deploy to GitHub Pages 🚀
         id: deployment
         uses: actions/deploy-pages@v4
+
+# --- END: THIS IS THE ONLY CONTENT THAT SHOULD BE IN THIS FILE ---
