@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie Randomizer</title>
+    
+    <!-- HIGHLIGHT: Title changed to Movie Picker -->
+    <title>Movie Picker</title>
 
-    <!-- HIGHLIGHT: Added a cache-busting version number to the CSS file -->
-    <link rel="stylesheet" href="style.css?v=4.0">
-
+    <link rel="stylesheet" href="style.css?v=5.0">
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- React and Babel Libraries -->
@@ -19,11 +19,7 @@
     
     <div id="root"></div>
 
-    <!-- 
-      The config file is loaded first.
-      The ?v=4.0 on script.js forces the browser to download the newest version.
-    -->
     <script src="config.js" defer></script>
-    <script type="text/babel" src="script.js" defer></script>
+    <script type="text/babel" src="script.js?v=5.1" defer></script> <!-- Bumped version for cache-busting -->
 </body>
 </html>
