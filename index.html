@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Picker</title>
 
-    <!-- Cache-busting version number for CSS -->
+    <!-- The ?v=1.0 is a cache-buster to ensure users get the new files -->
     <link rel="stylesheet" href="style.css?v=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -13,12 +13,12 @@
     
     <div id="root"></div>
 
-    <!-- Scripts are at the end of the body for robust loading -->
+    <!-- Scripts are loaded at the end of the body for robust performance -->
     <script src="https://unpkg.com/react@17/umd/react.development.js" defer></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" defer></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js" defer></script>
     
-    <!-- The config file is loaded first, then the main script -->
+    <!-- config.js must be loaded before script.js -->
     <script src="config.js" defer></script>
     <script type="text/babel" src="script.js?v=1.0" defer></script> 
 </body>
