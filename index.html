@@ -5,25 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Picker</title>
 
-    <link rel="stylesheet" href="style.css?v=7.0"> <!-- Cache-busting -->
+    <!-- Cache-busting version number for CSS -->
+    <link rel="stylesheet" href="style.css?v=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Scripts have been moved to the end of the body -->
 </head>
 <body class="bg-[var(--color-bg)] text-[var(--color-text-primary)] transition-colors duration-300">
     
     <div id="root"></div>
 
-    <!-- 
-      HIGHLIGHT: All scripts are now at the end of the body.
-      This is the most robust way to ensure they load in the correct order
-      and that the HTML page is ready before they run.
-    -->
-    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Scripts are at the end of the body for robust loading -->
+    <script src="https://unpkg.com/react@17/umd/react.development.js" defer></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" defer></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js" defer></script>
     
-    <!-- Your application script runs last, with a new version number -->
-    <script type="text/babel" src="script.js?v=7.0"></script>
+    <!-- The config file is loaded first, then the main script -->
+    <script src="config.js" defer></script>
+    <script type="text/babel" src="script.js?v=1.0" defer></script> 
 </body>
 </html>
