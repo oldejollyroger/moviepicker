@@ -1,7 +1,8 @@
 // --- React and Hooks ---
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
 
-// --- This script assumes config.js is loaded first and provides TMDB_API_KEY ---
+// --- This script assumes a file named 'config.js' exists and contains:
+// const TMDB_API_KEY = "YOUR_REAL_API_KEY";
 
 // --- Constants ---
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -15,6 +16,8 @@ const CURATED_COUNTRY_LIST = new Set([
   'PT', 'RO', 'RU', 'SA', 'SG', 'ZA', 'KR', 'ES', 'SE', 'CH', 'TW', 'TH', 'TR', 'AE', 'GB', 'US'
 ]);
 
+const USER_REGION_KEY = 'moviePickerUserRegion';
+
 const THEMES = [
     { id: 'theme-purple', color: '#8b5cf6' },
     { id: 'theme-ocean', color: '#22d3ee' },
@@ -27,6 +30,7 @@ const THEMES = [
 const translations = {
     es: {
         title: 'Movie Picker', subtitle: '¿Qué vemos esta noche?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros',
+        showFilters: 'Mostrar Filtros', hideFilters: 'Ocultar Filtros',
         sortBy: 'Ordenar por:', sortOptions: [ { name: 'Popularidad', id: 'popularity.desc' }, { name: 'Mejor Calificación', id: 'vote_average.desc' }, { name: 'Fecha de Estreno', id: 'primary_release_date.desc' } ],
         region: 'País:', selectRegionPrompt: 'Por favor, selecciona tu país para empezar', platform: 'Plataformas (Opcional):', platformSearchPlaceholder: 'Buscar plataforma...', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:',
         decade: 'Década:', allDecades: 'Cualquiera', minRating: 'Calificación Mínima:',
@@ -42,6 +46,7 @@ const translations = {
     },
     en: {
         title: 'Movie Picker', subtitle: "What should we watch tonight?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters',
+        showFilters: 'Show Filters', hideFilters: 'Hide Filters',
         sortBy: 'Sort by:', sortOptions: [ { name: 'Popularity', id: 'popularity.desc' }, { name: 'Top Rated', id: 'vote_average.desc' }, { name: 'Release Date', id: 'primary_release_date.desc' } ],
         region: 'Country:', selectRegionPrompt: 'Please select your country to begin', platform: 'Platforms (Optional):', platformSearchPlaceholder: 'Search platform...', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:',
         decade: 'Decade:', allDecades: 'Any', minRating: 'Minimum Rating:',
@@ -58,12 +63,15 @@ const translations = {
 };
 
 const App = () => {
-  const [language, setLanguage] = useState(null);
+  const [language, setLanguage] = useState('en');
   const [theme, setTheme] = useState(() => localStorage.getItem('movieRandomizerTheme') || 'theme-purple');
   const t = translations[language] || translations['en']; 
-  const [userRegion, setUserRegion] = useState(null);
+  
+  // HIGHLIGHT: userRegion now loads from localStorage or defaults to null
+  const [userRegion, setUserRegion] = useState(() => localStorage.getItem(USER_REGION_KEY) || null);
   const [availableRegions, setAvailableRegions] = useState([]);
   const [platformOptions, setPlatformOptions] = useState([]);
+  
   const [platformSearchQuery, setPlatformSearchQuery] = useState('');
   const [allMovies, setAllMovies] = useState([]);
   const [selectedMovie, setSelectedMovie] = useState(null);
@@ -86,14 +94,19 @@ const App = () => {
   const [isSearching, setIsSearching] = useState(false);
   const searchRef = useRef(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [isFiltersVisible, setIsFiltersVisible] = useState(window.innerWidth > 768);
   const WATCHED_MOVIES_KEY = 'watchedUserMoviesRandomizer_TMDb_v8';
   const [watchedMovies, setWatchedMovies] = useState({});
   const [sessionShownMovies, setSessionShownMovies] = useState(new Set());
 
   useEffect(() => {
-    if (!language) return;
     const initializeApp = async () => {
         setIsLoading(true);
+        if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
+            setError("API Key not found or is placeholder. Please check config.js and your deployment secrets.");
+            setIsLoading(false);
+            return;
+        }
         try {
             const langParam = language === 'es' ? 'es-ES' : 'en-US';
             const [regionsResponse, genresResponse] = await Promise.all([
@@ -118,7 +131,8 @@ const App = () => {
   }, [language]);
 
   useEffect(() => {
-    if (!userRegion) return;
+    if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
+    localStorage.setItem(USER_REGION_KEY, userRegion);
     setFilters(f => ({ ...f, platform: [] }));
     setAllMovies([]);
     setSelectedMovie(null);
@@ -387,45 +401,33 @@ const App = () => {
       return `${hours}h ${minutes}min`;
   };
   
-  if (!language) {
-    return (
-        <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center">
-            <div className="text-center max-w-md">
-                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-6">Select Your Language</h1>
-                <div className="flex justify-center gap-4">
-                    <button onClick={() => handleLanguageSelect('es')} className="px-8 py-3 bg-gray-800 hover:bg-[var(--color-accent)] rounded-lg font-bold text-lg transition-colors">Español</button>
-                    <button onClick={() => handleLanguageSelect('en')} className="px-8 py-3 bg-gray-800 hover:bg-[var(--color-accent)] rounded-lg font-bold text-lg transition-colors">English</button>
-                </div>
-            </div>
-        </div>
-    );
-  }
+  // --- Render Logic ---
+  const isAppReady = genresMap && Object.keys(genresMap).length > 0 && availableRegions.length > 0;
 
-  if (isLoading && availableRegions.length === 0) {
+  if (isLoading && !isAppReady) {
     return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="loader"></div></div> );
   }
   if (error) {
     return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="text-center"><h1 className="text-3xl font-bold text-red-500 mb-4">Error</h1><p className="text-xl">{error}</p></div></div> );
   }
 
-  if (!userRegion) {
-    return (
-        <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center">
-            <div className="text-center max-w-md">
-                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-4">{t.selectRegionPrompt}</h1>
-                <select id="initial-region-filter" onChange={e => handleRegionChange(e.target.value)} defaultValue="" className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]">
-                    <option value="" disabled>-- {t.region} --</option>
-                    {availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}
-                </select>
-            </div>
-        </div>
-    );
-  }
-  
   return (
     <div className="min-h-screen p-4 sm:p-8 font-sans app-container relative">
+      {!userRegion && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="text-center max-w-md w-full glass-card p-8 rounded-2xl">
+            <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-4">{t.selectRegionPrompt}</h1>
+            <select id="initial-region-filter" onChange={e => handleRegionChange(e.target.value)} defaultValue="" className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]">
+              <option value="" disabled>-- {t.region} --</option>
+              {availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}
+            </select>
+          </div>
+        </div>
+      )}
+
       <div className="absolute top-4 right-4 flex items-center gap-4 z-10">
         <div className="flex items-center gap-1 bg-[var(--color-card-bg)] p-1 rounded-full">{THEMES.map(themeOption => (<button key={themeOption.id} onClick={() => setTheme(themeOption.id)} className={`w-6 h-6 rounded-full transition-transform duration-150 ${theme === themeOption.id ? 'scale-125 ring-2 ring-white' : ''}`} style={{backgroundColor: themeOption.color}}></button>))}</div>
+        <div className="flex items-center bg-[var(--color-card-bg)] p-1 rounded-full"><button onClick={() => setLanguage('es')} className={`lang-btn ${language === 'es' ? 'lang-btn-active' : 'lang-btn-inactive'}`}>Español</button><button onClick={() => setLanguage('en')} className={`lang-btn ${language === 'en' ? 'lang-btn-active' : 'lang-btn-inactive'}`}>English</button></div>
       </div>
       <header className="text-center mb-8 pt-16">
         <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)]">{t.title}</h1>
