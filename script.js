@@ -29,7 +29,7 @@ const THEMES = [
 
 const translations = {
     es: {
-        title: 'Movie Picker', subtitle: '¿Qué vemos esta ahora?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros',
+        title: 'Movie Picker', subtitle: '¿Qué vemos ahora?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros',
         showFilters: 'Mostrar Filtros', hideFilters: 'Ocultar Filtros',
         sortBy: 'Ordenar por:', sortOptions: [ { name: 'Popularidad', id: 'popularity.desc' }, { name: 'Mejor Calificación', id: 'vote_average.desc' }, { name: 'Fecha de Estreno', id: 'primary_release_date.desc' } ],
         region: 'País:', selectRegionPrompt: 'Por favor, selecciona tu país para empezar', platform: 'Plataformas (Opcional):', platformSearchPlaceholder: 'Buscar plataforma...', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:',
