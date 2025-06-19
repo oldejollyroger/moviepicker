@@ -29,7 +29,7 @@ const THEMES = [
 
 const translations = {
     es: {
-        title: 'Movie Picker', subtitle: '¿Qué vemos esta noche?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros',
+        title: 'Movie Picker', subtitle: '¿Qué vemos esta ahora?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros',
         showFilters: 'Mostrar Filtros', hideFilters: 'Ocultar Filtros',
         sortBy: 'Ordenar por:', sortOptions: [ { name: 'Popularidad', id: 'popularity.desc' }, { name: 'Mejor Calificación', id: 'vote_average.desc' }, { name: 'Fecha de Estreno', id: 'primary_release_date.desc' } ],
         region: 'País:', selectRegionPrompt: 'Por favor, selecciona tu país para empezar', platform: 'Plataformas (Opcional):', platformSearchPlaceholder: 'Buscar plataforma...', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:',
@@ -45,7 +45,7 @@ const translations = {
         cardSimilarMovies: 'Películas Similares', footer: 'Datos de películas cortesía de',
     },
     en: {
-        title: 'Movie Picker', subtitle: "What should we watch tonight?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters',
+        title: 'Movie Picker', subtitle: "What should we watch next?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters',
         showFilters: 'Show Filters', hideFilters: 'Hide Filters',
         sortBy: 'Sort by:', sortOptions: [ { name: 'Popularity', id: 'popularity.desc' }, { name: 'Top Rated', id: 'vote_average.desc' }, { name: 'Release Date', id: 'primary_release_date.desc' } ],
         region: 'Country:', selectRegionPrompt: 'Please select your country to begin', platform: 'Platforms (Optional):', platformSearchPlaceholder: 'Search platform...', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:',
