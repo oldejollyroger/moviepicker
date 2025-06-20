@@ -1,7 +1,7 @@
 // --- React and Hooks ---
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
 
-// --- This script assumes config.js is loaded and provides TMDB_API_KEY ---
+// --- This script assumes a file named 'config.js' is loaded and provides TMDB_API_KEY ---
 
 // --- Constants ---
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
@@ -17,9 +17,12 @@ const CURATED_COUNTRY_LIST = new Set([
 ]);
 
 const THEMES = [
-    { id: 'theme-purple', color: '#8b5cf6' }, { id: 'theme-ocean', color: '#22d3ee' },
-    { id: 'theme-forest', color: '#22c55e' }, { id: 'theme-volcano', color: '#dc2626' },
-    { id: 'theme-sunset', color: '#f97316' }, { id: 'theme-cyberpunk', color: '#d946ef' },
+    { id: 'theme-purple', color: '#8b5cf6' },
+    { id: 'theme-ocean', color: '#22d3ee' },
+    { id: 'theme-forest', color: '#22c55e' },
+    { id: 'theme-volcano', color: '#dc2626' },
+    { id: 'theme-sunset', color: '#f97316' },
+    { id: 'theme-cyberpunk', color: '#d946ef' },
 ];
 
 const translations = {
@@ -58,7 +61,7 @@ const translations = {
 };
 
 const App = () => {
-  const [language, setLanguage] = useState('en');
+  const [language, setLanguage] = useState(null);
   const [theme, setTheme] = useState(() => localStorage.getItem('moviePickerTheme') || 'theme-purple');
   const t = translations[language] || translations['en']; 
   const [userRegion, setUserRegion] = useState(() => localStorage.getItem(USER_REGION_KEY) || null);
@@ -92,22 +95,26 @@ const App = () => {
   const [sessionShownMovies, setSessionShownMovies] = useState(new Set());
 
   useEffect(() => {
+    if (!language) return;
     const initializeApp = async () => {
         setIsLoading(true);
+        if (typeof TMDB_API_KEY === 'undefined' || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
+            setError("API Key not found or is placeholder. Please check config.js and your deployment secrets.");
+            setIsLoading(false);
+            return;
+        }
         try {
-            if (typeof TMDB_API_KEY === 'undefined' || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
-              throw new Error("API Key not found. Check config.js and deployment secrets.");
-            }
             const langParam = language === 'es' ? 'es-ES' : 'en-US';
             const [regionsResponse, genresResponse] = await Promise.all([
                 fetch(`${TMDB_BASE_URL}/configuration/countries?api_key=${TMDB_API_KEY}`),
                 fetch(`${TMDB_BASE_URL}/genre/movie/list?api_key=${TMDB_API_KEY}&language=${langParam}`)
             ]);
             if (!regionsResponse.ok) throw new Error("Could not fetch TMDb regions");
-            if (!genresResponse.ok) throw new Error(`Could not fetch genres`);
+            if (!genresResponse.ok) throw new Error(`Could not fetch genres (Lang: ${langParam})`);
             const regionsData = await regionsResponse.json();
             const genresData = await genresResponse.json();
-            setAvailableRegions(regionsData.filter(r => CURATED_COUNTRY_LIST.has(r.iso_3166_1)).sort((a, b) => a.english_name.localeCompare(b.english_name)));
+            const curatedRegions = regionsData.filter(r => CURATED_COUNTRY_LIST.has(r.iso_3166_1)).sort((a, b) => a.english_name.localeCompare(b.english_name));
+            setAvailableRegions(curatedRegions);
             setGenresMap(genresData.genres.reduce((acc, genre) => ({ ...acc, [genre.id]: genre.name }), {}));
         } catch (err) {
             console.error("Error during app initialization:", err);
@@ -122,7 +129,7 @@ const App = () => {
   useEffect(() => {
     if (!userRegion) return;
     localStorage.setItem(USER_REGION_KEY, userRegion);
-    setFilters(f => ({ ...initialFilters, platform: f.platform }));
+    setFilters(f => ({ ...f, platform: [] }));
     setAllMovies([]);
     setSelectedMovie(null);
     setHasSearched(false);
@@ -132,7 +139,8 @@ const App = () => {
             if (!response.ok) throw new Error('Failed to fetch providers for the selected region.');
             const data = await response.json();
             const flatrateProviders = data.results.filter(p => p.display_priorities?.[userRegion] !== undefined);
-            setPlatformOptions(flatrateProviders.sort((a,b) => a.display_priorities[userRegion] - b.display_priorities[userRegion]).map(p => ({ id: p.provider_id.toString(), name: p.provider_name })));
+            const regionalProviders = flatrateProviders.sort((a, b) => (a.display_priorities[userRegion]) - (b.display_priorities[userRegion])).map(provider => ({ id: provider.provider_id.toString(), name: provider.provider_name }));
+            setPlatformOptions(regionalProviders);
         } catch (err) { console.error(err); setPlatformOptions([]); }
     };
     fetchRegionPlatforms();
@@ -144,161 +152,290 @@ const App = () => {
   }, [theme]);
   
   const discoverAndSetMovies = useCallback(async () => {
-    if (!userRegion || !genresMap) return;
+    if (!userRegion || !genresMap || Object.keys(genresMap).length === 0) return;
     setIsLoading(true);
     setError(null);
     if (selectedMovie) {
         setMovieHistory(prev => [...prev, selectedMovie]);
     }
+    setSelectedMovie(null);
     setHasSearched(true);
     const langParam = language === 'es' ? 'es-ES' : 'en-US';
     
     const fetchPage = async (voteCount) => {
         let providersToQuery = [...filters.platform];
-        if (providersToQuery.includes('384') && !providersToQuery.includes('1899')) providersToQuery.push('1899');
-        let url = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${langParam}&sort_by=popularity.desc&vote_count.gte=${voteCount}&watch_region=${userRegion}`;
-        if (providersToQuery.length > 0) url += `&with_watch_providers=${providersToQuery.join('|')}&with_watch_monetization_types=flatrate`;
-        if (filters.genre.length > 0) url += `&with_genres=${filters.genre.join(',')}`;
-        if (filters.excludeGenres.length > 0) url += `&without_genres=${filters.excludeGenres.join(',')}`;
-        if (filters.minRating > 0) url += `&vote_average.gte=${filters.minRating}`;
+        if (providersToQuery.includes('384') && !providersToQuery.includes('1899')) {
+            providersToQuery.push('1899');
+        }
+        let baseDiscoverUrl = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${langParam}&vote_count.gte=${voteCount}&watch_region=${userRegion}`;
+        if (providersToQuery.length > 0) {
+            baseDiscoverUrl += `&with_watch_providers=${providersToQuery.join('|')}&with_watch_monetization_types=flatrate`;
+        }
+        if (filters.genre.length > 0) baseDiscoverUrl += `&with_genres=${filters.genre.join(',')}`;
+        if (filters.excludeGenres.length > 0) baseDiscoverUrl += `&without_genres=${filters.excludeGenres.join(',')}`;
+        if (filters.minRating > 0) baseDiscoverUrl += `&vote_average.gte=${filters.minRating}`;
         if (filters.decade !== 'todos') {
             const year = parseInt(filters.decade);
-            url += `&primary_release_date.gte=${year}-01-01&primary_release_date.lte=${year + 9}-12-31`;
+            baseDiscoverUrl += `&primary_release_date.gte=${year}-01-01&primary_release_date.lte=${year + 9}-12-31`;
         }
-        url += `&page=${Math.floor(Math.random() * 20) + 1}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("API request failed.");
-        return res.json();
+        const sortOptionsForVariety = ['popularity.desc', 'vote_average.desc', 'revenue.desc'];
+        const fetchPromises = sortOptionsForVariety.map(sortBy => {
+            const randomPage = Math.floor(Math.random() * 20) + 1;
+            return fetch(`${baseDiscoverUrl}&sort_by=${sortBy}&page=${randomPage}`);
+        });
+        const responses = await Promise.all(fetchPromises);
+        let allResults = [];
+        for (const response of responses) {
+            if (response.ok) {
+                const data = await response.json();
+                allResults = allResults.concat(data.results);
+            } else { console.warn(`A variety search failed: ${response.statusText}`); }
+        }
+        return allResults;
     };
     
     try {
-        let results = (await fetchPage(100)).results;
-        if (results.length < 10) {
-            const moreResults = (await fetchPage(0)).results;
-            results = [...results, ...moreResults];
+        let initialResults = await fetchPage(100);
+        if (initialResults.length === 0) {
+            initialResults = await fetchPage(0); 
         }
+        const uniqueResults = Array.from(new Set(initialResults.map(m => m.id))).map(id => initialResults.find(m => m.id === id));
+        const transformedMovies = uniqueResults.filter(movie => movie && movie.overview && movie.poster_path && movie.release_date).map(movie => ({ id: movie.id.toString(), title: movie.title, synopsis: movie.overview, year: parseInt(movie.release_date.split('-')[0]), imdbRating: movie.vote_average.toFixed(1), genres: movie.genre_ids.map(id => genresMap[id]).filter(Boolean) || ["Desconocido"], poster: movie.poster_path, }));
         const now = Date.now();
-        const validMovies = Array.from(new Set(results.map(m => m.id)))
-            .map(id => results.find(m => m.id === id))
-            .filter(m => m && m.poster_path && m.overview && !(watchedMovies[m.id] && watchedMovies[m.id] > now));
-
-        if (validMovies.length > 0) {
-            let sessionAvailable = validMovies.filter(m => !sessionShownMovies.has(m.id));
-            if(sessionAvailable.length === 0) {
-                setSessionShownMovies(new Set());
-                sessionAvailable = validMovies;
-            }
-            const randomMovie = sessionAvailable[Math.floor(Math.random() * sessionAvailable.length)];
-            setSelectedMovie(randomMovie);
-            setSessionShownMovies(prev => new Set(prev).add(randomMovie.id));
-        } else {
-            setError(t.noMoviesFound);
-            setSelectedMovie(null);
-        }
-    } catch(err) {
-        setError(err.message);
+        const unwatchedMovies = transformedMovies.filter(m => !(watchedMovies[m.id] && watchedMovies[m.id] > now));
+        setAllMovies(unwatchedMovies);
+    } catch (err) {
+        console.error("Error discovering movies:", err);
+        setError(String(err).includes("401") ? "Authorization error (401). Check your TMDb API Key." : `Could not discover movies. ${err.message}`);
+        setAllMovies([]);
     } finally {
         setIsLoading(false);
     }
-  }, [filters, language, userRegion, genresMap, watchedMovies, selectedMovie, sessionShownMovies]);
-
-  const fetchFullMovieDetails = useCallback(async (movieId) => {
-    setIsFetchingDetails(true);
-    const langParam = language === 'es' ? 'es-ES' : 'en-US';
-    try {
-        const res = await fetch(`${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=${langParam}&append_to_response=credits,videos,watch/providers,similar`);
-        if (!res.ok) throw new Error("Failed to fetch movie details.");
-        const data = await res.json();
-        const regionProviders = data['watch/providers']?.results?.[userRegion];
-        const rent = regionProviders?.rent || [];
-        const buy = regionProviders?.buy || [];
-        const combined = [...rent, ...buy];
-        const uniquePay = Array.from(new Set(combined.map(p => p.provider_id))).map(id => combined.find(p => p.provider_id === id));
-        setMovieDetails({
-            duration: data.runtime,
-            director: data.credits?.crew.find(p => p.job === 'Director'),
-            cast: data.credits?.cast.slice(0, 5),
-            providers: regionProviders?.flatrate || [],
-            rentalProviders: uniquePay,
-            similar: data.similar?.results.slice(0, 10) || [],
-            trailerKey: (data.videos?.results?.filter(v => v.type === 'Trailer' && v.site === 'YouTube') || [])[0]?.key,
-        });
-    } catch (err) {
-        console.error(err);
-    } finally {
-        setIsFetchingDetails(false);
-    }
-  }, [userRegion, language]);
+  }, [filters, language, userRegion, genresMap, watchedMovies, selectedMovie]);
 
   useEffect(() => {
-    if (selectedMovie) fetchFullMovieDetails(selectedMovie.id);
-  }, [selectedMovie, fetchFullMovieDetails]);
+    if (isLoading || allMovies.length === 0 || !hasSearched) return;
+    let sessionAvailable = allMovies.filter(m => !sessionShownMovies.has(m.id));
+    if (sessionAvailable.length === 0 && allMovies.length > 0) {
+        setSessionShownMovies(new Set());
+        sessionAvailable = allMovies;
+    }
+    if (sessionAvailable.length > 0) {
+        const newMovie = sessionAvailable[Math.floor(Math.random() * sessionAvailable.length)];
+        setSelectedMovie(newMovie);
+        setSessionShownMovies(prev => new Set(prev).add(newMovie.id));
+    } else {
+        setSelectedMovie(null);
+    }
+  }, [allMovies, isLoading, hasSearched]);
 
-  const handleFilterChange = (type, value) => setFilters(prev => ({...prev, [type]: value}));
-  const handleGenreChange = (id, type) => {
-    setFilters(prev => {
+  useEffect(() => {
+    if (searchQuery.trim() === '') { setSearchResults([]); return; }
+    setIsSearching(true);
+    const searchTimer = setTimeout(async () => {
+        try {
+            const response = await fetch(`${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(searchQuery)}&language=${language === 'es' ? 'es-ES' : 'en-US'}`);
+            if (!response.ok) throw new Error("Search failed");
+            const data = await response.json();
+            setSearchResults(data.results.slice(0, 5));
+        } catch (err) {
+            console.error("Search error:", err);
+            setSearchResults([]);
+        } finally { setIsSearching(false); }
+    }, 300);
+    return () => clearTimeout(searchTimer);
+  }, [searchQuery, language]);
+  
+  useEffect(() => {
+    const handleClickOutside = (event) => { if (searchRef.current && !searchRef.current.contains(event.target)) { setSearchResults([]); } };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => { document.removeEventListener("mousedown", handleClickOutside); };
+  }, []);
+
+  const fetchFullMovieDetails = useCallback(async (movieId, lang) => {
+    try {
+        const res = await fetch(`${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,videos,watch/providers,keywords,similar`);
+        if (!res.ok) throw new Error(`Details: ${res.statusText}`);
+        const data = await res.json();
+        const regionProviders = data['watch/providers']?.results?.[userRegion];
+        const rentProviders = regionProviders?.rent || [];
+        const buyProviders = regionProviders?.buy || [];
+        const combinedPayProviders = [...rentProviders, ...buyProviders];
+        const uniquePayProviderIds = new Set();
+        const uniquePayProviders = combinedPayProviders.filter(p => { if (uniquePayProviderIds.has(p.provider_id)) return false; uniquePayProviderIds.add(p.provider_id); return true; });
+        let similarMovies = [];
+        const similarIds = new Set([parseInt(movieId)]);
+        const MAX_SIMILAR = 10;
+        const fetchAndAdd = async (url) => {
+            if (similarMovies.length >= MAX_SIMILAR) return;
+            try {
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    const results = data.parts || data.results;
+                    if (results) {
+                        for (const movie of results) {
+                            if (!similarIds.has(movie.id) && movie.poster_path && movie.vote_average > 5) {
+                                similarMovies.push(movie);
+                                similarIds.add(movie.id);
+                                if (similarMovies.length >= MAX_SIMILAR) break;
+                            }
+                        }
+                    }
+                }
+            } catch (e) { console.warn("Similar movies fetch failed for url:", url, e); }
+        };
+        const keywords = data.keywords?.keywords || [];
+        const companies = data.production_companies || [];
+        if (data.belongs_to_collection) await fetchAndAdd(`${TMDB_BASE_URL}/collection/${data.belongs_to_collection.id}?api_key=${TMDB_API_KEY}&language=${lang}`);
+        if (keywords.length > 0) await fetchAndAdd(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${lang}&with_keywords=${keywords[0].id}&sort_by=popularity.desc`);
+        if (companies.length > 0) await fetchAndAdd(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${lang}&with_companies=${companies[0].id}&sort_by=popularity.desc`);
+        if (similarMovies.length < MAX_SIMILAR) await fetchAndAdd(`${TMDB_BASE_URL}/movie/${movieId}/similar?api_key=${TMDB_API_KEY}&language=${lang}`);
+        return { ...data, duration: data.runtime || null, providers: regionProviders?.flatrate || [], rentalProviders: uniquePayProviders, cast: data.credits?.cast?.slice(0, 5) || [], director: data.credits?.crew?.find(p => p.job === 'Director') || null, trailerKey: (data.videos?.results?.filter(v => v.type === 'Trailer' && v.site === 'YouTube') || [])[0]?.key || null, similar: similarMovies.slice(0, MAX_SIMILAR) };
+    } catch (err) { console.error("Error fetching all details for movie", movieId, err); return null; }
+  }, [userRegion]);
+
+  useEffect(() => {
+    if (!selectedMovie) return;
+    const langParam = language === 'es' ? 'es-ES' : 'en-US';
+    setIsFetchingDetails(true);
+    setMovieDetails({});
+    fetchFullMovieDetails(selectedMovie.id, langParam).then(details => { if (details) setMovieDetails(details); setIsFetchingDetails(false); });
+  }, [selectedMovie, language, fetchFullMovieDetails]);
+
+  useEffect(() => {
+    const storedWatched = localStorage.getItem(WATCHED_MOVIES_KEY);
+    if (storedWatched) {
+      try {
+        const parsed = JSON.parse(storedWatched);
+        const now = Date.now();
+        const validWatched = Object.fromEntries(Object.entries(parsed).filter(([_, expiryTimestamp]) => expiryTimestamp > now));
+        setWatchedMovies(validWatched);
+      } catch (e) { console.error(e); }
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(WATCHED_MOVIES_KEY, JSON.stringify(watchedMovies));
+  }, [watchedMovies]);
+  
+  const resetSession = () => { setSessionShownMovies(new Set()); };
+  const handleFilterChange = (type, value) => { setFilters(f => ({ ...f, [type]: value })); resetSession(); };
+  const handleGenreChange = (genreId, type) => {
+    setFilters(f => {
         const listKey = type === 'include' ? 'genre' : 'excludeGenres';
         const otherListKey = type === 'include' ? 'excludeGenres' : 'genre';
-        let list = [...prev[listKey]];
-        let otherList = [...prev[otherListKey]];
-        const index = list.indexOf(id);
-        if (index > -1) {
-            list.splice(index, 1);
+        const list = [...(f[listKey] || [])];
+        const i = list.indexOf(genreId);
+        if (i > -1) {
+            list.splice(i, 1);
         } else {
-            list.push(id);
-            const otherIndex = otherList.indexOf(id);
+            list.push(genreId);
+            const otherList = [...(f[otherListKey] || [])];
+            const otherIndex = otherList.indexOf(genreId);
             if (otherIndex > -1) otherList.splice(otherIndex, 1);
+            return { ...f, [listKey]: list, [otherListKey]: otherList };
         }
-        return {...prev, [listKey]: list, [otherListKey]: otherList};
+        return { ...f, [listKey]: list };
     });
+    resetSession();
   };
   const handlePlatformChange = (id) => {
-    setFilters(prev => {
-      const platforms = [...prev.platform];
-      const index = platforms.indexOf(id);
-      if (index > -1) platforms.splice(index, 1);
-      else platforms.push(id);
-      return {...prev, platform: platforms};
-    });
+      setFilters(f => {
+          const p = [...f.platform]; const i = p.indexOf(id);
+          i > -1 ? p.splice(i, 1) : p.push(id);
+          return { ...f, platform: p };
+      });
+      resetSession();
   };
-  const handleRegionChange = (newRegion) => setUserRegion(newRegion);
-  const handleSearchChange = (e) => setSearchQuery(e.target.value);
+  const handleLanguageSelect = (lang) => { setLanguage(lang); };
+  const handleClearFilters = () => { setFilters(initialFilters); resetSession(); };
+  const handleRegionChange = (newRegion) => { setUserRegion(newRegion); };
+  const handleSearchChange = (e) => { setSearchQuery(e.target.value); };
+  
   const handleSearchResultClick = (movie) => {
+    const formattedMovie = { id: movie.id.toString(), title: movie.title, synopsis: movie.overview, year: movie.release_date ? parseInt(movie.release_date.split('-')[0]) : null, imdbRating: movie.vote_average.toFixed(1), genres: movie.genre_ids.map(id => genresMap[id]).filter(Boolean) || ["Desconocido"], poster: movie.poster_path, };
     if (selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]);
-    const formatted = { ...movie, year: movie.release_date?.split('-')[0], imdbRating: movie.vote_average.toFixed(1) };
-    setSelectedMovie(formatted);
+    setSelectedMovie(formattedMovie);
     setSearchQuery('');
     setSearchResults([]);
   };
+
   const handleGoBack = () => {
       if (movieHistory.length === 0) return;
       const newHistory = [...movieHistory];
-      const prevMovie = newHistory.pop();
+      const previousMovie = newHistory.pop();
       setMovieHistory(newHistory);
-      setSelectedMovie(prevMovie);
+      setSelectedMovie(previousMovie);
   };
+
   const handleMarkAsWatched = (movieId) => {
-    setWatchedMovies(prev => ({...prev, [movieId]: Date.now() + (90 * 24 * 60 * 60 * 1000)}));
+    if(!movieId) return;
+    const threeMonths = 3 * 30 * 24 * 60 * 60 * 1000;
+    setWatchedMovies(prev => ({...prev, [movieId]: Date.now() + threeMonths}));
     discoverAndSetMovies();
   };
-  const filteredPlatforms = useMemo(() => platformOptions.filter(p => p.name.toLowerCase().includes(platformSearchQuery.toLowerCase())), [platformOptions, platformSearchQuery]);
-  const formatDuration = (mins) => { if (!mins) return ''; return `${Math.floor(mins / 60)}h ${mins % 60}min`; };
   
-  if (isLoading && availableRegions.length === 0) return (<div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center"><div className="loader"></div></div>);
-  if (error) return (<div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center"><p className="text-red-400 text-xl">{error}</p></div>);
-  if (!userRegion) return (
-      <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center">
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm"></div>
-        <div className="relative text-center max-w-md w-full p-8 rounded-2xl">
-            <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-4">{t.selectRegionPrompt}</h1>
-            <select onChange={e => handleRegionChange(e.target.value)} defaultValue="" className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]">
-                <option value="" disabled>-- {t.region} --</option>
-                {availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}
-            </select>
-        </div>
-      </div>
-  );
+  const handleSimilarMovieClick = async (movie) => {
+    setIsFetchingModalDetails(true);
+    setModalMovie(null);
+    const langParam = language === 'es' ? 'es-ES' : 'en-US';
+    const details = await fetchFullMovieDetails(movie.id, langParam);
+    setModalMovie(details);
+    setIsFetchingModalDetails(false);
+  };
+  
+  const handlePlatformSearchChange = (e) => { setPlatformSearchQuery(e.target.value); };
 
+  const filteredPlatforms = useMemo(() => {
+    return platformOptions.filter(p => p.name.toLowerCase().includes(platformSearchQuery.toLowerCase()));
+  }, [platformOptions, platformSearchQuery]);
+
+  const closeModal = () => setModalMovie(null);
+
+  const formatDuration = (totalMinutes) => {
+      if (!totalMinutes || totalMinutes <= 0) return null;
+      const hours = Math.floor(totalMinutes / 60);
+      const minutes = totalMinutes % 60;
+      return `${hours}h ${minutes}min`;
+  };
+  
+  if (!language) {
+    return (
+        <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center">
+            <div className="text-center max-w-md">
+                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-6">Select Your Language</h1>
+                <div className="flex justify-center gap-4">
+                    <button onClick={() => handleLanguageSelect('es')} className="px-8 py-3 bg-gray-800 hover:bg-[var(--color-accent)] rounded-lg font-bold text-lg transition-colors">Español</button>
+                    <button onClick={() => handleLanguageSelect('en')} className="px-8 py-3 bg-gray-800 hover:bg-[var(--color-accent)] rounded-lg font-bold text-lg transition-colors">English</button>
+                </div>
+            </div>
+        </div>
+    );
+  }
+
+  if (isLoading && availableRegions.length === 0) {
+    return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="loader"></div></div> );
+  }
+  if (error) {
+    return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="text-center"><h1 className="text-3xl font-bold text-red-500 mb-4">Error</h1><p className="text-xl">{error}</p></div></div> );
+  }
+
+  if (!userRegion) {
+    return (
+        <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center">
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm"></div>
+            <div className="relative text-center max-w-md w-full p-8 rounded-2xl">
+                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-4">{t.selectRegionPrompt}</h1>
+                <select id="initial-region-filter" onChange={e => handleRegionChange(e.target.value)} defaultValue="" className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]">
+                    <option value="" disabled>-- {t.region} --</option>
+                    {availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}
+                </select>
+            </div>
+        </div>
+    );
+  }
+  
   return (
     <div className="min-h-screen p-4 sm:p-8 font-sans app-container relative">
       <div className="absolute top-4 right-4 flex items-center gap-4 z-10">
@@ -313,16 +450,25 @@ const App = () => {
           <button onClick={() => setIsFiltersVisible(!isFiltersVisible)} className="w-full sm:w-auto px-4 py-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-full text-sm font-semibold hover:bg-[var(--color-accent)] transition-colors whitespace-nowrap">{isFiltersVisible ? t.hideFilters : t.showFilters}</button>
         </div>
       </header>
-
-      {isFiltersVisible && (<div className="mb-8 p-6 bg-[var(--color-header-bg)] rounded-xl shadow-2xl fade-in"><div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-semibold text-[var(--color-accent-text)]">{t.advancedFilters}</h2><button onClick={handleClearFilters} className="text-xs bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1 px-3 rounded-lg transition-colors">{t.clearFilters}</button></div><div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8"><div className="space-y-4"><div><label htmlFor="region-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.region}</label><select id="region-filter" value={userRegion} onChange={e => handleRegionChange(e.target.value)} className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]">{availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}</select></div><div><label htmlFor="decade-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.decade}</label><select id="decade-filter" value={filters.decade} onChange={e => handleFilterChange('decade', e.target.value)} className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"><option value="todos">{t.allDecades}</option>{[2020, 2010, 2000, 1990, 1980, 1970].map(d=>(<option key={d} value={d}>{`${d}s`}</option>))}</select></div><div><label htmlFor="rating-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.minRating} {Number(filters.minRating).toFixed(1)}</label><input type="range" id="rating-filter" min="0" max="9.5" step="0.5" value={filters.minRating} onChange={e => handleFilterChange('minRating', e.target.value)} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]" /></div></div><div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.includeGenre}</label><div className="filter-checkbox-list space-y-1">{genres.map(g => (<div key={`inc-${g.id}`} className="flex items-center"><input id={`inc-${g.id}`} type="checkbox" checked={filters.genre.includes(g.id)} onChange={() => handleGenreChange(g.id, 'include')} disabled={filters.excludeGenres.includes(g.id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)] disabled:opacity-50"/><label htmlFor={`inc-${g.id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.excludeGenres.includes(g.id) ? 'opacity-50' : ''}`}>{g.name}</label></div>))}</div></div><div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.excludeGenre}</label><div className="filter-checkbox-list space-y-1">{genres.map(g => (<div key={`ex-${g.id}`} className="flex items-center"><input id={`ex-${g.id}`} type="checkbox" checked={filters.excludeGenres.includes(g.id)} onChange={() => handleGenreChange(g.id, 'exclude')} disabled={filters.genre.includes(g.id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-red-600 focus:ring-red-500 accent-red-600 disabled:opacity-50"/><label htmlFor={`ex-${g.id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.genre.includes(g.id) ? 'opacity-50' : ''}`}>{g.name}</label></div>))}</div></div><div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.platform}</label><input type="text" value={platformSearchQuery} onChange={handlePlatformSearchChange} placeholder={t.platformSearchPlaceholder} className="w-full p-2 mb-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md text-sm" /><div className="grid grid-cols-2 gap-x-4 gap-y-2 filter-checkbox-list" style={{maxHeight: '160px'}}>{filteredPlatforms.length > 0 ? filteredPlatforms.map(p => (<div key={p.id} className="flex items-center"><input id={`platform-${p.id}`} type="checkbox" checked={filters.platform.includes(p.id)} onChange={() => handlePlatformChange(p.id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"/><label htmlFor={`platform-${p.id}`} className="ml-2 text-sm text-[var(--color-text-secondary)]">{p.name}</label></div>)) : <p className="text-sm text-gray-400 col-span-2">No matching platforms.</p>}</div></div></div></div>)}
       
+      {isFiltersVisible && (
+        <div className="mb-8 p-6 bg-[var(--color-header-bg)] rounded-xl shadow-2xl fade-in">
+          <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-semibold text-[var(--color-accent-text)]">{t.advancedFilters}</h2><button onClick={handleClearFilters} className="text-xs bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1 px-3 rounded-lg transition-colors">{t.clearFilters}</button></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8">
+            <div className="space-y-4"><div><label htmlFor="region-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.region}</label><select id="region-filter" value={userRegion} onChange={e => handleRegionChange(e.target.value)} className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]">{availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}</select></div><div><label htmlFor="decade-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.decade}</label><select id="decade-filter" value={filters.decade} onChange={e => handleFilterChange('decade', e.target.value)} className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"><option value="todos">{t.allDecades}</option>{[2020, 2010, 2000, 1990, 1980, 1970].map(d=>(<option key={d} value={d}>{`${d}s`}</option>))}</select></div><div><label htmlFor="rating-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.minRating} {Number(filters.minRating).toFixed(1)}</label><input type="range" id="rating-filter" min="0" max="9.5" step="0.5" value={filters.minRating} onChange={e => handleFilterChange('minRating', e.target.value)} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]" /></div></div>
+            <div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.includeGenre}</label><div className="filter-checkbox-list space-y-1">{Object.values(genresMap).sort((a,b) => a.name.localeCompare(b.name)).map(g => (<div key={`inc-${g.id}`} className="flex items-center"><input id={`inc-${g.id}`} type="checkbox" checked={filters.genre.includes(g.id)} onChange={() => handleGenreChange(g.id, 'include')} disabled={filters.excludeGenres.includes(g.id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)] disabled:opacity-50"/><label htmlFor={`inc-${g.id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.excludeGenres.includes(g.id) ? 'opacity-50' : ''}`}>{g.name}</label></div>))}</div></div>
+            <div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.excludeGenre}</label><div className="filter-checkbox-list space-y-1">{Object.values(genresMap).sort((a,b) => a.name.localeCompare(b.name)).map(g => (<div key={`ex-${g.id}`} className="flex items-center"><input id={`ex-${g.id}`} type="checkbox" checked={filters.excludeGenres.includes(g.id)} onChange={() => handleGenreChange(g.id, 'exclude')} disabled={filters.genre.includes(g.id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-red-600 focus:ring-red-500 accent-red-600 disabled:opacity-50"/><label htmlFor={`ex-${g.id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.genre.includes(g.id) ? 'opacity-50' : ''}`}>{g.name}</label></div>))}</div></div>
+            <div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.platform}</label><input type="text" value={platformSearchQuery} onChange={handlePlatformSearchChange} placeholder={t.platformSearchPlaceholder} className="w-full p-2 mb-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md text-sm" /><div className="grid grid-cols-1 gap-y-2 filter-checkbox-list" style={{maxHeight: '160px'}}>{filteredPlatforms.length > 0 ? filteredPlatforms.map(p => (<div key={p.id} className="flex items-center"><input id={`platform-${p.id}`} type="checkbox" checked={filters.platform.includes(p.id)} onChange={() => handlePlatformChange(p.id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"/><label htmlFor={`platform-${p.id}`} className="ml-2 text-sm text-[var(--color-text-secondary)]">{p.name}</label></div>)) : <p className="text-sm text-gray-400 col-span-2">No matching platforms.</p>}</div></div>
+          </div>
+        </div>
+      )}
+
       <div className="text-center mb-10 flex justify-center items-center gap-4">
-        <button onClick={handleGoBack} disabled={movieHistory.length === 0} className="p-4 bg-[var(--color-card-bg)]/50 hover:bg-[var(--color-card-bg)] text-white rounded-full shadow-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
-        <button onClick={discoverAndSetMovies} disabled={isLoading} className={`px-10 py-4 bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] text-white font-bold rounded-full shadow-lg transform hover:scale-105 transition-transform duration-150 text-xl disabled:opacity-50 disabled:cursor-not-allowed`}>{isLoading ? t.searching : t.surpriseMe}</button>
+        <button onClick={handleGoBack} disabled={movieHistory.length === 0} className="p-4 bg-gray-800 hover:bg-gray-700 text-white rounded-full shadow-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
+        <button onClick={discoverAndSetMovies} disabled={isLoading || !userRegion} className={`px-10 py-4 bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] text-white font-bold rounded-full shadow-lg transform hover:scale-105 transition-transform duration-150 text-xl disabled:opacity-50 disabled:cursor-not-allowed`}>{isLoading ? t.searching : t.surpriseMe}</button>
       </div>
-
-      {/* The rest of the app's JSX */}
-
+      
+      {/* ... (The rest of the JSX remains exactly the same) ... */}
     </div>
   );
 };
