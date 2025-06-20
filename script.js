@@ -37,6 +37,7 @@ const translations = {
         cardStreamingNotFound: 'No encontrado en streaming.', cardCast: 'Reparto Principal:', cardCastNotFound: 'Reparto no disponible.',
         cardMarkAsWatched: 'No mostrar por 3 meses', cardTrailer: 'Tráiler', cardTrailerNotFound: 'Tráiler no disponible.',
         cardSimilarMovies: 'Películas Similares', footer: 'Datos de películas cortesía de',
+        shareButton: 'Compartir', shareSuccess: '¡Enlace copiado!',
     },
     en: {
         title: 'Movie Randomizer', subtitle: "What should we watch tonight?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters',
@@ -53,6 +54,7 @@ const translations = {
         cardStreamingNotFound: 'Not found on streaming.', cardCast: 'Main Cast:', cardCastNotFound: 'Cast not available.',
         cardMarkAsWatched: "Don't show for 3 months", cardTrailer: 'Trailer', cardTrailerNotFound: 'Trailer not available.',
         cardSimilarMovies: 'Similar Movies', footer: 'Movie data courtesy of',
+        shareButton: 'Share', shareSuccess: 'Link Copied!',
     }
 };
 
@@ -78,9 +80,9 @@ const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
                 <p><strong className="text-[var(--color-accent-text)]">{t.cardRating}</strong> {movie.imdbRating}/10 ⭐</p>
                 {isFetching ? null : displayDetails.director?.name && <p><strong className="text-[var(--color-accent-text)]">{t.cardDirector}</strong> {displayDetails.director.name}</p>}
                 <p><strong className="text-[var(--color-accent-text)]">{t.cardGenres}</strong> {movie.genres.join(', ')}</p>
-                <div><strong className="text-[var(--color-accent-text)]">{`${t.cardAvailableOn} ${userRegion}`} </strong>{isFetching ? <div className="small-loader"></div> : displayDetails.providers?.length > 0 ? displayDetails.providers.map(p => ( <img key={p.provider_id} src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/> )) : <span className="text-[var(--color-text-secondary)]">{t.cardStreamingNotFound}</span>}</div>
-                {isFetching ? null : displayDetails.rentalProviders?.length > 0 && (<div><strong className="text-[var(--color-accent-text)]">{t.cardAvailableToRent}</strong><div className="mt-1">{displayDetails.rentalProviders.map(p => ( <img key={p.provider_id} src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/> ))}</div></div>)}
-                <div className="mt-4"><strong className="text-[var(--color-accent-text)] block mb-1">{t.cardCast}</strong>{isFetching ? <div className="small-loader"></div> : displayDetails.cast?.length > 0 ? ( <div className="flex flex-wrap gap-x-4 gap-y-2">{displayDetails.cast.map(actor => ( <div key={actor.id} className="flex flex-col items-center text-center w-20"><img src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1"/><span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span></div> ))}</div> ) : <span className="text-xs text-[var(--color-text-secondary)]">{t.cardCastNotFound}</span>}</div>
+                <div><strong className="text-[var(--color-accent-text)]">{`${t.cardAvailableOn} ${userRegion}`} </strong>{isFetching ? <div className="small-loader"></div> : displayDetails.providers?.length > 0 ? displayDetails.providers.map(p => ( <img key={p.provider_id} loading="lazy" src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/> )) : <span className="text-[var(--color-text-secondary)]">{t.cardStreamingNotFound}</span>}</div>
+                {isFetching ? null : displayDetails.rentalProviders?.length > 0 && (<div><strong className="text-[var(--color-accent-text)]">{t.cardAvailableToRent}</strong><div className="mt-1">{displayDetails.rentalProviders.map(p => ( <img key={p.provider_id} loading="lazy" src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/> ))}</div></div>)}
+                <div className="mt-4"><strong className="text-[var(--color-accent-text)] block mb-1">{t.cardCast}</strong>{isFetching ? <div className="small-loader"></div> : displayDetails.cast?.length > 0 ? ( <div className="flex flex-wrap gap-x-4 gap-y-2">{displayDetails.cast.map(actor => ( <div key={actor.id} className="flex flex-col items-center text-center w-20"><img loading="lazy" src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1"/><span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span></div> ))}</div> ) : <span className="text-xs text-[var(--color-text-secondary)]">{t.cardCastNotFound}</span>}</div>
             </div>
         </React.Fragment>
     );
@@ -90,64 +92,64 @@ const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
 // --- Main App Component ---
 const App = () => {
   // --- State Management ---
-  const [language, setLanguage] = useState(null);
+  const [language, setLanguage] = useState(() => localStorage.getItem('movieRandomizerLang') || null);
+  const [userRegion, setUserRegion] = useState(() => localStorage.getItem('movieRandomizerRegion') || null);
   const [theme, setTheme] = useState(() => localStorage.getItem('movieRandomizerTheme') || 'theme-purple');
   const t = translations[language] || translations['en']; 
-  
-  const [userRegion, setUserRegion] = useState(null);
+  const [shareStatus, setShareStatus] = useState('idle'); 
   const [availableRegions, setAvailableRegions] = useState([]);
   const [platformOptions, setPlatformOptions] = useState([]);
   const [platformSearchQuery, setPlatformSearchQuery] = useState('');
-
   const [allMovies, setAllMovies] = useState([]);
   const [selectedMovie, setSelectedMovie] = useState(null);
   const [movieHistory, setMovieHistory] = useState([]);
-  
   const [movieDetails, setMovieDetails] = useState({});
   const [isFetchingDetails, setIsFetchingDetails] = useState(false);
-  
   const [modalMovie, setModalMovie] = useState(null);
   const [isFetchingModalDetails, setIsFetchingModalDetails] = useState(false);
-  
   const initialFilters = { genre: [], excludeGenres: [], decade: 'todos', platform: [], sortBy: 'popularity.desc', minRating: 0 };
   const [filters, setFilters] = useState(initialFilters);
-  
   const [isLoading, setIsLoading] = useState(true);
-  const [isDiscovering, setIsDiscovering] = useState(false); // For "Surprise Me" button specifically
+  const [isDiscovering, setIsDiscovering] = useState(false);
   const [error, setError] = useState(null);
   const [genresMap, setGenresMap] = useState({});
-  
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const searchRef = useRef(null);
-  
   const [hasSearched, setHasSearched] = useState(false);
   const [isFiltersVisible, setIsFiltersVisible] = useState(window.innerWidth > 768);
-
   const WATCHED_MOVIES_KEY = 'watchedUserMoviesRandomizer_TMDb_v8';
   const [watchedMovies, setWatchedMovies] = useState({});
   const [sessionShownMovies, setSessionShownMovies] = useState(new Set());
-
+  const cardRef = useRef(null);
+  
   // --- Effects ---
   
-  // FIX: Make filter visibility responsive to window resizing
   useEffect(() => {
     const handleResize = () => setIsFiltersVisible(window.innerWidth > 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Effect to set the language on the <html> tag for CSS and accessibility
   useEffect(() => {
     if (language) {
+      localStorage.setItem('movieRandomizerLang', language);
       document.documentElement.lang = language;
     }
   }, [language]);
     
-  // Initialize app data (genres, regions) when language is set
   useEffect(() => {
-    if (!language) return;
+    if (userRegion) {
+      localStorage.setItem('movieRandomizerRegion', userRegion);
+    }
+  }, [userRegion]);
+    
+  useEffect(() => {
+    if (!language) {
+        setIsLoading(false);
+        return;
+    }
 
     const initializeApp = async () => {
         setIsLoading(true);
@@ -187,14 +189,31 @@ const App = () => {
     initializeApp();
   }, [language]);
   
-  // Fetch platforms when user region changes
+  const handleSurpriseMe = useCallback(() => {
+    const availableMovies = allMovies.filter(m => !sessionShownMovies.has(m.id));
+
+    if (availableMovies.length > 0) {
+      const newMovie = availableMovies[Math.floor(Math.random() * availableMovies.length)];
+      if (selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]);
+      setSelectedMovie(newMovie);
+      setSessionShownMovies(prev => new Set(prev).add(newMovie.id));
+    } else {
+      fetchNewMovieBatch();
+    }
+  }, [allMovies, sessionShownMovies, selectedMovie, fetchNewMovieBatch]);
+
   useEffect(() => {
     if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY) return;
+
+    if (allMovies.length === 0 && !hasSearched) {
+        handleSurpriseMe();
+    }
     
     setFilters(f => ({ ...f, platform: [] }));
-    setAllMovies([]);
-    setSelectedMovie(null);
-    setHasSearched(false);
+    if (!hasSearched) {
+        setAllMovies([]);
+        setSelectedMovie(null);
+    }
 
     const fetchRegionPlatforms = async () => {
         try {
@@ -211,16 +230,13 @@ const App = () => {
         } catch (err) { console.error(err); setPlatformOptions([]); }
     };
     fetchRegionPlatforms();
-  }, [userRegion]);
+  }, [userRegion, hasSearched]);
 
-
-  // Apply theme class to document and save to localStorage
   useEffect(() => {
     document.documentElement.className = theme;
     localStorage.setItem('movieRandomizerTheme', theme);
   }, [theme]);
   
-  // FIX: Renamed discoverAndSetMovies to fetchNewMovieBatch for clarity
   const fetchNewMovieBatch = useCallback(async () => {
     if (!userRegion || !genresMap || Object.keys(genresMap).length === 0) return;
 
@@ -234,8 +250,6 @@ const App = () => {
     
     const fetchPage = async (voteCount) => {
         let providersToQuery = [...filters.platform];
-        // FIX: Add comment explaining the logic
-        // If HBO Max (384) is selected, also query for Max (1899) due to the service rebranding.
         if (providersToQuery.includes('384') && !providersToQuery.includes('1899')) {
             providersToQuery.push('1899');
         }
@@ -256,12 +270,10 @@ const App = () => {
             return fetch(`${baseDiscoverUrl}&sort_by=${sortBy}&page=${randomPage}`);
         });
         
-        // FIX: Use Promise.allSettled for resilience
         const results = await Promise.allSettled(fetchPromises);
         let allResults = [];
         for (const result of results) {
             if (result.status === 'fulfilled' && result.value.ok) {
-                // Must await the .json() call here
                 const data = await result.value.json();
                 allResults = allResults.concat(data.results);
             } else { 
@@ -306,7 +318,6 @@ const App = () => {
     }
   }, [filters, language, userRegion, genresMap, watchedMovies, selectedMovie]);
 
-  // Debounced search for specific movies
   useEffect(() => {
     if (searchQuery.trim() === '') {
         setSearchResults([]);
@@ -331,7 +342,6 @@ const App = () => {
     return () => clearTimeout(searchTimer);
   }, [searchQuery, language]);
   
-  // Close search results on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
         if (searchRef.current && !searchRef.current.contains(event.target)) {
@@ -344,7 +354,6 @@ const App = () => {
     };
   }, []);
 
-  // Fetch all details for a specific movie ID
   const fetchFullMovieDetails = useCallback(async (movieId, lang) => {
     try {
         const res = await fetch(`${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,videos,watch/providers,keywords,similar`);
@@ -382,7 +391,14 @@ const App = () => {
     }
   }, [userRegion]);
 
-  // Fetch details when a new movie is selected
+  useEffect(() => {
+    if (selectedMovie && cardRef.current) {
+      cardRef.current.classList.remove('movie-card-enter');
+      setTimeout(() => cardRef.current.classList.add('movie-card-enter'), 10);
+    }
+    setShareStatus('idle');
+  }, [selectedMovie]);
+
   useEffect(() => {
     if (!selectedMovie) return;
     const langParam = language === 'es' ? 'es-ES' : 'en-US';
@@ -394,7 +410,6 @@ const App = () => {
     });
   }, [selectedMovie, language, fetchFullMovieDetails]);
 
-  // Load/save watched movies from/to localStorage
   useEffect(() => {
     const storedWatched = localStorage.getItem(WATCHED_MOVIES_KEY);
     if (storedWatched) {
@@ -473,32 +488,34 @@ const App = () => {
       setSelectedMovie(previousMovie);
       if(selectedMovie) setSessionShownMovies(prev => new Set(prev).add(selectedMovie.id));
   };
-  
-  // FIX: New "Surprise Me!" handler logic
-  const handleSurpriseMe = useCallback(() => {
-    const availableMovies = allMovies.filter(m => !sessionShownMovies.has(m.id));
-
-    if (availableMovies.length > 0) {
-      // If we have unused movies in our current batch, just pick one
-      const newMovie = availableMovies[Math.floor(Math.random() * availableMovies.length)];
-      if (selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]);
-      setSelectedMovie(newMovie);
-      setSessionShownMovies(prev => new Set(prev).add(newMovie.id));
-    } else {
-      // If we've run out, fetch a new batch
-      fetchNewMovieBatch();
-    }
-  }, [allMovies, sessionShownMovies, selectedMovie, fetchNewMovieBatch]);
 
   const handleMarkAsWatched = (movieId) => {
     if(!movieId) return;
     const threeMonths = 3 * 30 * 24 * 60 * 60 * 1000;
     setWatchedMovies(prev => ({...prev, [movieId]: Date.now() + threeMonths}));
-    // Remove the movie from the current session and get a new one immediately
     setAllMovies(prev => prev.filter(m => m.id !== movieId));
     handleSurpriseMe();
   };
   
+  const handleShare = useCallback(() => {
+    if (!selectedMovie) return;
+    const movieUrl = `https://www.themoviedb.org/movie/${selectedMovie.id}`;
+    const shareData = {
+        title: selectedMovie.title,
+        text: `Check out this movie I found: ${selectedMovie.title}`,
+        url: movieUrl
+    };
+
+    if (navigator.share) {
+        navigator.share(shareData).catch(err => console.error("Couldn't share", err));
+    } else {
+        navigator.clipboard.writeText(movieUrl).then(() => {
+            setShareStatus('success');
+            setTimeout(() => setShareStatus('idle'), 2000);
+        });
+    }
+  }, [selectedMovie]);
+
   const handleSimilarMovieClick = async (movie) => {
     setIsFetchingModalDetails(true);
     setModalMovie(null);
@@ -563,7 +580,7 @@ const App = () => {
         <div className="flex items-center gap-1 bg-[var(--color-card-bg)] p-1 rounded-full">{THEMES.map(themeOption => (<button key={themeOption.id} onClick={() => setTheme(themeOption.id)} className={`w-6 h-6 rounded-full transition-transform duration-150 ${theme === themeOption.id ? 'scale-125 ring-2 ring-white' : ''}`} style={{backgroundColor: themeOption.color}}></button>))}</div>
         <div className="flex items-center bg-[var(--color-card-bg)] p-1 rounded-full"><button onClick={() => setLanguage('es')} className={`lang-btn ${language === 'es' ? 'lang-btn-active' : 'lang-btn-inactive'}`}>Español</button><button onClick={() => setLanguage('en')} className={`lang-btn ${language === 'en' ? 'lang-btn-active' : 'lang-btn-inactive'}`}>English</button></div>
       </div>
-      <header className="text-center mb-4 pt-16"><h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)]">{t.title}</h1><h2 className="text-xl sm:text-2xl text-[var(--color-text-secondary)] mt-2">{t.subtitle}</h2><div className="max-w-xl mx-auto mt-6 flex flex-col sm:flex-row items-center gap-4"><div ref={searchRef} className="relative w-full sm:flex-grow"><input type="text" value={searchQuery} onChange={handleSearchChange} placeholder={t.searchPlaceholder} className="w-full p-3 pl-10 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-full focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"/><div className="absolute top-0 left-0 inline-flex items-center p-3">{isSearching ? <div className="small-loader !m-0 !w-5 !h-5"></div> : <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>}</div>{searchResults.length > 0 && (<ul className="absolute w-full mt-2 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg shadow-lg z-20 max-h-80 overflow-y-auto">{searchResults.map(movie => (<li key={movie.id} onClick={() => handleSearchResultClick(movie)} className="p-3 hover:bg-[var(--color-bg)] cursor-pointer flex items-center gap-4"><img src={movie.poster_path ? `${TMDB_THUMBNAIL_BASE_URL}${movie.poster_path}` : 'https://placehold.co/92x138/4A5568/FFFFFF?text=?'} alt={movie.title} className="w-12 h-auto rounded-md" /><div className="text-left"><p className="font-semibold text-[var(--color-text-primary)]">{movie.title}</p><p className="text-sm text-[var(--color-text-secondary)]">{movie.release_date?.split('-')[0]}</p></div></li>))}</ul>)}</div>
+      <header className="text-center mb-4 pt-16"><h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)]">{t.title}</h1><h2 className="text-xl sm:text-2xl text-[var(--color-text-secondary)] mt-2">{t.subtitle}</h2><div className="max-w-xl mx-auto mt-6 flex flex-col sm:flex-row items-center gap-4"><div ref={searchRef} className="relative w-full sm:flex-grow"><input type="text" value={searchQuery} onChange={handleSearchChange} placeholder={t.searchPlaceholder} className="w-full p-3 pl-10 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-full focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"/><div className="absolute top-0 left-0 inline-flex items-center p-3">{isSearching ? <div className="small-loader !m-0 !w-5 !h-5"></div> : <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>}</div>{searchResults.length > 0 && (<ul className="absolute w-full mt-2 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg shadow-lg z-20 max-h-80 overflow-y-auto">{searchResults.map(movie => (<li key={movie.id} onClick={() => handleSearchResultClick(movie)} className="p-3 hover:bg-[var(--color-bg)] cursor-pointer flex items-center gap-4"><img loading="lazy" src={movie.poster_path ? `${TMDB_THUMBNAIL_BASE_URL}${movie.poster_path}` : 'https://placehold.co/92x138/4A5568/FFFFFF?text=?'} alt={movie.title} className="w-12 h-auto rounded-md" /><div className="text-left"><p className="font-semibold text-[var(--color-text-primary)]">{movie.title}</p><p className="text-sm text-[var(--color-text-secondary)]">{movie.release_date?.split('-')[0]}</p></div></li>))}</ul>)}</div>
           <button onClick={() => setIsFiltersVisible(!isFiltersVisible)} className="w-full sm:w-auto px-4 py-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-full text-sm font-semibold hover:bg-[var(--color-accent)] transition-colors whitespace-nowrap">{isFiltersVisible ? t.hideFilters : t.showFilters}</button>
         </div>
       </header>
@@ -586,19 +603,33 @@ const App = () => {
       </div>
       
       {selectedMovie ? ( 
-          <div className="max-w-4xl mx-auto bg-[var(--color-card-bg)] rounded-xl shadow-2xl overflow-hidden mb-10">
+          <div ref={cardRef} className="max-w-4xl mx-auto bg-[var(--color-card-bg)] rounded-xl shadow-2xl overflow-hidden mb-10">
               <div className="flex flex-col sm:flex-row">
                   <div className="sm:w-1/3 flex-shrink-0">
-                      <img className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${selectedMovie.poster}`} alt={`Poster for ${selectedMovie.title}`}/>
+                      <img loading="lazy" className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${selectedMovie.poster}`} alt={`Poster for ${selectedMovie.title}`}/>
                   </div>
                   <div className="p-6 sm:p-8 sm:w-2/3">
                       <MovieCardContent movie={selectedMovie} details={movieDetails} isFetching={isFetchingDetails} t={t} userRegion={userRegion} />
-                      <button onClick={() => handleMarkAsWatched(selectedMovie.id)} className="mt-8 w-full py-3 px-4 bg-red-600/80 hover:bg-red-600 text-white font-bold rounded-lg shadow-md transition-colors">{t.cardMarkAsWatched}</button>
+                      <div className="mt-8 flex gap-4">
+                         <button onClick={() => handleMarkAsWatched(selectedMovie.id)} className="w-full py-3 px-4 bg-red-600/80 hover:bg-red-600 text-white font-bold rounded-lg shadow-md transition-colors">{t.cardMarkAsWatched}</button>
+                         <button onClick={handleShare} className="w-full py-3 px-4 bg-blue-600/80 hover:bg-blue-600 text-white font-bold rounded-lg shadow-md transition-colors">
+                           {shareStatus === 'success' ? t.shareSuccess : t.shareButton}
+                         </button>
+                      </div>
                   </div>
               </div>
               <div className="p-6 bg-[var(--color-bg)] border-t border-[var(--color-border)]">
                   <h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-3">{t.cardSimilarMovies}</h3>
-                  {isFetchingDetails ? <div className="flex justify-center"><div className="small-loader"></div></div> :  movieDetails.similar?.length > 0 ? ( <div className="grid grid-cols-3 md:grid-cols-5 gap-4 place-items-center">{movieDetails.similar.map(movie => ( <button key={movie.id} onClick={() => handleSimilarMovieClick(movie)} className="w-full text-center hover:scale-105 transition-transform duration-150 group"><img src={movie.poster_path ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}` : 'https://placehold.co/200x300/4A5568/FFFFFF?text=No+Poster'} alt={movie.title} className="rounded-lg mb-1 w-full h-auto object-cover"/><span className="text-xs text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-text)] transition-colors">{movie.title}</span></button> ))}</div> ) : <p className="text-[var(--color-text-secondary)] text-sm">{t.noMoviesFound}</p>}
+                  {isFetchingDetails ? <div className="flex justify-center"><div className="small-loader"></div></div> :  movieDetails.similar?.length > 0 ? ( 
+                      <div className="horizontal-scroll-container">
+                          {movieDetails.similar.map(movie => ( 
+                              <button key={movie.id} onClick={() => handleSimilarMovieClick(movie)} className="text-center hover:scale-105 transition-transform duration-150 group">
+                                  <img loading="lazy" src={movie.poster_path ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}` : 'https://placehold.co/200x300/4A5568/FFFFFF?text=No+Poster'} alt={movie.title} className="rounded-lg mb-1 w-full h-auto object-cover"/>
+                                  <span className="text-xs text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-text)] transition-colors">{movie.title}</span>
+                              </button> 
+                          ))}
+                      </div> 
+                  ) : <p className="text-[var(--color-text-secondary)] text-sm">{t.noMoviesFound}</p>}
               </div>
               {(isFetchingDetails || movieDetails.trailerKey) && ( <div className="p-6 bg-[var(--color-card-bg)]/50"><h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-2">{t.cardTrailer}</h3>{isFetchingDetails ? <div className="small-loader"></div> : movieDetails.trailerKey ? <div className="trailer-responsive rounded-lg overflow-hidden"><iframe src={`https://www.youtube.com/embed/${movieDetails.trailerKey}`} title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe></div> : <p className="text-[var(--color-text-secondary)]">{t.cardTrailerNotFound}</p>}</div> )}
           </div> ) : ( <div className="text-center text-gray-400 mt-10 text-lg">{hasSearched && allMovies.length === 0 && !isDiscovering ? t.noMoviesFound : !hasSearched && t.welcomeMessage}</div> )}
@@ -607,7 +638,7 @@ const App = () => {
         <div className="max-w-4xl mx-auto rounded-xl shadow-2xl overflow-hidden">
             <div className="flex flex-col sm:flex-row">
                 <div className="sm:w-1/3 flex-shrink-0">
-                    <img className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${modalMovie.poster_path}`} alt={`Poster for ${modalMovie.title}`}/>
+                    <img loading="lazy" className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${modalMovie.poster_path}`} alt={`Poster for ${modalMovie.title}`}/>
                 </div>
                 <div className="p-6 sm:p-8 sm:w-2/3">
                     <MovieCardContent

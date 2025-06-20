@@ -102,3 +102,42 @@ body, #root { min-height: 100vh; }
 .filter-checkbox-list::-webkit-scrollbar { width: 8px; }
 .filter-checkbox-list::-webkit-scrollbar-track { background: var(--color-bg); }
 .filter-checkbox-list::-webkit-scrollbar-thumb { background-color: var(--color-border); border-radius: 10px; border: 2px solid var(--color-bg); }
+/* Add these new classes to the bottom of your style.css file */
+
+/* For the movie card fade-in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.movie-card-enter {
+  animation: fadeIn 0.5s ease-in-out forwards;
+}
+
+/* For the horizontally-scrolling similar movies section */
+.horizontal-scroll-container {
+    display: flex;
+    overflow-x: auto;
+    gap: 1rem; /* 16px */
+    padding-bottom: 1rem; /* Space for the scrollbar */
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: var(--color-border) var(--color-bg); /* Firefox */
+}
+
+.horizontal-scroll-container::-webkit-scrollbar {
+    height: 8px;
+}
+.horizontal-scroll-container::-webkit-scrollbar-track {
+    background: var(--color-bg);
+    border-radius: 10px;
+}
+.horizontal-scroll-container::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: 10px;
+    border: 2px solid var(--color-bg);
+}
+
+.horizontal-scroll-container > button {
+    flex-shrink: 0; /* Prevents items from shrinking */
+    width: 120px; /* Example width, adjust as needed */
+}
