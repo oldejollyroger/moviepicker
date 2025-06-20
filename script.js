@@ -298,7 +298,6 @@ const App = () => {
     }
   }, [allMovies, sessionShownMovies, selectedMovie, fetchNewMovieBatch]);
 
-  // This effect now only fetches platform data when the region changes.
   useEffect(() => {
     if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY) return;
     
@@ -436,10 +435,19 @@ const App = () => {
   }, [watchedMovies]);
   
   // --- Handlers ---
-  const resetSession = () => { setSessionShownMovies(new Set()); setMovieHistory([]); };
+  
+  // HIGHLIGHT: A new, centralized function to reset the search state.
+  const resetSearchState = () => {
+    setAllMovies([]);
+    setSelectedMovie(null);
+    setHasSearched(false);
+    setMovieHistory([]);
+    setSessionShownMovies(new Set());
+  };
+
   const handleFilterChange = (type, value) => {
     setFilters(f => ({ ...f, [type]: value }));
-    resetSession(); 
+    resetSearchState();
   };
   const handleGenreChange = (genreId, type) => {
     setFilters(f => {
@@ -463,7 +471,7 @@ const App = () => {
         }
         return { ...f, [type]: newCurrentList, [otherType]: newOtherList };
     });
-    resetSession();
+    resetSearchState();
   };
   const handlePlatformChange = (id) => {
       setFilters(f => {
@@ -472,16 +480,14 @@ const App = () => {
           i > -1 ? p.splice(i, 1) : p.push(id);
           return { ...f, platform: p };
       });
-      resetSession();
+      resetSearchState();
   };
-  const handleLanguageSelect = (lang) => { setLanguage(lang); };
   const handleClearFilters = () => {
       setFilters(initialFilters);
-      setAllMovies([]);
-      setSelectedMovie(null);
-      setHasSearched(false);
-      resetSession();
+      resetSearchState();
   };
+  
+  const handleLanguageSelect = (lang) => { setLanguage(lang); };
   const handleRegionChange = (newRegion) => { setUserRegion(newRegion); };
   const handleSearchChange = (e) => { setSearchQuery(e.target.value); };
   
