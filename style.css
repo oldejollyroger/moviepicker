@@ -141,3 +141,6 @@ body, #root { min-height: 100vh; }
     flex-shrink: 0; /* Prevents items from shrinking */
     width: 120px; /* Example width, adjust as needed */
 }
+.poster-container {
+    position: relative;
+}

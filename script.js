@@ -35,7 +35,7 @@ const translations = {
         cardRating: 'Nota TMDb:', cardDirector: 'Director:', cardGenres: 'Géneros:', cardAvailableOn: 'Disponible en (Suscripción):',
         cardAvailableToRent: 'Disponible para Alquilar/Comprar:',
         cardStreamingNotFound: 'No encontrado en streaming.', cardCast: 'Reparto Principal:', cardCastNotFound: 'Reparto no disponible.',
-        cardMarkAsWatched: 'No mostrar por 3 meses', cardTrailer: 'Tráiler', cardTrailerNotFound: 'Tráiler no disponible.',
+        cardMarkAsWatched: 'No mostrar por 3 meses', cardTrailer: 'Ver Tráiler', cardTrailerNotFound: 'Tráiler no disponible.',
         cardSimilarMovies: 'Películas Similares', footer: 'Datos de películas cortesía de',
         shareButton: 'Compartir', shareSuccess: '¡Enlace copiado!',
     },
@@ -52,7 +52,7 @@ const translations = {
         cardRating: 'TMDb Rating:', cardDirector: 'Director:', cardGenres: 'Genres:', cardAvailableOn: 'Available on (Subscription):',
         cardAvailableToRent: 'Available for Rent or Buy:',
         cardStreamingNotFound: 'Not found on streaming.', cardCast: 'Main Cast:', cardCastNotFound: 'Cast not available.',
-        cardMarkAsWatched: "Don't show for 3 months", cardTrailer: 'Trailer', cardTrailerNotFound: 'Trailer not available.',
+        cardMarkAsWatched: "Don't show for 3 months", cardTrailer: 'Watch Trailer', cardTrailerNotFound: 'Trailer not available.',
         cardSimilarMovies: 'Similar Movies', footer: 'Movie data courtesy of',
         shareButton: 'Share', shareSuccess: 'Link Copied!',
     }
@@ -90,7 +90,6 @@ const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
 // --- Main App Component ---
 const App = () => {
   // --- State Management ---
-  // HIGHLIGHT: Language now defaults to 'en' but is loaded from storage.
   const [language, setLanguage] = useState(() => localStorage.getItem('movieRandomizerLang') || 'en');
   const [userRegion, setUserRegion] = useState(() => localStorage.getItem('movieRandomizerRegion') || null);
   const [theme, setTheme] = useState(() => localStorage.getItem('movieRandomizerTheme') || 'theme-purple');
@@ -106,6 +105,9 @@ const App = () => {
   const [isFetchingDetails, setIsFetchingDetails] = useState(false);
   const [modalMovie, setModalMovie] = useState(null);
   const [isFetchingModalDetails, setIsFetchingModalDetails] = useState(false);
+  
+  // HIGHLIGHT: New state for the trailer modal
+  const [isTrailerModalOpen, setIsTrailerModalOpen] = useState(false);
   
   const initialFilters = { genre: [], excludeGenres: [], decade: 'todos', platform: [], sortBy: 'popularity.desc', minRating: 0 };
   const [filters, setFilters] = useState(() => {
@@ -552,6 +554,10 @@ const App = () => {
   }, [platformOptions, platformSearchQuery]);
 
   const closeModal = () => setModalMovie(null);
+  
+  // HIGHLIGHT: New handlers for the trailer modal
+  const openTrailerModal = () => setIsTrailerModalOpen(true);
+  const closeTrailerModal = () => setIsTrailerModalOpen(false);
 
   // --- Render Logic ---
   
@@ -587,7 +593,6 @@ const App = () => {
 
       <div className="text-center mb-10 flex justify-center items-center gap-4">
         <button onClick={handleGoBack} disabled={movieHistory.length === 0} className="p-4 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg shadow-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
-        {/* HIGHLIGHT: The main button is now also disabled if no country is selected */}
         <button 
             onClick={handleSurpriseMe} 
             disabled={isDiscovering || !userRegion} 
@@ -601,8 +606,16 @@ const App = () => {
       {selectedMovie ? ( 
           <div ref={cardRef} className="max-w-4xl mx-auto bg-[var(--color-card-bg)] rounded-xl shadow-2xl overflow-hidden mb-10">
               <div className="flex flex-col sm:flex-row">
-                  <div className="sm:w-1/3 flex-shrink-0">
+                  {/* HIGHLIGHT: The poster container now has a relative class */}
+                  <div className="sm:w-1/3 flex-shrink-0 relative poster-container">
                       <img loading="lazy" className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${selectedMovie.poster}`} alt={`Poster for ${selectedMovie.title}`}/>
+                      {/* HIGHLIGHT: New trailer button overlays the poster */}
+                      {!isFetchingDetails && movieDetails.trailerKey && (
+                        <button onClick={openTrailerModal} className="absolute bottom-4 left-1/2 -translate-x-1/2 w-3/4 bg-black/60 backdrop-blur-sm text-white font-bold py-2 px-4 rounded-full hover:bg-white/20 transition-all duration-300 flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                            {t.cardTrailer}
+                        </button>
+                      )}
                   </div>
                   <div className="p-6 sm:p-8 sm:w-2/3">
                       <MovieCardContent movie={selectedMovie} details={movieDetails} isFetching={isFetchingDetails} t={t} userRegion={userRegion} />
@@ -627,7 +640,7 @@ const App = () => {
                       </div> 
                   ) : <p className="text-[var(--color-text-secondary)] text-sm">{t.noMoviesFound}</p>}
               </div>
-              {(isFetchingDetails || movieDetails.trailerKey) && ( <div className="p-6 bg-[var(--color-card-bg)]/50"><h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-2">{t.cardTrailer}</h3>{isFetchingDetails ? <div className="small-loader"></div> : movieDetails.trailerKey ? <div className="trailer-responsive rounded-lg overflow-hidden"><iframe src={`https://www.youtube.com/embed/${movieDetails.trailerKey}`} title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe></div> : <p className="text-[var(--color-text-secondary)]">{t.cardTrailerNotFound}</p>}</div> )}
+              {/* HIGHLIGHT: Old trailer section is removed from here */}
           </div> ) : ( <div className="text-center text-gray-400 mt-10 text-lg">{hasSearched && allMovies.length === 0 && !isDiscovering ? t.noMoviesFound : !hasSearched && t.welcomeMessage}</div> )}
 
       {modalMovie && (<div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={closeModal}><div className="bg-[var(--color-card-bg)] rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}><button onClick={closeModal} className="absolute top-3 right-3 text-white bg-gray-900 rounded-full p-1 hover:bg-gray-700 z-10"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>{isFetchingModalDetails ? <div className="h-96 flex items-center justify-center"><div className="loader"></div></div> : (
@@ -658,7 +671,20 @@ const App = () => {
 
       <footer className="text-center mt-12 py-6 text-sm text-[var(--color-text-subtle)]"><p>{t.footer} <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-text)] hover:underline">TMDb</a>.</p></footer>
       
-      {/* HIGHLIGHT: The new mandatory country selection overlay */}
+      {/* HIGHLIGHT: New trailer modal */}
+      {isTrailerModalOpen && movieDetails.trailerKey && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={closeTrailerModal}>
+            <div className="bg-black rounded-xl w-full max-w-4xl aspect-video relative" onClick={(e) => e.stopPropagation()}>
+                <button onClick={closeTrailerModal} className="absolute -top-3 -right-3 text-white bg-gray-900 rounded-full p-1 hover:bg-gray-700 z-10">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                <div className="trailer-responsive rounded-lg overflow-hidden">
+                    <iframe src={`https://www.youtube.com/embed/${movieDetails.trailerKey}?autoplay=1`} title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+                </div>
+            </div>
+        </div>
+      )}
+
       {!userRegion && (
         <div className="fixed inset-0 bg-gray-900 bg-opacity-90 z-40 flex items-center justify-center p-4">
           <div className="text-center max-w-md bg-[var(--color-card-bg)] p-8 rounded-xl shadow-2xl">
