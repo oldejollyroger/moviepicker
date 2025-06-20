@@ -90,10 +90,11 @@ const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
 // --- Main App Component ---
 const App = () => {
   // --- State Management ---
-  const [language, setLanguage] = useState(() => localStorage.getItem('movieRandomizerLang') || null);
+  // HIGHLIGHT: Language now defaults to 'en' but is loaded from storage.
+  const [language, setLanguage] = useState(() => localStorage.getItem('movieRandomizerLang') || 'en');
   const [userRegion, setUserRegion] = useState(() => localStorage.getItem('movieRandomizerRegion') || null);
   const [theme, setTheme] = useState(() => localStorage.getItem('movieRandomizerTheme') || 'theme-purple');
-  const t = translations[language] || translations['en']; 
+  const t = translations[language]; 
   const [shareStatus, setShareStatus] = useState('idle'); 
   const [availableRegions, setAvailableRegions] = useState([]);
   const [platformOptions, setPlatformOptions] = useState([]);
@@ -144,10 +145,8 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    if (language) {
-      localStorage.setItem('movieRandomizerLang', language);
-      document.documentElement.lang = language;
-    }
+    localStorage.setItem('movieRandomizerLang', language);
+    document.documentElement.lang = language;
   }, [language]);
     
   useEffect(() => {
@@ -161,11 +160,6 @@ const App = () => {
   }, [filters]);
     
   useEffect(() => {
-    if (!language) {
-        setIsLoading(false);
-        return;
-    }
-
     const initializeApp = async () => {
         setIsLoading(true);
         setError(null);
@@ -436,7 +430,6 @@ const App = () => {
   
   // --- Handlers ---
   
-  // HIGHLIGHT: A new, centralized function to reset the search state.
   const resetSearchState = () => {
     setAllMovies([]);
     setSelectedMovie(null);
@@ -561,20 +554,7 @@ const App = () => {
   const closeModal = () => setModalMovie(null);
 
   // --- Render Logic ---
-  if (!language) {
-    return (
-        <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center">
-            <div className="text-center max-w-md">
-                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-6">Select Your Language</h1>
-                <div className="flex justify-center gap-4">
-                    <button onClick={() => handleLanguageSelect('es')} className="px-8 py-3 bg-[var(--color-card-bg)] hover:bg-[var(--color-accent)] rounded-lg font-bold text-lg transition-colors">Español</button>
-                    <button onClick={() => handleLanguageSelect('en')} className="px-8 py-3 bg-[var(--color-card-bg)] hover:bg-[var(--color-accent)] rounded-lg font-bold text-lg transition-colors">English</button>
-                </div>
-            </div>
-        </div>
-    );
-  }
-
+  
   if (isLoading) {
     return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="loader"></div></div> );
   }
@@ -582,25 +562,6 @@ const App = () => {
     return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="text-center"><h1 className="text-3xl font-bold text-red-500 mb-4">Error</h1><p className="text-xl">{error}</p></div></div> );
   }
 
-  if (!userRegion) {
-    return (
-        <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center">
-            <div className="text-center max-w-md">
-                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-4">{t.selectRegionPrompt}</h1>
-                <select 
-                    id="initial-region-filter" 
-                    onChange={e => handleRegionChange(e.target.value)}
-                    defaultValue=""
-                    className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"
-                >
-                    <option value="" disabled>-- {t.region} --</option>
-                    {availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}
-                </select>
-            </div>
-        </div>
-    );
-  }
-  
   return (
     <div className="min-h-screen p-4 sm:p-8 font-sans app-container relative">
       <div className="absolute top-4 right-4 flex items-center gap-4 z-10">
@@ -616,7 +577,7 @@ const App = () => {
         <div className="mb-8 p-6 bg-[var(--color-header-bg)] rounded-xl shadow-2xl">
           <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-semibold text-[var(--color-accent-text)]">{t.advancedFilters}</h2><button onClick={handleClearFilters} className="text-xs bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1 px-3 rounded-lg transition-colors">{t.clearFilters}</button></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8">
-            <div className="space-y-4"><div><label htmlFor="region-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.region}</label><select id="region-filter" value={userRegion} onChange={e => handleRegionChange(e.target.value)} className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]">{availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}</select></div><div><label htmlFor="decade-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.decade}</label><select id="decade-filter" value={filters.decade} onChange={e => handleFilterChange('decade', e.target.value)} className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"><option value="todos">{t.allDecades}</option>{[2020, 2010, 2000, 1990, 1980, 1970].map(d=>(<option key={d} value={d}>{`${d}s`}</option>))}</select></div><div><label htmlFor="rating-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.minRating} {Number(filters.minRating).toFixed(1)}</label><input type="range" id="rating-filter" min="0" max="9.5" step="0.5" value={filters.minRating} onChange={e => handleFilterChange('minRating', e.target.value)} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]" /></div></div>
+            <div className="space-y-4"><div><label htmlFor="region-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.region}</label><select id="region-filter" value={userRegion || ''} onChange={e => handleRegionChange(e.target.value)} className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]">{availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}</select></div><div><label htmlFor="decade-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.decade}</label><select id="decade-filter" value={filters.decade} onChange={e => handleFilterChange('decade', e.target.value)} className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"><option value="todos">{t.allDecades}</option>{[2020, 2010, 2000, 1990, 1980, 1970].map(d=>(<option key={d} value={d}>{`${d}s`}</option>))}</select></div><div><label htmlFor="rating-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.minRating} {Number(filters.minRating).toFixed(1)}</label><input type="range" id="rating-filter" min="0" max="9.5" step="0.5" value={filters.minRating} onChange={e => handleFilterChange('minRating', e.target.value)} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]" /></div></div>
             <div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.includeGenre}</label><div className="filter-checkbox-list space-y-1">{Object.entries(genresMap).sort(([,a],[,b]) => a.localeCompare(b)).map(([id, name]) => (<div key={`inc-${id}`} className="flex items-center"><input id={`inc-genre-${id}`} type="checkbox" checked={filters.genre.includes(id)} onChange={() => handleGenreChange(id, 'genre')} disabled={filters.excludeGenres.includes(id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)] disabled:opacity-50"/><label htmlFor={`inc-genre-${id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.excludeGenres.includes(id) ? 'opacity-50' : ''}`}>{name}</label></div>))}</div></div>
             <div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.excludeGenre}</label><div className="filter-checkbox-list space-y-1">{Object.entries(genresMap).sort(([,a],[,b]) => a.localeCompare(b)).map(([id, name]) => (<div key={`ex-${id}`} className="flex items-center"><input id={`ex-genre-${id}`} type="checkbox" checked={filters.excludeGenres.includes(id)} onChange={() => handleGenreChange(id, 'excludeGenres')} disabled={filters.genre.includes(id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-red-600 focus:ring-red-500 accent-red-600 disabled:opacity-50"/><label htmlFor={`ex-genre-${id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.genre.includes(id) ? 'opacity-50' : ''}`}>{name}</label></div>))}</div></div>
             <div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.platform}</label><input type="text" value={platformSearchQuery} onChange={handlePlatformSearchChange} placeholder={t.platformSearchPlaceholder} className="w-full p-2 mb-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md text-sm" /><div className="grid grid-cols-2 gap-x-4 gap-y-2 filter-checkbox-list" style={{maxHeight: '160px'}}>{filteredPlatforms.length > 0 ? filteredPlatforms.map(p => (<div key={p.id} className="flex items-center"><input id={`platform-${p.id}`} type="checkbox" checked={filters.platform.includes(p.id)} onChange={() => handlePlatformChange(p.id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"/><label htmlFor={`platform-${p.id}`} className="ml-2 text-sm text-[var(--color-text-secondary)]">{p.name}</label></div>)) : <p className="text-sm text-gray-400 col-span-2">No matching platforms.</p>}</div></div>
@@ -626,7 +587,15 @@ const App = () => {
 
       <div className="text-center mb-10 flex justify-center items-center gap-4">
         <button onClick={handleGoBack} disabled={movieHistory.length === 0} className="p-4 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg shadow-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
-        <button onClick={handleSurpriseMe} disabled={isDiscovering} className={`px-8 py-4 bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-150 text-xl disabled:opacity-50 disabled:cursor-not-allowed`}>{isDiscovering ? t.searching : t.surpriseMe}</button>
+        {/* HIGHLIGHT: The main button is now also disabled if no country is selected */}
+        <button 
+            onClick={handleSurpriseMe} 
+            disabled={isDiscovering || !userRegion} 
+            title={!userRegion ? t.selectRegionPrompt : ''}
+            className={`px-8 py-4 bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-150 text-xl disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+            {isDiscovering ? t.searching : t.surpriseMe}
+        </button>
       </div>
       
       {selectedMovie ? ( 
@@ -688,6 +657,28 @@ const App = () => {
       )}</div></div>)}
 
       <footer className="text-center mt-12 py-6 text-sm text-[var(--color-text-subtle)]"><p>{t.footer} <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-text)] hover:underline">TMDb</a>.</p></footer>
+      
+      {/* HIGHLIGHT: The new mandatory country selection overlay */}
+      {!userRegion && (
+        <div className="fixed inset-0 bg-gray-900 bg-opacity-90 z-40 flex items-center justify-center p-4">
+          <div className="text-center max-w-md bg-[var(--color-card-bg)] p-8 rounded-xl shadow-2xl">
+              <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-4">{t.selectRegionPrompt}</h1>
+              {availableRegions.length > 0 ? (
+                <select 
+                    id="initial-region-filter" 
+                    onChange={e => handleRegionChange(e.target.value)}
+                    defaultValue=""
+                    className="w-full p-3 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"
+                >
+                    <option value="" disabled>-- {t.region} --</option>
+                    {availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}
+                </select>
+              ) : (
+                <div className="loader"></div>
+              )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
