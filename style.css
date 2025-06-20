@@ -1,146 +1,105 @@
 :root {
-    /* Default Theme: Purple */
+    /* Default: Dark Mode */
     --color-bg: #111827; /* gray-900 */
     --color-card-bg: #1f2937; /* gray-800 */
     --color-header-bg: #1f2937;
     --color-text-primary: #f9fafb; /* gray-50 */
     --color-text-secondary: #d1d5db; /* gray-300 */
     --color-text-subtle: #6b7280; /* gray-500 */
-    --color-accent: #8b5cf6; /* purple-500 */
-    --color-accent-text: #c4b5fd; /* purple-300 */
-    --color-accent-gradient-from: #a78bfa; /* violet-400 */
-    --color-accent-gradient-to: #f472b6; /* pink-400 */
     --color-border: #374151; /* gray-700 */
-}
-
-html.theme-ocean {
-    --color-bg: #0c243b;
-    --color-card-bg: #1e3a5f;
-    --color-header-bg: #1e3a5f;
-    --color-text-primary: #eff6ff;
-    --color-text-secondary: #bfdbfe;
-    --color-accent: #22d3ee;
-    --color-accent-text: #67e8f9;
-    --color-accent-gradient-from: #22d3ee;
-    --color-accent-gradient-to: #3b82f6;
-    --color-border: #3b82f6;
-}
-
-html.theme-forest {
-    --color-bg: #064e3b;
-    --color-card-bg: #047857;
-    --color-header-bg: #047857;
-    --color-text-primary: #f0fdf4;
-    --color-text-secondary: #dcfce7;
-    --color-accent: #22c55e;
-    --color-accent-text: #4ade80;
-    --color-accent-gradient-from: #4ade80;
-    --color-accent-gradient-to: #a3e635;
-    --color-border: #16a34a;
-}
-
-html.theme-volcano {
-    --color-bg: #1c1917;
-    --color-card-bg: #292524;
-    --color-header-bg: #292524;
-    --color-text-primary: #fef2f2;
-    --color-text-secondary: #fecaca;
-    --color-accent: #dc2626;
-    --color-accent-text: #f87171;
-    --color-accent-gradient-from: #f97316;
-    --color-accent-gradient-to: #ef4444;
-    --color-border: #991b1b;
-}
-
-html.theme-sunset {
-    --color-bg: #2d1a3c;
-    --color-card-bg: #4c2a6c;
-    --color-header-bg: #4c2a6c;
-    --color-text-primary: #fefce8;
-    --color-text-secondary: #fde68a;
-    --color-accent: #f97316;
-    --color-accent-text: #fbbf24;
-    --color-accent-gradient-from: #fb923c;
-    --color-accent-gradient-to: #f59e0b;
-    --color-border: #d97706;
-}
-
-html.theme-cyberpunk {
-    --color-bg: #0c0a09;
-    --color-card-bg: #1c1917;
-    --color-header-bg: #1c1917;
-    --color-text-primary: #ecfdf5;
-    --color-text-secondary: #a7f3d0;
+    
+    /* Default Accent: Cyberpunk */
     --color-accent: #d946ef;
     --color-accent-text: #f0abfc;
     --color-accent-gradient-from: #22d3ee;
     --color-accent-gradient-to: #d946ef;
-    --color-border: #86198f;
 }
 
+/* Light Mode Overrides */
+html.light-mode {
+    --color-bg: #f9fafb; /* gray-50 */
+    --color-card-bg: #ffffff; /* white */
+    --color-header-bg: #ffffff;
+    --color-text-primary: #111827; /* gray-900 */
+    --color-text-secondary: #374151; /* gray-700 */
+    --color-text-subtle: #9ca3af; /* gray-400 */
+    --color-border: #e5e7eb; /* gray-200 */
+    --color-accent-text: var(--color-accent); /* Accent color itself for text */
+}
+
+/* General Styles */
 body, #root { min-height: 100vh; }
 #root { display: flex; flex-direction: column; }
 .app-container { flex-grow: 1; display: flex; flex-direction: column; }
 .app-container > footer { margin-top: auto; }
 
-.loader { border: 5px solid #f3f3f3; border-top-color: var(--color-accent); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
-.small-loader { border: 3px solid #f3f3f3; border-top-color: var(--color-accent); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; margin-left: 8px; vertical-align: middle; }
+/* Loaders */
+.loader { border: 5px solid rgba(128,128,128,0.2); border-top-color: var(--color-accent); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
+.small-loader { border: 3px solid rgba(128,128,128,0.2); border-top-color: var(--color-accent); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; margin-left: 8px; vertical-align: middle; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+/* Card & Image Styles */
 .platform-logo { height: 28px; width: auto; margin-right: 6px; margin-bottom: 4px; border-radius: 4px; background-color: #4A5568; padding: 2px; vertical-align: middle; }
 .actor-thumbnail { width: 50px; height: 75px; object-fit: cover; border-radius: 4px; background-color: #4A5568; }
 
-.trailer-responsive { position: relative; overflow: hidden; padding-top: 56.25%; margin-top: 10px; }
+.trailer-responsive { position: relative; overflow: hidden; padding-top: 56.25%; }
 .trailer-responsive iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
 
-.lang-btn { padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; transition: background-color 0.2s, color 0.2s; border: none; cursor: pointer; }
-.lang-btn-active { background-color: var(--color-accent); color: var(--color-text-primary); }
-.lang-btn-inactive { background-color: transparent; color: var(--color-text-secondary); }
+.poster-container { position: relative; }
 
-.filter-checkbox-list { max-height: 150px; overflow-y: auto; padding-right: 0.5rem; }
-/* Improved scrollbar styling */
-.filter-checkbox-list::-webkit-scrollbar { width: 8px; }
-.filter-checkbox-list::-webkit-scrollbar-track { background: var(--color-bg); }
-.filter-checkbox-list::-webkit-scrollbar-thumb { background-color: var(--color-border); border-radius: 10px; border: 2px solid var(--color-bg); }
-/* Add these new classes to the bottom of your style.css file */
-
-/* For the movie card fade-in animation */
+/* Animation for main movie card */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+.movie-card-enter { animation: fadeIn 0.5s ease-in-out forwards; }
 
-.movie-card-enter {
-  animation: fadeIn 0.5s ease-in-out forwards;
-}
+/* Lang/Theme Buttons */
+.lang-btn { padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; transition: background-color 0.2s, color 0.2s; border: none; cursor: pointer; }
+.lang-btn-active { background-color: var(--color-accent); color: white; }
+html.light-mode .lang-btn-active { color: white; }
+.lang-btn-inactive { background-color: transparent; color: var(--color-text-secondary); }
 
-/* For the horizontally-scrolling similar movies section */
-.horizontal-scroll-container {
-    display: flex;
-    overflow-x: auto;
-    gap: 1rem; /* 16px */
-    padding-bottom: 1rem; /* Space for the scrollbar */
-    scrollbar-width: thin; /* Firefox */
-    scrollbar-color: var(--color-border) var(--color-bg); /* Firefox */
-}
+/* Horizontal Scroll for Similar Movies */
+.horizontal-scroll-container { display: flex; overflow-x: auto; gap: 1rem; padding-bottom: 1rem; scrollbar-width: thin; scrollbar-color: var(--color-border) var(--color-bg); }
+.horizontal-scroll-container::-webkit-scrollbar { height: 8px; }
+.horizontal-scroll-container::-webkit-scrollbar-track { background: var(--color-bg); border-radius: 10px; }
+.horizontal-scroll-container::-webkit-scrollbar-thumb { background-color: var(--color-border); border-radius: 10px; border: 2px solid var(--color-bg); }
+.horizontal-scroll-container > button { flex-shrink: 0; width: 120px; }
 
-.horizontal-scroll-container::-webkit-scrollbar {
-    height: 8px;
-}
-.horizontal-scroll-container::-webkit-scrollbar-track {
-    background: var(--color-bg);
-    border-radius: 10px;
-}
-.horizontal-scroll-container::-webkit-scrollbar-thumb {
-    background-color: var(--color-border);
-    border-radius: 10px;
-    border: 2px solid var(--color-bg);
-}
+/* Filter Checkbox List */
+.filter-checkbox-list { max-height: 250px; overflow-y: auto; padding-right: 0.5rem; }
+.filter-checkbox-list::-webkit-scrollbar { width: 8px; }
+.filter-checkbox-list::-webkit-scrollbar-track { background: var(--color-bg); }
+.filter-checkbox-list::-webkit-scrollbar-thumb { background-color: var(--color-border); border-radius: 10px; border: 2px solid var(--color-bg); }
 
-.horizontal-scroll-container > button {
-    flex-shrink: 0; /* Prevents items from shrinking */
-    width: 120px; /* Example width, adjust as needed */
+/* Active Filter Pills */
+.filter-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 9999px;
+    background-color: var(--color-accent);
+    color: white;
+    transition: background-color 0.2s;
 }
-.poster-container {
-    position: relative;
+html.light-mode .filter-pill {
+    background-color: var(--color-accent);
+    color: white;
+}
+.filter-pill button {
+    margin-left: 0.5rem;
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 50%;
+    width: 1.25rem;
+    height: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+.filter-pill button:hover {
+    background-color: rgba(0,0,0,0.4);
 }
