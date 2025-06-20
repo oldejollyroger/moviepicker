@@ -106,13 +106,11 @@ const App = () => {
   const [modalMovie, setModalMovie] = useState(null);
   const [isFetchingModalDetails, setIsFetchingModalDetails] = useState(false);
   
-  // HIGHLIGHT: FIX #1 - Load filters from localStorage
   const initialFilters = { genre: [], excludeGenres: [], decade: 'todos', platform: [], sortBy: 'popularity.desc', minRating: 0 };
   const [filters, setFilters] = useState(() => {
     const savedFilters = localStorage.getItem('movieRandomizerFilters');
     if (savedFilters) {
         try {
-            // Merge with initialFilters to handle any new filter properties added to the app
             return { ...initialFilters, ...JSON.parse(savedFilters) };
         } catch (e) {
             console.error("Failed to parse filters from localStorage", e);
@@ -158,7 +156,6 @@ const App = () => {
     }
   }, [userRegion]);
   
-  // HIGHLIGHT: FIX #1 - Save filters to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('movieRandomizerFilters', JSON.stringify(filters));
   }, [filters]);
@@ -301,21 +298,10 @@ const App = () => {
     }
   }, [allMovies, sessionShownMovies, selectedMovie, fetchNewMovieBatch]);
 
-  // HIGHLIGHT: FIX #2 - Dedicated effect to safely trigger the initial movie fetch
-  useEffect(() => {
-    const isDataReady = userRegion && genresMap && Object.keys(genresMap).length > 0;
-    const needsInitialFetch = !hasSearched && allMovies.length === 0 && !isDiscovering;
-
-    if (isDataReady && needsInitialFetch) {
-        handleSurpriseMe();
-    }
-  }, [userRegion, genresMap, hasSearched, allMovies.length, isDiscovering, handleSurpriseMe]);
-
-
+  // This effect now only fetches platform data when the region changes.
   useEffect(() => {
     if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY) return;
     
-    // Fetch platforms whenever the region changes.
     const fetchRegionPlatforms = async () => {
         try {
             const response = await fetch(`${TMDB_BASE_URL}/watch/providers/movie?api_key=${TMDB_API_KEY}&watch_region=${userRegion}`);
@@ -481,14 +467,21 @@ const App = () => {
   };
   const handlePlatformChange = (id) => {
       setFilters(f => {
-          const p = [...f.platform]; const i = p.indexOf(id);
+          const p = [...(f.platform || [])];
+          const i = p.indexOf(id);
           i > -1 ? p.splice(i, 1) : p.push(id);
           return { ...f, platform: p };
       });
       resetSession();
   };
   const handleLanguageSelect = (lang) => { setLanguage(lang); };
-  const handleClearFilters = () => { setFilters(initialFilters); resetSession(); };
+  const handleClearFilters = () => {
+      setFilters(initialFilters);
+      setAllMovies([]);
+      setSelectedMovie(null);
+      setHasSearched(false);
+      resetSession();
+  };
   const handleRegionChange = (newRegion) => { setUserRegion(newRegion); };
   const handleSearchChange = (e) => { setSearchQuery(e.target.value); };
   
