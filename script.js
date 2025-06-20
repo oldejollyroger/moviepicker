@@ -1,3 +1,4 @@
+// --- React and Hooks ---
 const { useState, useEffect, useCallback } = React;
 
 // --- CRITICAL: Add your TMDb API Key Here ---
@@ -20,15 +21,17 @@ const App = () => {
     setMovie(null);
 
     try {
-      if (!TMDB_API_KEY || TMDB_API_KEY === "22f17214f2c35b01940cdfed47d738c2") {
-        throw new Error("API Key is missing. Please add it to script.js.");
-      }
+      // HIGHLIGHT: The problematic API key check has been REMOVED from here.
+      // We will let the API call itself tell us if the key is bad.
 
-      // Fetch a list of popular movies from a random page
       const randomPage = Math.floor(Math.random() * 50) + 1;
-      const url = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=en-US&sort_by=popularity.desc&page=${randomPage}&vote_count.gte=100`;
+      const url = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=en-US&sort_by=popularity.desc&page=${randomPage}&vote_count.gte=100&include_adult=false`;
       
       const response = await fetch(url);
+      
+      if (response.status === 401) {
+        throw new Error("Authorization Error: Invalid API Key. Please check the key in your script.");
+      }
       if (!response.ok) {
         throw new Error(`API request failed: ${response.statusText}`);
       }
@@ -36,18 +39,18 @@ const App = () => {
       const data = await response.json();
 
       if (data.results && data.results.length > 0) {
-        // Filter out movies without essential data
         const validMovies = data.results.filter(m => m.poster_path && m.overview);
         if (validMovies.length > 0) {
-          // Select a truly random movie from the filtered page results
           const randomMovie = validMovies[Math.floor(Math.random() * validMovies.length)];
           setMovie(randomMovie);
         } else {
-          // If the page had no valid movies, try again
+          // If the page had no valid movies, try again by recalling the function.
+          // This is a simple way to handle empty pages.
+          console.log("Empty page found, re-fetching...");
           fetchRandomMovie();
         }
       } else {
-        throw new Error("No movies found in the API response.");
+        throw new Error("No movies found in the API response. Try adjusting filters if they are added.");
       }
 
     } catch (err) {
@@ -56,7 +59,12 @@ const App = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []); // No dependencies, it's a self-contained action
+  }, []); // The dependency array is empty because it's a self-contained action.
+
+  // Automatically fetch a movie on the first load.
+  useEffect(() => {
+    fetchRandomMovie();
+  }, [fetchRandomMovie]);
 
   return (
     <div className="app-container p-4 sm:p-8">
@@ -76,7 +84,9 @@ const App = () => {
           </button>
         </div>
 
-        {error && <div className="text-center text-red-400 mt-4 text-lg">{error}</div>}
+        {isLoading && <div className="loader"></div>}
+        
+        {error && <div className="text-center text-red-400 mt-4 text-lg max-w-2xl mx-auto">{error}</div>}
         
         {!isLoading && !movie && !error && (
             <div className="text-center text-gray-400 mt-10 text-lg">
