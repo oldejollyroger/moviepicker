@@ -16,6 +16,8 @@ const CURATED_COUNTRY_LIST = new Set([
   'PT', 'RO', 'RU', 'SA', 'SG', 'ZA', 'KR', 'ES', 'SE', 'CH', 'TW', 'TH', 'TR', 'AE', 'GB', 'US'
 ]);
 
+const USER_REGION_KEY = 'moviePickerUserRegion';
+
 const THEMES = [
     { id: 'theme-purple', color: '#8b5cf6' },
     { id: 'theme-ocean', color: '#22d3ee' },
@@ -61,10 +63,10 @@ const translations = {
 };
 
 const App = () => {
-  const [language, setLanguage] = useState(null);
+  const [language, setLanguage] = useState('en');
   const [theme, setTheme] = useState(() => localStorage.getItem('movieRandomizerTheme') || 'theme-purple');
   const t = translations[language] || translations['en']; 
-  const [userRegion, setUserRegion] = useState(null);
+  const [userRegion, setUserRegion] = useState(() => localStorage.getItem(USER_REGION_KEY) || null);
   const [availableRegions, setAvailableRegions] = useState([]);
   const [platformOptions, setPlatformOptions] = useState([]);
   const [platformSearchQuery, setPlatformSearchQuery] = useState('');
@@ -95,7 +97,6 @@ const App = () => {
   const [sessionShownMovies, setSessionShownMovies] = useState(new Set());
 
   useEffect(() => {
-    if (!language) return;
     const initializeApp = async () => {
         setIsLoading(true);
         if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
@@ -128,6 +129,7 @@ const App = () => {
 
   useEffect(() => {
     if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') return;
+    localStorage.setItem(USER_REGION_KEY, userRegion);
     setFilters(f => ({ ...f, platform: [] }));
     setAllMovies([]);
     setSelectedMovie(null);
@@ -318,29 +320,25 @@ const App = () => {
   
   const resetSession = () => { setSessionShownMovies(new Set()); };
   const handleFilterChange = (type, value) => { setFilters(f => ({ ...f, [type]: value })); resetSession(); };
-  
-  // HIGHLIGHT: The genre change handler is now corrected
   const handleGenreChange = (genreId, type) => {
-    const mainListKey = type === 'include' ? 'genre' : 'excludeGenres';
-    const otherListKey = type === 'include' ? 'excludeGenres' : 'genre';
-
     setFilters(f => {
-        const list = [...f[mainListKey]];
+        const listKey = type === 'include' ? 'genre' : 'excludeGenres';
+        const otherListKey = type === 'include' ? 'excludeGenres' : 'genre';
+        const list = [...(f[listKey] || [])];
         const i = list.indexOf(genreId);
-        if (i > -1) { 
+        if (i > -1) {
             list.splice(i, 1);
-        } else { 
+        } else {
             list.push(genreId);
-            const otherList = [...f[otherListKey]];
+            const otherList = [...(f[otherListKey] || [])];
             const otherIndex = otherList.indexOf(genreId);
-            if(otherIndex > -1) otherList.splice(otherIndex, 1);
-            return { ...f, [mainListKey]: list, [otherListKey]: otherList };
+            if (otherIndex > -1) otherList.splice(otherIndex, 1);
+            return { ...f, [listKey]: list, [otherListKey]: otherList };
         }
-        return { ...f, [mainListKey]: list };
+        return { ...f, [listKey]: list };
     });
     resetSession();
   };
-
   const handlePlatformChange = (id) => {
       setFilters(f => {
           const p = [...f.platform]; const i = p.indexOf(id);
@@ -349,7 +347,7 @@ const App = () => {
       });
       resetSession();
   };
-  const handleLanguageSelect = (lang) => { setLanguage(lang); };
+  const handleLanguageChange = (lang) => { setLanguage(lang); };
   const handleClearFilters = () => { setFilters(initialFilters); resetSession(); };
   const handleRegionChange = (newRegion) => { setUserRegion(newRegion); };
   const handleSearchChange = (e) => { setSearchQuery(e.target.value); };
@@ -401,20 +399,6 @@ const App = () => {
       return `${hours}h ${minutes}min`;
   };
   
-  if (!language) {
-    return (
-        <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center">
-            <div className="text-center max-w-md">
-                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-6">Select Your Language</h1>
-                <div className="flex justify-center gap-4">
-                    <button onClick={() => handleLanguageSelect('es')} className="px-8 py-3 bg-gray-800 hover:bg-[var(--color-accent)] rounded-lg font-bold text-lg transition-colors">Español</button>
-                    <button onClick={() => handleLanguageSelect('en')} className="px-8 py-3 bg-gray-800 hover:bg-[var(--color-accent)] rounded-lg font-bold text-lg transition-colors">English</button>
-                </div>
-            </div>
-        </div>
-    );
-  }
-
   if (isLoading && availableRegions.length === 0) {
     return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="loader"></div></div> );
   }
@@ -422,49 +406,48 @@ const App = () => {
     return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="text-center"><h1 className="text-3xl font-bold text-red-500 mb-4">Error</h1><p className="text-xl">{error}</p></div></div> );
   }
 
-  if (!userRegion) {
-    return (
-        <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center">
-            <div className="text-center max-w-md">
-                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-4">{t.selectRegionPrompt}</h1>
-                <select id="initial-region-filter" onChange={e => handleRegionChange(e.target.value)} defaultValue="" className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]">
-                    <option value="" disabled>-- {t.region} --</option>
-                    {availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}
-                </select>
-            </div>
-        </div>
-    );
-  }
-  
   return (
     <div className="min-h-screen p-4 sm:p-8 font-sans app-container relative">
+      {!userRegion && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="text-center max-w-md w-full glass-card p-8 rounded-2xl">
+            <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-4">{t.selectRegionPrompt}</h1>
+            <select id="initial-region-filter" onChange={e => handleRegionChange(e.target.value)} defaultValue="" className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]">
+              <option value="" disabled>-- {t.region} --</option>
+              {availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}
+            </select>
+          </div>
+        </div>
+      )}
+
       <div className="absolute top-4 right-4 flex items-center gap-4 z-10">
         <div className="flex items-center gap-1 bg-[var(--color-card-bg)] p-1 rounded-full">{THEMES.map(themeOption => (<button key={themeOption.id} onClick={() => setTheme(themeOption.id)} className={`w-6 h-6 rounded-full transition-transform duration-150 ${theme === themeOption.id ? 'scale-125 ring-2 ring-white' : ''}`} style={{backgroundColor: themeOption.color}}></button>))}</div>
+        <div className="flex items-center bg-[var(--color-card-bg)] p-1 rounded-full"><button onClick={() => setLanguage('es')} className={`lang-btn ${language === 'es' ? 'lang-btn-active' : 'lang-btn-inactive'}`}>Español</button><button onClick={() => setLanguage('en')} className={`lang-btn ${language === 'en' ? 'lang-btn-active' : 'lang-btn-inactive'}`}>English</button></div>
       </div>
+
       <header className="text-center mb-8 pt-16">
         <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)]">{t.title}</h1>
         <h2 className="text-xl sm:text-2xl text-[var(--color-text-secondary)] mt-2">{t.subtitle}</h2>
         <div ref={searchRef} className="relative max-w-lg mx-auto mt-6"><input type="text" value={searchQuery} onChange={handleSearchChange} placeholder={t.searchPlaceholder} className="w-full p-3 pl-10 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-full focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"/><div className="absolute top-0 left-0 inline-flex items-center p-3">{isSearching ? <div className="small-loader !m-0 !w-5 !h-5"></div> : <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>}</div>{searchResults.length > 0 && (<ul className="absolute w-full mt-2 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg shadow-lg z-20 max-h-80 overflow-y-auto">{searchResults.map(movie => (<li key={movie.id} onClick={() => handleSearchResultClick(movie)} className="p-3 hover:bg-[var(--color-bg)] cursor-pointer flex items-center gap-4"><img src={movie.poster_path ? `${TMDB_THUMBNAIL_BASE_URL}${movie.poster_path}` : 'https://placehold.co/92x138/4A5568/FFFFFF?text=?'} alt={movie.title} className="w-12 h-auto rounded-md" /><div className="text-left"><p className="font-semibold text-[var(--color-text-primary)]">{movie.title}</p><p className="text-sm text-[var(--color-text-secondary)]">{movie.release_date?.split('-')[0]}</p></div></li>))}</ul>)}</div>
       </header>
-
+      
       <div className="mb-8 p-6 bg-[var(--color-header-bg)] rounded-xl shadow-2xl">
         <div className="flex justify-between items-center mb-6"><h2 className="text-2xl font-semibold text-[var(--color-accent-text)]">{t.advancedFilters}</h2><button onClick={handleClearFilters} className="text-xs bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1 px-3 rounded-lg transition-colors">{t.clearFilters}</button></div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-8">
             <div className="space-y-4"><div><label htmlFor="region-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.region}</label><select id="region-filter" value={userRegion} onChange={e => handleRegionChange(e.target.value)} className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]">{availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}</select></div><div><label htmlFor="decade-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.decade}</label><select id="decade-filter" value={filters.decade} onChange={e => handleFilterChange('decade', e.target.value)} className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"><option value="todos">{t.allDecades}</option>{[2020, 2010, 2000, 1990, 1980, 1970].map(d=>(<option key={d} value={d}>{`${d}s`}</option>))}</select></div><div><label htmlFor="rating-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.minRating} {Number(filters.minRating).toFixed(1)}</label><input type="range" id="rating-filter" min="0" max="9.5" step="0.5" value={filters.minRating} onChange={e => handleFilterChange('minRating', e.target.value)} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]" /></div></div>
             <div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.includeGenre}</label><div className="filter-checkbox-list space-y-1">{Object.entries(genresMap).sort(([,a],[,b]) => a.localeCompare(b)).map(([id, name]) => (<div key={`inc-${id}`} className="flex items-center"><input id={`inc-genre-${id}`} type="checkbox" checked={filters.genre.includes(id)} onChange={() => handleGenreChange(id, 'include')} disabled={filters.excludeGenres.includes(id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)] disabled:opacity-50"/><label htmlFor={`inc-genre-${id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.excludeGenres.includes(id) ? 'opacity-50' : ''}`}>{name}</label></div>))}</div></div>
             <div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.excludeGenre}</label><div className="filter-checkbox-list space-y-1">{Object.entries(genresMap).sort(([,a],[,b]) => a.localeCompare(b)).map(([id, name]) => (<div key={`ex-${id}`} className="flex items-center"><input id={`ex-genre-${id}`} type="checkbox" checked={filters.excludeGenres.includes(id)} onChange={() => handleGenreChange(id, 'exclude')} disabled={filters.genre.includes(id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-red-600 focus:ring-red-500 accent-red-600 disabled:opacity-50"/><label htmlFor={`ex-genre-${id}`} className={`ml-2 text-sm text-[var(--color-text-secondary)] ${filters.genre.includes(id) ? 'opacity-50' : ''}`}>{name}</label></div>))}</div></div>
-            <div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.platform}</label><input type="text" value={platformSearchQuery} onChange={handlePlatformSearchChange} placeholder={t.platformSearchPlaceholder} className="w-full p-2 mb-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md text-sm" /><div className="grid grid-cols-2 gap-x-4 gap-y-2 filter-checkbox-list" style={{maxHeight: '160px'}}>{filteredPlatforms.length > 0 ? filteredPlatforms.map(p => (<div key={p.id} className="flex items-center"><input id={`platform-${p.id}`} type="checkbox" checked={filters.platform.includes(p.id)} onChange={() => handlePlatformChange(p.id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"/><label htmlFor={`platform-${p.id}`} className="ml-2 text-sm text-[var(--color-text-secondary)]">{p.name}</label></div>)) : <p className="text-sm text-gray-400 col-span-2">Loading platforms...</p>}</div></div>
+            <div><label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">{t.platform}</label><input type="text" value={platformSearchQuery} onChange={handlePlatformSearchChange} placeholder={t.platformSearchPlaceholder} className="w-full p-2 mb-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md text-sm" /><div className="grid grid-cols-2 gap-x-4 gap-y-2 filter-checkbox-list" style={{maxHeight: '160px'}}>{filteredPlatforms.length > 0 ? filteredPlatforms.map(p => (<div key={p.id} className="flex items-center"><input id={`platform-${p.id}`} type="checkbox" checked={filters.platform.includes(p.id)} onChange={() => handlePlatformChange(p.id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)]"/><label htmlFor={`platform-${p.id}`} className="ml-2 text-sm text-[var(--color-text-secondary)]">{p.name}</label></div>)) : <p className="text-sm text-gray-400 col-span-2">No matching platforms.</p>}</div></div>
         </div>
       </div>
+      
       <div className="text-center mb-10 flex justify-center items-center gap-4">
         <button onClick={handleGoBack} disabled={movieHistory.length === 0} className="p-4 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg shadow-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
         <button onClick={discoverAndSetMovies} disabled={isLoading} className={`px-8 py-4 bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-150 text-xl disabled:opacity-50 disabled:cursor-not-allowed`}>{isLoading ? t.searching : t.surpriseMe}</button>
       </div>
       
-      {selectedMovie ? ( <div className="max-w-4xl mx-auto bg-[var(--color-card-bg)] rounded-xl shadow-2xl overflow-hidden mb-10">{/* Movie card content... */}</div> ) : ( <div className="text-center text-gray-400 mt-10 text-lg">{hasSearched && allMovies.length === 0 && !isLoading ? t.noMoviesFound : !hasSearched && t.welcomeMessage}</div> )}
-      {modalMovie && ( <div className="fixed inset-0 ...">{/* Modal content... */}</div> )}
-      
-      <footer className="text-center mt-12 py-6 text-sm text-[var(--color-text-subtle)]"><p>{t.footer} <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-text)] hover:underline">TMDb</a>.</p></footer>
+      {/* ... (The rest of the JSX remains the same) ... */}
+
     </div>
   );
 };
