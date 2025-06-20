@@ -67,9 +67,7 @@ const formatDuration = (totalMinutes) => {
 
 // --- Reusable UI Component for Movie Details ---
 const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
-    // This component renders the main content of a movie card, used in multiple places.
     const displayDetails = isFetching ? {} : details;
-    
     return (
         <React.Fragment>
             <h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{movie.title}</h2>
@@ -107,8 +105,23 @@ const App = () => {
   const [isFetchingDetails, setIsFetchingDetails] = useState(false);
   const [modalMovie, setModalMovie] = useState(null);
   const [isFetchingModalDetails, setIsFetchingModalDetails] = useState(false);
+  
+  // HIGHLIGHT: FIX #1 - Load filters from localStorage
   const initialFilters = { genre: [], excludeGenres: [], decade: 'todos', platform: [], sortBy: 'popularity.desc', minRating: 0 };
-  const [filters, setFilters] = useState(initialFilters);
+  const [filters, setFilters] = useState(() => {
+    const savedFilters = localStorage.getItem('movieRandomizerFilters');
+    if (savedFilters) {
+        try {
+            // Merge with initialFilters to handle any new filter properties added to the app
+            return { ...initialFilters, ...JSON.parse(savedFilters) };
+        } catch (e) {
+            console.error("Failed to parse filters from localStorage", e);
+            return initialFilters;
+        }
+    }
+    return initialFilters;
+  });
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [error, setError] = useState(null);
@@ -144,6 +157,11 @@ const App = () => {
       localStorage.setItem('movieRandomizerRegion', userRegion);
     }
   }, [userRegion]);
+  
+  // HIGHLIGHT: FIX #1 - Save filters to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('movieRandomizerFilters', JSON.stringify(filters));
+  }, [filters]);
     
   useEffect(() => {
     if (!language) {
@@ -188,54 +206,6 @@ const App = () => {
     };
     initializeApp();
   }, [language]);
-  
-  const handleSurpriseMe = useCallback(() => {
-    const availableMovies = allMovies.filter(m => !sessionShownMovies.has(m.id));
-
-    if (availableMovies.length > 0) {
-      const newMovie = availableMovies[Math.floor(Math.random() * availableMovies.length)];
-      if (selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]);
-      setSelectedMovie(newMovie);
-      setSessionShownMovies(prev => new Set(prev).add(newMovie.id));
-    } else {
-      fetchNewMovieBatch();
-    }
-  }, [allMovies, sessionShownMovies, selectedMovie, fetchNewMovieBatch]);
-
-  useEffect(() => {
-    if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY) return;
-
-    if (allMovies.length === 0 && !hasSearched) {
-        handleSurpriseMe();
-    }
-    
-    setFilters(f => ({ ...f, platform: [] }));
-    if (!hasSearched) {
-        setAllMovies([]);
-        setSelectedMovie(null);
-    }
-
-    const fetchRegionPlatforms = async () => {
-        try {
-            const response = await fetch(`${TMDB_BASE_URL}/watch/providers/movie?api_key=${TMDB_API_KEY}&watch_region=${userRegion}`);
-            if (!response.ok) throw new Error('Failed to fetch providers for the selected region.');
-            const data = await response.json();
-            
-            const flatrateProviders = data.results.filter(p => p.display_priorities?.[userRegion] !== undefined);
-            const regionalProviders = flatrateProviders
-                .sort((a, b) => (a.display_priorities[userRegion]) - (b.display_priorities[userRegion]))
-                .map(provider => ({ id: provider.provider_id.toString(), name: provider.provider_name }));
-            
-            setPlatformOptions(regionalProviders);
-        } catch (err) { console.error(err); setPlatformOptions([]); }
-    };
-    fetchRegionPlatforms();
-  }, [userRegion, hasSearched]);
-
-  useEffect(() => {
-    document.documentElement.className = theme;
-    localStorage.setItem('movieRandomizerTheme', theme);
-  }, [theme]);
   
   const fetchNewMovieBatch = useCallback(async () => {
     if (!userRegion || !genresMap || Object.keys(genresMap).length === 0) return;
@@ -318,6 +288,57 @@ const App = () => {
     }
   }, [filters, language, userRegion, genresMap, watchedMovies, selectedMovie]);
 
+  const handleSurpriseMe = useCallback(() => {
+    const availableMovies = allMovies.filter(m => !sessionShownMovies.has(m.id));
+
+    if (availableMovies.length > 0) {
+      const newMovie = availableMovies[Math.floor(Math.random() * availableMovies.length)];
+      if (selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]);
+      setSelectedMovie(newMovie);
+      setSessionShownMovies(prev => new Set(prev).add(newMovie.id));
+    } else {
+      fetchNewMovieBatch();
+    }
+  }, [allMovies, sessionShownMovies, selectedMovie, fetchNewMovieBatch]);
+
+  // HIGHLIGHT: FIX #2 - Dedicated effect to safely trigger the initial movie fetch
+  useEffect(() => {
+    const isDataReady = userRegion && genresMap && Object.keys(genresMap).length > 0;
+    const needsInitialFetch = !hasSearched && allMovies.length === 0 && !isDiscovering;
+
+    if (isDataReady && needsInitialFetch) {
+        handleSurpriseMe();
+    }
+  }, [userRegion, genresMap, hasSearched, allMovies.length, isDiscovering, handleSurpriseMe]);
+
+
+  useEffect(() => {
+    if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY) return;
+    
+    // Fetch platforms whenever the region changes.
+    const fetchRegionPlatforms = async () => {
+        try {
+            const response = await fetch(`${TMDB_BASE_URL}/watch/providers/movie?api_key=${TMDB_API_KEY}&watch_region=${userRegion}`);
+            if (!response.ok) throw new Error('Failed to fetch providers for the selected region.');
+            const data = await response.json();
+            
+            const flatrateProviders = data.results.filter(p => p.display_priorities?.[userRegion] !== undefined);
+            const regionalProviders = flatrateProviders
+                .sort((a, b) => (a.display_priorities[userRegion]) - (b.display_priorities[userRegion]))
+                .map(provider => ({ id: provider.provider_id.toString(), name: provider.provider_name }));
+            
+            setPlatformOptions(regionalProviders);
+        } catch (err) { console.error(err); setPlatformOptions([]); }
+    };
+    fetchRegionPlatforms();
+  }, [userRegion]);
+
+
+  useEffect(() => {
+    document.documentElement.className = theme;
+    localStorage.setItem('movieRandomizerTheme', theme);
+  }, [theme]);
+  
   useEffect(() => {
     if (searchQuery.trim() === '') {
         setSearchResults([]);
@@ -436,18 +457,25 @@ const App = () => {
   };
   const handleGenreChange = (genreId, type) => {
     setFilters(f => {
-        const list = [...f[type]];
-        const i = list.indexOf(genreId);
+        const currentType = f[type] || [];
         const otherType = type === 'genre' ? 'excludeGenres' : 'genre';
-        if (i > -1) { list.splice(i, 1); } 
-        else { 
-            list.push(genreId);
-            const otherList = [...f[otherType]];
-            const otherIndex = otherList.indexOf(genreId);
-            if(otherIndex > -1) otherList.splice(otherIndex, 1);
-            return { ...f, [type]: list, [otherType]: otherList };
+        const currentOtherType = f[otherType] || [];
+        
+        const newCurrentList = [...currentType];
+        const index = newCurrentList.indexOf(genreId);
+
+        const newOtherList = [...currentOtherType];
+        const otherIndex = newOtherList.indexOf(genreId);
+
+        if (index > -1) {
+            newCurrentList.splice(index, 1);
+        } else {
+            newCurrentList.push(genreId);
+            if (otherIndex > -1) {
+                newOtherList.splice(otherIndex, 1);
+            }
         }
-        return { ...f, [type]: list };
+        return { ...f, [type]: newCurrentList, [otherType]: newOtherList };
     });
     resetSession();
   };
