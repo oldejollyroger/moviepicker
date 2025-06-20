@@ -3,7 +3,7 @@ const { useState, useEffect, useCallback } = React;
 
 // --- CRITICAL: Add your TMDb API Key Here ---
 // This is the simplest, most reliable way to start.
-const TMDB_API_KEY = "22f17214f2c35b01940cdfed47d738c2";
+const TMDB_API_KEY = "22f17214f2c35b01940cdfed47d738c2"; // Replace with your actual API key
 
 // --- Constants ---
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
