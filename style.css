@@ -1,28 +1,64 @@
-body, #root {
-  min-height: 100vh;
+:root {
+    /* Default Theme: Purple */
+    --color-bg: #111827; /* gray-900 */
+    --color-card-bg: #1f2937; /* gray-800 */
+    --color-header-bg: #1f2937;
+    --color-text-primary: #f9fafb; /* gray-50 */
+    --color-text-secondary: #d1d5db; /* gray-300 */
+    --color-accent: #8b5cf6; /* purple-600 */
+    --color-accent-text: #c4b5fd; /* purple-300 */
+    --color-accent-gradient-from: #a78bfa; /* violet-400 */
+    --color-accent-gradient-to: #f472b6; /* pink-400 */
+    --color-border: #374151; /* gray-700 */
 }
-#root {
-  display: flex;
-  flex-direction: column;
+html.theme-ocean {
+    --color-bg: #0c243b;
+    --color-card-bg: #1e3a5f;
+    --color-header-bg: #1e3a5f;
+    --color-text-primary: #eff6ff;
+    --color-text-secondary: #bfdbfe;
+    --color-accent: #22d3ee;
+    --color-accent-text: #67e8f9;
+    --color-accent-gradient-from: #22d3ee;
+    --color-accent-gradient-to: #3b82f6;
+    --color-border: #3b82f6;
 }
-.app-container {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
+html.theme-forest {
+    --color-bg: #064e3b;
+    --color-card-bg: #047857;
+    --color-header-bg: #047857;
+    --color-text-primary: #f0fdf4;
+    --color-text-secondary: #dcfce7;
+    --color-accent: #22c55e;
+    --color-accent-text: #4ade80;
+    --color-accent-gradient-from: #4ade80;
+    --color-accent-gradient-to: #a3e635;
+    --color-border: #16a34a;
 }
-.app-container > footer {
-  margin-top: auto;
+html.theme-volcano {
+    --color-bg: #1c1917;
+    --color-card-bg: #292524;
+    --color-header-bg: #292524;
+    --color-text-primary: #fef2f2;
+    --color-text-secondary: #fecaca;
+    --color-accent: #dc2626;
+    --color-accent-text: #f87171;
+    --color-accent-gradient-from: #f97316;
+    --color-accent-gradient-to: #ef4444;
+    --color-border: #991b1b;
 }
-.loader {
-  border: 5px solid #f3f3f3; /* Light grey */
-  border-top-color: #3498db; /* Blue */
-  border-radius: 50%;
-  width: 50px;
-  height: 50px;
-  animation: spin 1s linear infinite;
-  margin: 20px auto;
-}
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
+body, #root { min-height: 100vh; }
+#root { display: flex; flex-direction: column; }
+.app-container { flex-grow: 1; display: flex; flex-direction: column; }
+.app-container > footer { margin-top: auto; }
+.loader { border: 5px solid #f3f3f3; border-top-color: var(--color-accent); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
+.small-loader { border: 3px solid #f3f3f3; border-top-color: var(--color-accent); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; margin-left: 8px; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.platform-logo { height: 28px; width: auto; margin-right: 6px; margin-bottom: 4px; border-radius: 4px; background-color: #4A5568; padding: 2px; vertical-align: middle; }
+.actor-thumbnail { width: 50px; height: 75px; object-fit: cover; border-radius: 4px; background-color: #4A5568; }
+.trailer-responsive { position: relative; overflow: hidden; padding-top: 56.25%; margin-top: 10px; }
+.trailer-responsive iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+.lang-btn { padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: background-color 0.2s; }
+.lang-btn-active { background-color: var(--color-accent); color: var(--color-text-primary); }
+.lang-btn-inactive { background-color: var(--color-card-bg); color: var(--color-text-secondary); }
+.filter-checkbox-list { max-height: 150px; overflow-y: auto; padding-right: 0.5rem; }

@@ -1,22 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es" class="theme-purple">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie Picker</title>
-    <link rel="stylesheet" href="style.css?v=1.0">
+    <title>Movie Randomizer</title>
+
+    <!-- External CSS file -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React CDN -->
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    
+    <!-- Babel CDN (to transpile JSX in the browser) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
-<body class="bg-gray-900 text-gray-100 font-sans">
+<body class="bg-[var(--color-bg)] text-[var(--color-text-primary)] transition-colors duration-300">
     
     <div id="root"></div>
 
-    <!-- Scripts are loaded at the end of the body for robust performance -->
-    <script src="https://unpkg.com/react@17/umd/react.development.js" defer></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" defer></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js" defer></script>
-    
-    <!-- The main application script -->
-    <script type="text/babel" src="script.js?v=1.0" defer></script>
+    <!-- External JavaScript file with React code -->
+    <!-- The `type="text/babel"` is crucial for Babel to process this file -->
+    <script type="text/babel" src="script.js"></script>
 </body>
 </html>
