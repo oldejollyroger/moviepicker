@@ -1,7 +1,7 @@
 const { useState, useEffect, useCallback } = React;
 
 // IMPORTANT: Replace with your own TMDb API v3 key from themoviedb.org
-const TMDB_API_KEY = 'YOUR_TMDB_API_KEY_HERE';
+const TMDB_API_KEY = '22f17214f2c35b01940cdfed47d738c2';
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
