@@ -20,7 +20,7 @@ const App = () => {
     setMovie(null);
 
     try {
-      if (!TMDB_API_KEY || TMDB_API_KEY === 'YOUR_TMDB_API_KEY_HERE') {
+      if (!TMDB_API_KEY || TMDB_API_KEY === '22f17214f2c35b01940cdfed47d738c2') {
         throw new Error("API Key is missing. Please add it to script.js.");
       }
 
