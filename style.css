@@ -5,12 +5,14 @@
     --color-header-bg: #1f2937;
     --color-text-primary: #f9fafb; /* gray-50 */
     --color-text-secondary: #d1d5db; /* gray-300 */
-    --color-accent: #8b5cf6; /* purple-600 */
+    --color-text-subtle: #6b7280; /* gray-500 */
+    --color-accent: #8b5cf6; /* purple-500 */
     --color-accent-text: #c4b5fd; /* purple-300 */
     --color-accent-gradient-from: #a78bfa; /* violet-400 */
     --color-accent-gradient-to: #f472b6; /* pink-400 */
     --color-border: #374151; /* gray-700 */
 }
+
 html.theme-ocean {
     --color-bg: #0c243b;
     --color-card-bg: #1e3a5f;
@@ -23,6 +25,7 @@ html.theme-ocean {
     --color-accent-gradient-to: #3b82f6;
     --color-border: #3b82f6;
 }
+
 html.theme-forest {
     --color-bg: #064e3b;
     --color-card-bg: #047857;
@@ -35,6 +38,7 @@ html.theme-forest {
     --color-accent-gradient-to: #a3e635;
     --color-border: #16a34a;
 }
+
 html.theme-volcano {
     --color-bg: #1c1917;
     --color-card-bg: #292524;
@@ -47,18 +51,54 @@ html.theme-volcano {
     --color-accent-gradient-to: #ef4444;
     --color-border: #991b1b;
 }
+
+html.theme-sunset {
+    --color-bg: #2d1a3c;
+    --color-card-bg: #4c2a6c;
+    --color-header-bg: #4c2a6c;
+    --color-text-primary: #fefce8;
+    --color-text-secondary: #fde68a;
+    --color-accent: #f97316;
+    --color-accent-text: #fbbf24;
+    --color-accent-gradient-from: #fb923c;
+    --color-accent-gradient-to: #f59e0b;
+    --color-border: #d97706;
+}
+
+html.theme-cyberpunk {
+    --color-bg: #0c0a09;
+    --color-card-bg: #1c1917;
+    --color-header-bg: #1c1917;
+    --color-text-primary: #ecfdf5;
+    --color-text-secondary: #a7f3d0;
+    --color-accent: #d946ef;
+    --color-accent-text: #f0abfc;
+    --color-accent-gradient-from: #22d3ee;
+    --color-accent-gradient-to: #d946ef;
+    --color-border: #86198f;
+}
+
 body, #root { min-height: 100vh; }
 #root { display: flex; flex-direction: column; }
 .app-container { flex-grow: 1; display: flex; flex-direction: column; }
 .app-container > footer { margin-top: auto; }
+
 .loader { border: 5px solid #f3f3f3; border-top-color: var(--color-accent); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
-.small-loader { border: 3px solid #f3f3f3; border-top-color: var(--color-accent); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; margin-left: 8px; }
+.small-loader { border: 3px solid #f3f3f3; border-top-color: var(--color-accent); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; margin-left: 8px; vertical-align: middle; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
 .platform-logo { height: 28px; width: auto; margin-right: 6px; margin-bottom: 4px; border-radius: 4px; background-color: #4A5568; padding: 2px; vertical-align: middle; }
 .actor-thumbnail { width: 50px; height: 75px; object-fit: cover; border-radius: 4px; background-color: #4A5568; }
+
 .trailer-responsive { position: relative; overflow: hidden; padding-top: 56.25%; margin-top: 10px; }
 .trailer-responsive iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
-.lang-btn { padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: background-color 0.2s; }
+
+.lang-btn { padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; transition: background-color 0.2s, color 0.2s; border: none; cursor: pointer; }
 .lang-btn-active { background-color: var(--color-accent); color: var(--color-text-primary); }
-.lang-btn-inactive { background-color: var(--color-card-bg); color: var(--color-text-secondary); }
+.lang-btn-inactive { background-color: transparent; color: var(--color-text-secondary); }
+
 .filter-checkbox-list { max-height: 150px; overflow-y: auto; padding-right: 0.5rem; }
+/* Improved scrollbar styling */
+.filter-checkbox-list::-webkit-scrollbar { width: 8px; }
+.filter-checkbox-list::-webkit-scrollbar-track { background: var(--color-bg); }
+.filter-checkbox-list::-webkit-scrollbar-thumb { background-color: var(--color-border); border-radius: 10px; border: 2px solid var(--color-bg); }

@@ -1,12 +1,9 @@
 <!DOCTYPE html>
-<html lang="es" class="theme-purple">
+<html lang="en"> <!-- Changed default lang to 'en', React will manage this later -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Movie Randomizer</title>
-
-    <!-- External CSS file -->
-    <link rel="stylesheet" href="style.css">
+    <title>MoviePicker</title>
 
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,14 +14,19 @@
     
     <!-- Babel CDN (to transpile JSX in the browser) -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Your Custom CSS File -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-[var(--color-bg)] text-[var(--color-text-primary)] transition-colors duration-300">
     
     <div id="root"></div>
 
-    <!-- External JavaScript file with React code -->
-    <!-- The `type="text/babel"` is crucial for Babel to process this file -->
-    <script src="config.js" defer></script>
-    <script type="text/babel" src="script.js" defer></script>
+    <!-- Configuration File (must be before your script) -->
+    <script src="config.js"></script>
+    
+    <!-- Your React Script (must have type="text/babel") -->
+    <script type="text/babel" src="script.js"></script>
+
 </body>
 </html>
