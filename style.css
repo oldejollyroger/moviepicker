@@ -1,32 +1,44 @@
 :root {
-    /* Default Theme: Purple */
+    /* Default: Dark Mode */
     --color-bg: #111827; /* gray-900 */
     --color-card-bg: #1f2937; /* gray-800 */
     --color-header-bg: #1f2937;
     --color-text-primary: #f9fafb; /* gray-50 */
     --color-text-secondary: #d1d5db; /* gray-300 */
     --color-text-subtle: #6b7280; /* gray-500 */
-    --color-accent: #8b5cf6; /* purple-500 */
-    --color-accent-text: #c4b5fd; /* purple-300 */
-    --color-accent-gradient-from: #a78bfa; /* violet-400 */
-    --color-accent-gradient-to: #f472b6; /* pink-400 */
     --color-border: #374151; /* gray-700 */
+    
+    /* Default Accent: Set by JavaScript */
+    --color-accent: #d946ef;
+    --color-accent-text: #f0abfc;
+    --color-accent-gradient-from: #22d3ee;
+    --color-accent-gradient-to: #d946ef;
 }
-html.theme-ocean { /* ... (other themes are unchanged) ... */ }
-html.theme-forest { /* ... */ }
-html.theme-volcano { /* ... */ }
-html.theme-sunset { /* ... */ }
-html.theme-cyberpunk { /* ... */ }
 
+/* Light Mode Overrides */
+html.light-mode {
+    --color-bg: #f9fafb; /* gray-50 */
+    --color-card-bg: #ffffff; /* white */
+    --color-header-bg: #ffffff;
+    --color-text-primary: #111827; /* gray-900 */
+    --color-text-secondary: #374151; /* gray-700 */
+    --color-text-subtle: #9ca3af; /* gray-400 */
+    --color-border: #e5e7eb; /* gray-200 */
+    --color-accent-text: var(--color-accent); /* Accent color itself for text */
+}
+
+/* General Styles */
 body, #root { min-height: 100vh; }
 #root { display: flex; flex-direction: column; }
 .app-container { flex-grow: 1; display: flex; flex-direction: column; }
 .app-container > footer { margin-top: auto; }
 
-.loader { border: 5px solid #f3f3f3; border-top-color: var(--color-accent); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
-.small-loader { border: 3px solid #f3f3f3; border-top-color: var(--color-accent); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; margin-left: 8px; vertical-align: middle; }
+/* Loaders */
+.loader { border: 5px solid rgba(128,128,128,0.2); border-top-color: var(--color-accent); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
+.small-loader { border: 3px solid rgba(128,128,128,0.2); border-top-color: var(--color-accent); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; margin-left: 8px; vertical-align: middle; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+/* Card & Image Styles */
 .platform-logo { height: 28px; width: auto; margin-right: 6px; margin-bottom: 4px; border-radius: 4px; background-color: #4A5568; padding: 2px; vertical-align: middle; }
 .actor-thumbnail { width: 50px; height: 75px; object-fit: cover; border-radius: 4px; background-color: #4A5568; }
 
@@ -34,30 +46,34 @@ body, #root { min-height: 100vh; }
 .trailer-responsive iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
 
 .poster-container { position: relative; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to   { opacity: 1; transform: translateY(0); } }
+
+/* Animation for main movie card */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 .movie-card-enter { animation: fadeIn 0.5s ease-in-out forwards; }
 
+/* Lang/Theme Buttons */
 .lang-btn { padding: 0.5rem 1rem; border-radius: 9999px; font-weight: 600; transition: background-color 0.2s, color 0.2s; border: none; cursor: pointer; }
-.lang-btn-active { background-color: var(--color-accent); color: var(--color-text-primary); }
+.lang-btn-active { background-color: var(--color-accent); color: white; }
+html.light-mode .lang-btn-active { color: white; }
 .lang-btn-inactive { background-color: transparent; color: var(--color-text-secondary); }
 
-.platform-list-container { max-height: 160px; overflow-y: auto; padding-right: 0.5rem; scrollbar-width: thin; scrollbar-color: var(--color-border) var(--color-bg); }
-.platform-list-container::-webkit-scrollbar { width: 8px; }
-.platform-list-container::-webkit-scrollbar-track { background: var(--color-bg); }
-.platform-list-container::-webkit-scrollbar-thumb { background-color: var(--color-border); border-radius: 10px; border: 2px solid var(--color-bg); }
-
-.filter-checkbox-list { max-height: 150px; overflow-y: auto; padding-right: 0.5rem; }
-.filter-checkbox-list::-webkit-scrollbar { width: 8px; }
-.filter-checkbox-list::-webkit-scrollbar-track { background: var(--color-bg); }
-.filter-checkbox-list::-webkit-scrollbar-thumb { background-color: var(--color-border); border-radius: 10px; border: 2px solid var(--color-bg); }
-
+/* Horizontal Scroll for Similar Movies */
 .horizontal-scroll-container { display: flex; overflow-x: auto; gap: 1rem; padding-bottom: 1rem; scrollbar-width: thin; scrollbar-color: var(--color-border) var(--color-bg); }
 .horizontal-scroll-container::-webkit-scrollbar { height: 8px; }
 .horizontal-scroll-container::-webkit-scrollbar-track { background: var(--color-bg); border-radius: 10px; }
 .horizontal-scroll-container::-webkit-scrollbar-thumb { background-color: var(--color-border); border-radius: 10px; border: 2px solid var(--color-bg); }
 .horizontal-scroll-container > button { flex-shrink: 0; width: 120px; }
 
-/* HIGHLIGHT: New styles for active filter pills */
+/* Filter Checkbox List (in modal) */
+.filter-checkbox-list { max-height: 250px; overflow-y: auto; padding-right: 0.5rem; }
+.filter-checkbox-list::-webkit-scrollbar { width: 8px; }
+.filter-checkbox-list::-webkit-scrollbar-track { background: var(--color-bg); }
+.filter-checkbox-list::-webkit-scrollbar-thumb { background-color: var(--color-border); border-radius: 10px; border: 2px solid var(--color-bg); }
+
+/* Active Filter Pills */
 .filter-pill {
     display: inline-flex;
     align-items: center;
@@ -68,6 +84,10 @@ body, #root { min-height: 100vh; }
     background-color: var(--color-accent);
     color: white;
     transition: background-color 0.2s;
+}
+html.light-mode .filter-pill {
+    background-color: var(--color-accent);
+    color: white;
 }
 .filter-pill button {
     margin-left: 0.5rem;
