@@ -92,7 +92,6 @@ const App = () => {
   useEffect(() => {
     localStorage.setItem('movieRandomizerFilters', JSON.stringify(filters));
   }, [filters]);
-    
   useEffect(() => {
     if (!language) {
         setIsLoading(false);
@@ -114,7 +113,6 @@ const App = () => {
     };
     initializeApp();
   }, [language]);
-  
   const fetchNewMovieBatch = useCallback(async () => {
     if (!userRegion || !genresMap || Object.keys(genresMap).length === 0) return;
     setIsDiscovering(true); setError(null);
@@ -148,36 +146,30 @@ const App = () => {
         if (unwatchedMovies.length > 0) { const newMovie = unwatchedMovies[Math.floor(Math.random() * unwatchedMovies.length)]; setSelectedMovie(newMovie); setSessionShownMovies(prev => new Set(prev).add(newMovie.id)); } else { setSelectedMovie(null); }
     } catch (err) { console.error("Error discovering movies:", err); setError(String(err).includes("401") ? "Authorization error (401). Check your TMDb API Key." : `Could not discover movies. ${err.message}`); setAllMovies([]); } finally { setIsDiscovering(false); }
   }, [filters, language, userRegion, genresMap, watchedMovies, selectedMovie]);
-
   const handleSurpriseMe = useCallback(() => {
     const availableMovies = allMovies.filter(m => !sessionShownMovies.has(m.id));
     if (availableMovies.length > 0) { const newMovie = availableMovies[Math.floor(Math.random() * availableMovies.length)]; if (selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]); setSelectedMovie(newMovie); setSessionShownMovies(prev => new Set(prev).add(newMovie.id)); } else { fetchNewMovieBatch(); }
   }, [allMovies, sessionShownMovies, selectedMovie, fetchNewMovieBatch]);
-
   useEffect(() => {
     if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY) return;
     const fetchRegionPlatforms = async () => { try { const response = await fetch(`${TMDB_BASE_URL}/watch/providers/movie?api_key=${TMDB_API_KEY}&watch_region=${userRegion}`); if (!response.ok) throw new Error('Failed to fetch providers for the selected region.'); const data = await response.json(); const flatrateProviders = data.results.filter(p => p.display_priorities?.[userRegion] !== undefined); const regionalProviders = flatrateProviders.sort((a, b) => (a.display_priorities[userRegion]) - (b.display_priorities[userRegion])).map(provider => ({ id: provider.provider_id.toString(), name: provider.provider_name })); setPlatformOptions(regionalProviders); } catch (err) { console.error(err); setPlatformOptions([]); } };
     fetchRegionPlatforms();
   }, [userRegion]);
-
   useEffect(() => {
     document.documentElement.className = theme;
     localStorage.setItem('movieRandomizerTheme', theme);
   }, [theme]);
-  
   useEffect(() => {
     if (searchQuery.trim() === '') { setSearchResults([]); return; }
     setIsSearching(true);
     const searchTimer = setTimeout(async () => { try { const response = await fetch(`${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(searchQuery)}&language=${language === 'es' ? 'es-ES' : 'en-US'}`); if (!response.ok) throw new Error("Search failed"); const data = await response.json(); setSearchResults(data.results.slice(0, 5)); } catch (err) { console.error("Search error:", err); setSearchResults([]); } finally { setIsSearching(false); } }, 300);
     return () => clearTimeout(searchTimer);
   }, [searchQuery, language]);
-  
   useEffect(() => {
     const handleClickOutside = (event) => { if (searchRef.current && !searchRef.current.contains(event.target)) { setSearchResults([]); } };
     document.addEventListener("mousedown", handleClickOutside);
     return () => { document.removeEventListener("mousedown", handleClickOutside); };
   }, []);
-
   const fetchFullMovieDetails = useCallback(async (movieId, lang) => {
     try {
         const res = await fetch(`${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,videos,watch/providers,keywords,similar`);
@@ -193,24 +185,20 @@ const App = () => {
         return { ...data, duration: data.runtime || null, providers: regionProviders?.flatrate || [], rentalProviders: uniquePayProviders, cast: data.credits?.cast?.slice(0, 5) || [], director: data.credits?.crew?.find(p => p.job === 'Director') || null, trailerKey: (data.videos?.results?.filter(v => v.type === 'Trailer' && v.site === 'YouTube') || [])[0]?.key || null, similar: similarMovies };
     } catch (err) { console.error("Error fetching all details for movie", movieId, err); return null; }
   }, [userRegion]);
-
   useEffect(() => {
     if (selectedMovie && cardRef.current) { cardRef.current.classList.remove('movie-card-enter'); setTimeout(() => cardRef.current.classList.add('movie-card-enter'), 10); }
     setShareStatus('idle');
   }, [selectedMovie]);
-
   useEffect(() => {
     if (!selectedMovie) return;
     const langParam = language === 'es' ? 'es-ES' : 'en-US';
     setIsFetchingDetails(true); setMovieDetails({});
     fetchFullMovieDetails(selectedMovie.id, langParam).then(details => { if (details) setMovieDetails(details); setIsFetchingDetails(false); });
   }, [selectedMovie, language, fetchFullMovieDetails]);
-
   useEffect(() => {
     const storedWatched = localStorage.getItem(WATCHED_MOVIES_KEY);
     if (storedWatched) { try { const parsed = JSON.parse(storedWatched); const now = Date.now(); const validWatched = Object.fromEntries(Object.entries(parsed).filter(([_, expiryTimestamp]) => expiryTimestamp > now)); setWatchedMovies(validWatched); } catch (e) { console.error("Could not parse watched movies from localStorage", e); } }
   }, []);
-
   useEffect(() => {
     localStorage.setItem(WATCHED_MOVIES_KEY, JSON.stringify(watchedMovies));
   }, [watchedMovies]);
@@ -254,12 +242,7 @@ const App = () => {
         <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center">
             <div className="text-center max-w-md">
                 <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-4">{t.selectRegionPrompt}</h1>
-                <select 
-                    id="initial-region-filter" 
-                    onChange={e => handleRegionChange(e.target.value)}
-                    defaultValue=""
-                    className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"
-                >
+                <select id="initial-region-filter" onChange={e => handleRegionChange(e.target.value)} defaultValue="" className="w-full p-3 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]">
                     <option value="" disabled>-- {t.region} --</option>
                     {availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}
                 </select>
@@ -300,8 +283,8 @@ const App = () => {
           <div ref={cardRef} className="max-w-4xl mx-auto bg-[var(--color-card-bg)] rounded-xl shadow-2xl overflow-hidden mb-10">
               <div className="flex flex-col sm:flex-row">
                   <div className="sm:w-1/3 flex-shrink-0">
-                      <div className="relative poster-container w-1/2 mx-auto sm:w-full sm:mx-0">
-                          <img loading="lazy" className="h-auto w-full object-cover" src={`${TMDB_IMAGE_BASE_URL}${selectedMovie.poster}`} alt={`Poster for ${selectedMovie.title}`}/>
+                      <div className="relative poster-container">
+                          <img loading="lazy" className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${selectedMovie.poster}`} alt={`Poster for ${selectedMovie.title}`}/>
                       </div>
                       {!isFetchingDetails && movieDetails.trailerKey && (
                           <div className="p-4 flex justify-center">
@@ -329,7 +312,7 @@ const App = () => {
               <div className="p-6 bg-[var(--color-bg)] border-t border-[var(--color-border)]">
                   <h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-3">{t.cardSimilarMovies}</h3>
                   {isFetchingDetails ? <div className="flex justify-center"><div className="small-loader"></div></div> :  movieDetails.similar?.length > 0 ? ( 
-                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 place-items-center">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 place-items-center">
                           {movieDetails.similar.map(movie => ( 
                               <button key={movie.id} onClick={() => handleSimilarMovieClick(movie)} className="w-full text-center hover:scale-105 transition-transform duration-150 group">
                                   <img loading="lazy" src={movie.poster_path ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}` : 'https://placehold.co/200x300/4A5568/FFFFFF?text=No+Poster'} alt={movie.title} className="rounded-lg mb-1 w-full h-auto object-cover"/>
