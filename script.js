@@ -93,7 +93,10 @@ const App = () => {
     localStorage.setItem('movieRandomizerFilters', JSON.stringify(filters));
   }, [filters]);
   useEffect(() => {
-    if (!language) { setIsLoading(false); return; }
+    if (!language) {
+        setIsLoading(false);
+        return;
+    }
     const initializeApp = async () => {
         setIsLoading(true); setError(null);
         if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY || TMDB_API_KEY === 'YOUR_REAL_API_KEY') { setError("API Key not found or is a placeholder. Please check config.js."); setIsLoading(false); return; }
@@ -297,77 +300,46 @@ const App = () => {
               </div>
           </div> ) : ( <div className="text-center text-gray-400 mt-10 text-lg">{hasSearched && allMovies.length === 0 && !isDiscovering ? t.noMoviesFound : !hasSearched && t.welcomeMessage}</div> )}
 
-      {/* Modal for similar movie details */}
-      {modalMovie && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="bg-[var(--color-card-bg)] rounded-xl shadow-2xl max-w-lg w-full relative p-6">
-            <button
-              onClick={closeModal}
-              className="absolute top-2 right-2 text-gray-400 hover:text-white text-2xl font-bold"
-              aria-label="Close"
-            >
-              &times;
-            </button>
-            {isFetchingModalDetails ? (
-              <div className="flex justify-center items-center h-40">
-                <div className="loader"></div>
-              </div>
-            ) : modalMovie ? (
-              <MovieCardContent
-                movie={{
-                  id: modalMovie.id,
-                  title: modalMovie.title,
-                  synopsis: modalMovie.overview,
-                  year: modalMovie.release_date
-                    ? parseInt(modalMovie.release_date.split('-')[0])
-                    : null,
-                  imdbRating: modalMovie.vote_average
-                    ? modalMovie.vote_average.toFixed(1)
-                    : 'N/A',
-                  genres: modalMovie.genres
-                    ? modalMovie.genres.map((g) => g.name)
-                    : [],
-                  poster: modalMovie.poster_path,
-                }}
-                details={modalMovie}
-                isFetching={false}
-                t={t}
-                userRegion={userRegion}
-              />
-            ) : (
-              <div className="text-center text-gray-400">{t.noMoviesFound}</div>
-            )}
-          </div>
-        </div>
-      )}
-      {/* Modal for trailer */}
-      {isTrailerModalOpen && movieDetails.trailerKey && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-          <div className="relative w-full max-w-2xl">
-            <button
-              onClick={closeTrailerModal}
-              className="absolute top-2 right-2 text-white text-3xl font-bold z-10"
-              aria-label="Close"
-            >
-              &times;
-            </button>
-            <div className="aspect-w-16 aspect-h-9">
-              <iframe
-                width="100%"
-                height="100%"
-                src={`https://www.youtube.com/embed/${movieDetails.trailerKey}`}
-                title="Trailer"
-                frameBorder="0"
-                allow="autoplay; encrypted-media"
-                allowFullScreen
-                className="rounded-xl w-full h-96"
-              ></iframe>
+      {modalMovie && (<div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={closeModal}><div className="bg-[var(--color-card-bg)] rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}><button onClick={closeModal} className="absolute top-3 right-3 text-white bg-gray-900 rounded-full p-1 hover:bg-gray-700 z-10"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>{isFetchingModalDetails ? <div className="h-96 flex items-center justify-center"><div className="loader"></div></div> : (
+        <div className="max-w-4xl mx-auto rounded-xl shadow-2xl overflow-hidden">
+            <div className="flex flex-col sm:flex-row">
+                <div className="sm:w-1/3 flex-shrink-0">
+                    <img loading="lazy" className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${modalMovie.poster_path}`} alt={`Poster for ${modalMovie.title}`}/>
+                </div>
+                <div className="p-6 sm:p-8 sm:w-2/3">
+                    <MovieCardContent
+                        movie={{
+                            title: modalMovie.title,
+                            synopsis: modalMovie.overview,
+                            year: modalMovie.release_date?.split('-')[0],
+                            imdbRating: modalMovie.vote_average?.toFixed(1),
+                            genres: modalMovie.genres?.map(g => g.name) || [],
+                        }}
+                        details={modalMovie}
+                        isFetching={false}
+                        t={t}
+                        userRegion={userRegion}
+                    />
+                </div>
             </div>
-          </div>
+            {modalMovie.trailerKey && (<div className="p-6 bg-[var(--color-card-bg)]/50"><h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-2">{t.cardTrailer}</h3><div className="trailer-responsive rounded-lg overflow-hidden"><iframe src={`https://www.youtube.com/embed/${modalMovie.trailerKey}`} title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe></div></div>)}
+        </div>
+      )}</div></div>)}
+
+      <footer className="text-center mt-12 py-6 text-sm text-[var(--color-text-subtle)]"><p>{t.footer} <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-text)] hover:underline">TMDb</a>.</p></footer>
+      
+      {isTrailerModalOpen && movieDetails.trailerKey && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={closeTrailerModal}>
+            <div className="bg-black rounded-xl w-full max-w-4xl aspect-video relative" onClick={(e) => e.stopPropagation()}>
+                <button onClick={closeTrailerModal} className="absolute -top-3 -right-3 text-white bg-gray-900 rounded-full p-1 hover:bg-gray-700 z-10">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                <div className="trailer-responsive rounded-lg overflow-hidden">
+                    <iframe src={`https://www.youtube.com/embed/${movieDetails.trailerKey}?autoplay=1`} title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe>
+                </div>
+            </div>
         </div>
       )}
-      
-      <footer className="text-center mt-12 py-6 text-sm text-[var(--color-text-subtle)]"><p>{t.footer} <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-text)] hover:underline">TMDb</a>.</p></footer>
     </div>
   );
 };

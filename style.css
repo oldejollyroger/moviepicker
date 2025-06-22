@@ -103,3 +103,23 @@ html.light-mode .filter-pill {
 .filter-pill button:hover {
     background-color: rgba(0,0,0,0.4);
 }
+/* This class constrains the platform list and makes it scrollable */
+.platform-list-container {
+    max-height: 160px; /* You can adjust this height */
+    overflow-y: auto;
+    padding-right: 0.5rem; /* Space for the scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) var(--color-bg);
+}
+
+.platform-list-container::-webkit-scrollbar {
+    width: 8px;
+}
+.platform-list-container::-webkit-scrollbar-track {
+    background: var(--color-bg);
+}
+.platform-list-container::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: 10px;
+    border: 2px solid var(--color-bg);
+}
