@@ -37,7 +37,16 @@ body, #root { min-height: 100vh; }
 .small-loader { border: 3px solid rgba(128,128,128,0.2); border-top-color: var(--color-accent); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; margin-left: 8px; vertical-align: middle; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-.platform-logo { height: 28px; width: auto; margin-right: 6px; margin-bottom: 4px; border-radius: 4px; background-color: #4A5568; padding: 2px; vertical-align: middle; }
+/* --- THIS CLASS HAS BEEN UPDATED --- */
+.platform-logo { 
+    height: 28px; 
+    width: auto; 
+    border-radius: 4px; 
+    background-color: #4A5568; 
+    padding: 2px; 
+    vertical-align: middle; 
+}
+
 .actor-thumbnail { width: 50px; height: 75px; object-fit: cover; border-radius: 4px; background-color: #4A5568; }
 
 .trailer-responsive { position: relative; overflow: hidden; padding-top: 56.25%; }
@@ -55,7 +64,6 @@ html.light-mode .lang-btn-active { color: white; }
 .horizontal-scroll-container::-webkit-scrollbar { height: 8px; }
 .horizontal-scroll-container::-webkit-scrollbar-track { background: var(--color-bg); border-radius: 10px; }
 .horizontal-scroll-container::-webkit-scrollbar-thumb { background-color: var(--color-border); border-radius: 10px; border: 2px solid var(--color-bg); }
-.horizontal-scroll-container > button { flex-shrink: 0; width: 120px; }
 
 .filter-checkbox-list { max-height: 250px; overflow-y: auto; padding-right: 0.5rem; }
 .filter-checkbox-list::-webkit-scrollbar { width: 8px; }
