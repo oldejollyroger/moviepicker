@@ -7,7 +7,6 @@ const TMDB_THUMBNAIL_BASE_URL = 'https://image.tmdb.org/t/p/w92';
 
 const CURATED_COUNTRY_LIST = new Set([ 'AR', 'AU', 'AT', 'BE', 'BR', 'CA', 'CL', 'CO', 'CZ', 'DK', 'EG', 'FI', 'FR', 'DE', 'GR', 'HK', 'HU', 'IN', 'ID', 'IE', 'IL', 'IT', 'JP', 'MY', 'MX', 'NL', 'NZ', 'NG', 'NO', 'PE', 'PH', 'PL', 'PT', 'RO', 'RU', 'SA', 'SG', 'ZA', 'KR', 'ES', 'SE', 'CH', 'TW', 'TH', 'TR', 'AE', 'GB', 'US' ]);
 const ACCENT_COLORS = [ { name: 'Cyberpunk', color: '#d946ef', text: '#f0abfc', from: '#22d3ee', to: '#d946ef' }, { name: 'Ocean', color: '#22d3ee', text: '#67e8f9', from: '#22d3ee', to: '#3b82f6' }, { name: 'Forest', color: '#22c55e', text: '#4ade80', from: '#4ade80', to: '#a3e635' }, { name: 'Volcano', color: '#dc2626', text: '#f87171', from: '#f97316', to: '#ef4444' }, { name: 'Sunset', color: '#f97316', text: '#fbbf24', from: '#fb923c', to: '#f59e0b' }, ];
-// --- CHANGE: Added a "settings" key for the new dropdown ---
 const translations = {
     es: { settings: "Ajustes", title: 'Movie Randomizer', subtitle: '¿Qué vemos esta noche?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros', showFilters: 'Más Filtros', hideFilters: 'Ocultar Filtros', applyFilters: 'Aplicar Filtros', sortBy: 'Ordenar por:', sortOptions: [ { name: 'Popularidad', id: 'popularity.desc' }, { name: 'Mejor Calificación', id: 'vote_average.desc' }, { name: 'Fecha de Estreno', id: 'primary_release_date.desc' } ], region: 'País:', selectRegionPrompt: 'Por favor, selecciona tu país para empezar', platform: 'Plataformas (Opcional):', platformSearchPlaceholder: 'Buscar plataforma...', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:', decade: 'Década:', allDecades: 'Cualquiera', minRating: 'Calificación Mínima:', surpriseMe: '¡Sorpréndeme!', goBack: 'Atrás', searching: 'Buscando...', searchPlaceholder: 'O busca una película específica...', welcomeMessage: "¡Ajusta los filtros y haz clic en '¡Sorpréndeme!' para descubrir una película!", noMoviesFound: 'No se encontraron películas con los filtros actuales. ¡Prueba con otros!', cardYear: 'Año:', cardDuration: 'Duración:', cardRating: 'Nota TMDb:', cardDirector: 'Director:', cardGenres: 'Géneros:', cardAvailableOn: 'Disponible en (Suscripción):', cardAvailableToRent: 'Disponible para Alquilar/Comprar:', cardStreamingNotFound: 'No encontrado en streaming.', cardCast: 'Reparto Principal:', cardCastNotFound: 'Reparto no disponible.', cardMarkAsWatched: 'No mostrar por 3 meses', cardTrailer: 'Ver Tráiler', cardTrailerNotFound: 'Tráiler no disponible.', cardSimilarMovies: 'Películas Similares', footer: 'Datos de películas cortesía de', shareButton: 'Compartir', shareSuccess: '¡Enlace copiado!', clearAllFilters: 'Limpiar todos los filtros', details: "Details" },
     en: { settings: "Settings", title: 'Movie Randomizer', subtitle: "What should we watch tonight?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters', showFilters: 'More Filters', hideFilters: 'Hide Filters', applyFilters: 'Apply Filters', sortBy: 'Sort by:', sortOptions: [ { name: 'Popularity', id: 'popularity.desc' }, { name: 'Top Rated', id: 'vote_average.desc' }, { name: 'Release Date', id: 'primary_release_date.desc' } ], region: 'Country:', selectRegionPrompt: 'Please select your country to begin', platform: 'Platforms (Optional):', platformSearchPlaceholder: 'Search platform...', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:', decade: 'Decade:', allDecades: 'Any', minRating: 'Minimum Rating:', surpriseMe: 'Surprise Me!', goBack: 'Back', searching: 'Searching...', searchPlaceholder: 'Or search for a specific movie...', welcomeMessage: "Adjust the filters and click 'Surprise Me!' to discover a movie!", noMoviesFound: 'No movies found with the current filters. Try changing them!', cardYear: 'Year:', cardDuration: 'Duration:', cardRating: 'TMDb Rating:', cardDirector: 'Director:', cardGenres: 'Genres:', cardAvailableOn: 'Available on (Subscription):', cardAvailableToRent: 'Available for Rent or Buy:', cardStreamingNotFound: 'Not found on streaming.', cardCast: 'Main Cast:', cardCastNotFound: 'Cast not available.', cardMarkAsWatched: "Don't show for 3 months", cardTrailer: 'Watch Trailer', cardTrailerNotFound: 'Trailer not available.', cardSimilarMovies: 'Similar Movies', footer: 'Movie data courtesy of', shareButton: 'Share', shareSuccess: 'Link Copied!', clearAllFilters: 'Clear All Filters', details: "Details" }
@@ -20,10 +19,6 @@ const formatDuration = (totalMinutes) => {
     return `${hours}h ${minutes}min`;
 };
 
-
-// ==================================================================
-// --- CHANGE: NEW COMPONENT for the settings dropdown ---
-// ==================================================================
 const SettingsDropdown = ({ mode, setMode, accent, setAccent, language, setLanguage, t }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -73,8 +68,6 @@ const SettingsDropdown = ({ mode, setMode, accent, setAccent, language, setLangu
     );
 }
 
-// ... the rest of your components (MovieCardContent, SkeletonMovieCard, FilterModal) remain unchanged ...
-// They are included below for completeness.
 const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
     const displayDetails = isFetching ? {} : details;
     return (
@@ -382,7 +375,6 @@ const App = () => {
   
   return (
     <div className="min-h-screen p-4 font-sans app-container relative">
-        {/* --- CHANGE: Replaced the old buttons with the new SettingsDropdown --- */}
         <div className="absolute top-4 right-4 z-20">
             <SettingsDropdown
                 mode={mode} setMode={setMode}
@@ -392,7 +384,6 @@ const App = () => {
             />
         </div>
       
-        {/* --- CHANGE: Adjusted padding to give more space for the dropdown button --- */}
         <header className="text-center mb-4 pt-16 sm:pt-16"><h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)]">{t.title}</h1><h2 className="text-xl sm:text-2xl text-[var(--color-text-secondary)] mt-2">{t.subtitle}</h2><div className="max-w-xl mx-auto mt-6 flex flex-col sm:flex-row items-center gap-4"><div ref={searchRef} className="relative w-full sm:flex-grow"><input type="text" value={searchQuery} onChange={handleSearchChange} placeholder={t.searchPlaceholder} className="w-full p-3 pl-10 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-full focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)] shadow-sm"/><div className="absolute top-0 left-0 inline-flex items-center p-3">{isSearching ? <div className="small-loader !m-0 !w-5 !h-5"></div> : <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>}</div>{searchResults.length > 0 && (<ul className="absolute w-full mt-2 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg shadow-lg z-20 max-h-80 overflow-y-auto">{searchResults.map(movie => (<li key={movie.id} onClick={() => handleSearchResultClick(movie)} className="p-3 hover:bg-[var(--color-bg)] cursor-pointer flex items-center gap-4"><img loading="lazy" src={movie.poster_path ? `${TMDB_THUMBNAIL_BASE_URL}${movie.poster_path}` : 'https://placehold.co/92x138/4A5568/FFFFFF?text=?'} alt={movie.title} className="w-12 h-auto rounded-md" /><div className="text-left"><p className="font-semibold text-[var(--color-text-primary)]">{movie.title}</p><p className="text-sm text-[var(--color-text-secondary)]">{movie.release_date?.split('-')[0]}</p></div></li>))}</ul>)}</div></div></header>
 
         <div className="max-w-3xl mx-auto mb-8 p-4 bg-[var(--color-card-bg)] rounded-xl shadow-lg border border-[var(--color-border)]">
@@ -420,9 +411,7 @@ const App = () => {
         </div>
       
         {isDiscovering ? <SkeletonMovieCard /> : selectedMovie ? ( 
-            // --- CHANGE: Added `w-full` to fix the overflow you identified. This is the key fix. ---
             <div ref={cardRef} className="w-full max-w-4xl mx-auto bg-[var(--color-card-bg)] rounded-xl shadow-2xl overflow-hidden mb-10 border border-[var(--color-border)] movie-card-enter">
-                {/* The card from the previous step (vertical on mobile, grid on desktop) is kept */}
                 <div className="sm:grid sm:grid-cols-3 sm:gap-x-8">
                     <div className="sm:col-span-1 p-4 sm:p-6">
                         <img loading="lazy" className="h-auto w-3/4 sm:w-full mx-auto object-cover rounded-lg shadow-lg" src={`${TMDB_IMAGE_BASE_URL}${selectedMovie.poster}`} alt={`Poster for ${selectedMovie.title}`}/>
@@ -483,6 +472,9 @@ const App = () => {
                         </div>
                     </div>
                 </div>
+                {/* ================================================================== */}
+                {/* --- THIS IS THE ONLY CHANGE IN THIS SECTION: Added `truncate` --- */}
+                {/* ================================================================== */}
                 <div className="p-4 sm:p-6 bg-[var(--color-bg)]/50 border-t border-[var(--color-border)]">
                     <h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-3">{t.cardSimilarMovies}</h3>
                     {isFetchingDetails ? <div className="flex justify-center"><div className="small-loader"></div></div> :  movieDetails.similar?.length > 0 ? ( 
@@ -490,7 +482,8 @@ const App = () => {
                             {movieDetails.similar.map(movie => ( 
                                 <button key={movie.id} onClick={() => handleSimilarMovieClick(movie)} className="text-center hover:scale-105 transition-transform duration-150 group">
                                     <img loading="lazy" src={movie.poster_path ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}` : 'https://placehold.co/200x300/4A5568/FFFFFF?text=No+Poster'} alt={movie.title} className="rounded-lg mb-1 w-full h-auto object-cover"/>
-                                    <span className="text-xs text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-text)] transition-colors">{movie.title}</span>
+                                    {/* The 'truncate' class here handles the ellipsis for long titles */}
+                                    <span className="text-xs text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-text)] transition-colors block truncate w-full">{movie.title}</span>
                                 </button> 
                             ))}
                         </div> 
