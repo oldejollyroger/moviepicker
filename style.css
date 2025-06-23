@@ -55,3 +55,14 @@ html.light-mode .lang-btn-active { color: white; }
 html.light-mode .filter-pill { background-color: var(--color-accent); color: white; }
 .filter-pill button { margin-left: 0.5rem; background-color: rgba(0,0,0,0.2); border-radius: 50%; width: 1.25rem; height: 1.25rem; display: inline-flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
 .filter-pill button:hover { background-color: rgba(0,0,0,0.4); }
+/* Add this to the end of your style.css */
+.platform-list-container {
+    max-height: 160px; /* You can adjust this height */
+    overflow-y: auto;
+    padding-right: 0.5rem; /* Space for the scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) var(--color-bg);
+}
+.platform-list-container::-webkit-scrollbar { width: 8px; }
+.platform-list-container::-webkit-scrollbar-track { background: var(--color-bg); }
+.platform-list-container::-webkit-scrollbar-thumb { background-color: var(--color-border); border-radius: 10px; border: 2px solid var(--color-bg); }
