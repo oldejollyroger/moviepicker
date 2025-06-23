@@ -19,25 +19,82 @@ const formatDuration = (totalMinutes) => {
     return `${hours}h ${minutes}min`;
 };
 
+// ==================================================================
+// THIS IS THE UPDATED COMPONENT WITH THE FIX
+// ==================================================================
 const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
     const displayDetails = isFetching ? {} : details;
     return (
         <React.Fragment>
             <h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{movie.title}</h2>
             <p className="mt-2 text-[var(--color-text-secondary)] text-base leading-relaxed break-words">{movie.synopsis}</p>
+            
             <div className="mt-6 space-y-4 text-sm">
                 <p><strong className="text-[var(--color-accent-text)]">{t.cardYear}</strong> {movie.year}</p>
                 {isFetching ? <div className="inline-flex items-center"><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong><div className="small-loader"></div></div> : displayDetails.duration && <p><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong> {formatDuration(displayDetails.duration)}</p>}
                 <p><strong className="text-[var(--color-accent-text)]">{t.cardRating}</strong> {movie.imdbRating}/10 ⭐</p>
                 {isFetching ? null : displayDetails.director?.name && <p><strong className="text-[var(--color-accent-text)]">{t.cardDirector}</strong> {displayDetails.director.name}</p>}
                 <p><strong className="text-[var(--color-accent-text)]">{t.cardGenres}</strong> {movie.genres.join(', ')}</p>
-                <div><strong className="text-[var(--color-accent-text)]">{`${t.cardAvailableOn} ${userRegion}`} </strong>{isFetching ? <div className="small-loader"></div> : displayDetails.providers?.length > 0 ? displayDetails.providers.map(p => ( <img key={p.provider_id} loading="lazy" src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/> )) : <span className="text-[var(--color-text-secondary)]">{t.cardStreamingNotFound}</span>}</div>
-                {isFetching ? null : displayDetails.rentalProviders?.length > 0 && (<div><strong className="text-[var(--color-accent-text)]">{t.cardAvailableToRent}</strong><div className="mt-1">{displayDetails.rentalProviders.map(p => ( <img key={p.provider_id} loading="lazy" src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/> ))}</div></div>)}
-                <div className="mt-4"><strong className="text-[var(--color-accent-text)] block mb-1">{t.cardCast}</strong>{isFetching ? <div className="small-loader"></div> : displayDetails.cast?.length > 0 ? ( <div className="flex flex-wrap gap-x-4 gap-y-2">{displayDetails.cast.map(actor => ( <div key={actor.id} className="flex flex-col items-center text-center w-20"><img loading="lazy" src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1"/><span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span></div> ))}</div> ) : <span className="text-xs text-[var(--color-text-secondary)]">{t.cardCastNotFound}</span>}</div>
+
+                {/* --- FIX APPLIED HERE --- */}
+                <div>
+                    {/* Make the title a block element so it sits on its own line cleanly */}
+                    <strong className="text-[var(--color-accent-text)] block mb-1">{`${t.cardAvailableOn} ${userRegion}`}</strong>
+                    {isFetching ? (
+                        <div className="small-loader"></div>
+                    ) : displayDetails.providers?.length > 0 ? (
+                        // Add a flex container that can wrap
+                        <div className="flex flex-wrap gap-2 items-center">
+                            {displayDetails.providers.map(p => (
+                                <img key={p.provider_id} loading="lazy" src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo"/>
+                            ))}
+                        </div>
+                    ) : (
+                        <span className="text-[var(--color-text-secondary)]">{t.cardStreamingNotFound}</span>
+                    )}
+                </div>
+                
+                {/* --- SAME FIX APPLIED FOR RENTAL PROVIDERS --- */}
+                {isFetching ? null : displayDetails.rentalProviders?.length > 0 && (
+                    <div>
+                        <strong className="text-[var(--color-accent-text)] block mb-1">{t.cardAvailableToRent}</strong>
+                        {/* Add a flex container that can wrap */}
+                        <div className="flex flex-wrap gap-2 items-center">
+                            {displayDetails.rentalProviders.map(p => (
+                                <img key={p.provider_id} loading="lazy" src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo"/>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                
+                {/* --- FIX ALSO APPLIED TO THE CAST SECTION --- */}
+                <div>
+                    <strong className="text-[var(--color-accent-text)] block mb-1">{t.cardCast}</strong>
+                    {isFetching ? (
+                        <div className="small-loader"></div>
+                    ) : displayDetails.cast?.length > 0 ? (
+                        // This was already using flex-wrap, which is great. 
+                        // I'm just confirming it's correct. The above changes are the most important.
+                        <div className="flex flex-wrap gap-x-4 gap-y-2">
+                            {displayDetails.cast.map(actor => (
+                                <div key={actor.id} className="flex flex-col items-center text-center w-20">
+                                    <img loading="lazy" src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1"/>
+                                    <span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <span className="text-xs text-[var(--color-text-secondary)]">{t.cardCastNotFound}</span>
+                    )}
+                </div>
             </div>
         </React.Fragment>
     );
 };
+// ==================================================================
+// END OF UPDATED COMPONENT
+// ==================================================================
+
 
 const SkeletonMovieCard = () => {
     return (
