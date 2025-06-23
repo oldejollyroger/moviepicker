@@ -19,16 +19,16 @@ const formatDuration = (totalMinutes) => {
     return `${hours}h ${minutes}min`;
 };
 
-// --- JS FIX 1: Smaller font sizes on mobile ---
+// --- CHANGE: Smaller font sizes on mobile, scaling up for desktop ---
 const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
     const displayDetails = isFetching ? {} : details;
     return (
         <React.Fragment>
-            {/* Title is smaller on mobile (text-2xl) and larger on desktop (sm:text-4xl) */}
-            <h2 className="text-2xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{movie.title}</h2>
-            {/* Synopsis is smaller on mobile (text-sm) and larger on desktop (sm:text-base) */}
-            <p className="mt-2 text-[var(--color-text-secondary)] text-sm sm:text-base leading-relaxed break-words">{movie.synopsis}</p>
-            <div className="mt-6 space-y-4 text-sm">
+            {/* Title: smaller on mobile (text-2xl), larger on desktop (sm:text-4xl) */}
+            <h2 className="text-2xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-2 sm:mb-3 break-words">{movie.title}</h2>
+            {/* Synopsis: smaller on mobile (text-sm), larger on desktop (sm:text-base) */}
+            <p className="mt-1 sm:mt-2 text-[var(--color-text-secondary)] text-sm sm:text-base leading-relaxed break-words">{movie.synopsis}</p>
+            <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4 text-sm">
                 <p><strong className="text-[var(--color-accent-text)]">{t.cardYear}</strong> {movie.year}</p>
                 {isFetching ? <div className="inline-flex items-center"><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong><div className="small-loader"></div></div> : displayDetails.duration && <p><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong> {formatDuration(displayDetails.duration)}</p>}
                 <p><strong className="text-[var(--color-accent-text)]">{t.cardRating}</strong> {movie.imdbRating}/10 ⭐</p>
@@ -52,9 +52,9 @@ const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
                 <div>
                     <strong className="text-[var(--color-accent-text)] block mb-1">{t.cardCast}</strong>
                     {isFetching ? <div className="small-loader"></div> : displayDetails.cast?.length > 0 ? (
-                    <div className="flex flex-wrap gap-x-4 gap-y-2">
+                    <div className="flex flex-wrap gap-x-2 sm:gap-x-4 gap-y-2">
                         {displayDetails.cast.map(actor => (
-                        <div key={actor.id} className="flex flex-col items-center text-center w-20">
+                        <div key={actor.id} className="flex flex-col items-center text-center w-16 sm:w-20">
                             <img loading="lazy" src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1"/>
                             <span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span>
                         </div>
@@ -76,7 +76,7 @@ const SkeletonMovieCard = () => {
                     <div className="w-full aspect-[2/3] bg-gray-700 rounded-lg"></div>
                 </div>
                 <div className="p-4 sm:p-8 sm:w-2/3">
-                    <div className="h-10 bg-gray-700 rounded w-3/4 mb-4"></div>
+                    <div className="h-8 sm:h-10 bg-gray-700 rounded w-3/4 mb-4"></div>
                     <div className="space-y-3 mt-4">
                         <div className="h-4 bg-gray-700 rounded"></div>
                         <div className="h-4 bg-gray-700 rounded"></div>
@@ -318,7 +318,7 @@ const App = () => {
   const handleRegionChange = (newRegion) => { setUserRegion(newRegion); };
   const handleSearchChange = (e) => { setSearchQuery(e.target.value); };
   const handleSearchResultClick = (movie) => { const formattedMovie = { id: movie.id.toString(), title: movie.title, synopsis: movie.overview, year: movie.release_date ? parseInt(movie.release_date.split('-')[0]) : null, imdbRating: movie.vote_average.toFixed(1), genres: movie.genre_ids.map(id => genresMap[id]).filter(Boolean) || ["Desconocido"], poster: movie.poster_path, }; if (selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]); setSelectedMovie(formattedMovie); setSearchQuery(''); setSearchResults([]); };
-  const handleGoBack = () => { if (movieHistory.length === 0) return; const newHistory = [...movieHistory]; const previousMovie = newHistory.pop(); setMovieHistory(newHistory); setSelectedMovie(previousMovie); if(selectedMovie) setSessionShownMovies(prev => new Set(prev).add(selectedMovie.id)); };
+  const handleGoBack = () => { if (movieHistory.length === 0) return; const newHistory = [...movie]; const previousMovie = newHistory.pop(); setMovieHistory(newHistory); setSelectedMovie(previousMovie); if(selectedMovie) setSessionShownMovies(prev => new Set(prev).add(selectedMovie.id)); };
   const handleMarkAsWatched = (movieId) => { if(!movieId) return; const threeMonths = 3 * 30 * 24 * 60 * 60 * 1000; setWatchedMovies(prev => ({...prev, [movieId]: Date.now() + threeMonths})); setAllMovies(prev => prev.filter(m => m.id !== movieId)); handleSurpriseMe(); };
   const handleShare = useCallback(() => { if (!selectedMovie) return; const movieUrl = `https://www.themoviedb.org/movie/${selectedMovie.id}`; const shareData = { title: selectedMovie.title, text: `Check out this movie I found: ${selectedMovie.title}`, url: movieUrl }; if (navigator.share) { navigator.share(shareData).catch(err => console.error("Couldn't share", err)); } else { navigator.clipboard.writeText(movieUrl).then(() => { setShareStatus('success'); setTimeout(() => setShareStatus('idle'), 2000); }); } }, [selectedMovie]);
   const handleSimilarMovieClick = async (movie) => { setIsFetchingModalDetails(true); setModalMovie(null); const langParam = language === 'es' ? 'es-ES' : 'en-US'; const details = await fetchFullMovieDetails(movie.id, langParam); setModalMovie(details); setIsFetchingModalDetails(false); };
@@ -377,36 +377,37 @@ const App = () => {
         {isDiscovering ? <SkeletonMovieCard /> : selectedMovie ? ( 
             <div ref={cardRef} className="max-w-4xl mx-auto bg-[var(--color-card-bg)] rounded-xl shadow-2xl overflow-hidden mb-10 border border-[var(--color-border)] movie-card-enter">
                 <div className="flex flex-col sm:flex-row">
+                    {/* --- CHANGE: Optimized poster image for mobile (w-1/2) and desktop (sm:w-1/3) --- */}
                     <div className="sm:w-1/3 flex-shrink-0">
-                        <div className="relative poster-container">
-                            <img loading="lazy" className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${selectedMovie.poster}`} alt={`Poster for ${selectedMovie.title}`}/>
+                        <div className="relative poster-container p-4 sm:p-0">
+                            <img loading="lazy" className="h-auto w-1/2 sm:w-full mx-auto sm:mx-0 object-cover rounded-md" src={`${TMDB_IMAGE_BASE_URL}${selectedMovie.poster}`} alt={`Poster for ${selectedMovie.title}`}/>
                         </div>
                         {!isFetchingDetails && movieDetails.trailerKey && (
-                            <div className="p-4 flex justify-center">
-                                <button onClick={openTrailerModal} className="w-full max-w-[300px] rounded-lg overflow-hidden relative group shadow-lg hover:shadow-2xl transition-shadow">
+                            <div className="p-4 pt-0 flex justify-center">
+                                <button onClick={openTrailerModal} className="w-full max-w-[200px] sm:max-w-[300px] rounded-lg overflow-hidden relative group shadow-lg hover:shadow-2xl transition-shadow">
                                     <img loading="lazy" src={`https://img.youtube.com/vi/${movieDetails.trailerKey}/mqdefault.jpg`} alt="Trailer thumbnail" className="w-full" />
                                     <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                                        <div className="bg-black/50 backdrop-blur-sm rounded-full p-3">
-                                            <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                                        <div className="bg-black/50 backdrop-blur-sm rounded-full p-2 sm:p-3">
+                                            <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                                         </div>
                                     </div>
                                 </button>
                             </div>
                         )}
                     </div>
-                    {/* --- JS FIX 2: Reduced padding on mobile (p-4) and added min-w-0 --- */}
-                    <div className="p-4 sm:p-8 sm:w-2/3 min-w-0">
+                    {/* --- CHANGE: CRITICAL FIX. Reduced padding for mobile and added min-w-0 to prevent flex overflow --- */}
+                    <div className="p-4 pt-0 sm:p-8 sm:w-2/3 min-w-0">
                         <MovieCardContent movie={selectedMovie} details={movieDetails} isFetching={isFetchingDetails} t={t} userRegion={userRegion} />
-                        <div className="mt-8 flex flex-col sm:flex-row gap-4">
-                           <button onClick={() => handleMarkAsWatched(selectedMovie.id)} className="w-full py-3 px-4 bg-red-600/80 hover:bg-red-600 text-white font-bold rounded-lg shadow-md transition-colors">{t.cardMarkAsWatched}</button>
-                           <button onClick={handleShare} className="w-full py-3 px-4 bg-blue-600/80 hover:bg-blue-600 text-white font-bold rounded-lg shadow-md transition-colors">
+                        <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-4">
+                           <button onClick={() => handleMarkAsWatched(selectedMovie.id)} className="w-full py-2 sm:py-3 px-4 bg-red-600/80 hover:bg-red-600 text-white font-bold rounded-lg shadow-md transition-colors">{t.cardMarkAsWatched}</button>
+                           <button onClick={handleShare} className="w-full py-2 sm:py-3 px-4 bg-blue-600/80 hover:bg-blue-600 text-white font-bold rounded-lg shadow-md transition-colors">
                              {shareStatus === 'success' ? t.shareSuccess : t.shareButton}
                            </button>
                         </div>
                     </div>
                 </div>
-                <div className="p-6 bg-[var(--color-bg)] border-t border-[var(--color-border)]">
-                    <h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-3">{t.cardSimilarMovies}</h3>
+                <div className="p-4 sm:p-6 bg-[var(--color-bg)] border-t border-[var(--color-border)]">
+                    <h3 className="text-lg sm:text-xl font-semibold text-[var(--color-accent-text)] mb-3">{t.cardSimilarMovies}</h3>
                     {isFetchingDetails ? <div className="flex justify-center"><div className="small-loader"></div></div> :  movieDetails.similar?.length > 0 ? ( 
                         <div className="horizontal-scroll-container">
                             {movieDetails.similar.map(movie => ( 
@@ -419,7 +420,7 @@ const App = () => {
                     ) : <p className="text-sm text-[var(--color-text-secondary)] text-sm">{t.noMoviesFound}</p>}
                 </div>
             </div> ) : ( 
-            <div className="text-center text-gray-400 mt-10 text-lg">
+            <div className="text-center text-gray-400 mt-10 text-lg px-4">
                 {hasSearched && allMovies.length === 0 && !isDiscovering 
                     ? (<div><p>{t.noMoviesFound}</p><button onClick={handleClearFilters} className="mt-4 px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg">{t.clearAllFilters}</button></div>) 
                     : !hasSearched && t.welcomeMessage
@@ -438,9 +439,12 @@ const App = () => {
                         <div className="max-w-4xl mx-auto rounded-xl shadow-2xl overflow-hidden">
                             <div className="flex flex-col sm:flex-row">
                                 <div className="sm:w-1/3 flex-shrink-0">
-                                    <img loading="lazy" className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${modalMovie.poster_path}`} alt={`Poster for ${modalMovie.title}`}/>
+                                     <div className="relative poster-container p-4 sm:p-0">
+                                        <img loading="lazy" className="h-auto w-1/2 sm:w-full mx-auto sm:mx-0 object-cover rounded-md" src={`${TMDB_IMAGE_BASE_URL}${modalMovie.poster_path}`} alt={`Poster for ${modalMovie.title}`}/>
+                                     </div>
                                 </div>
-                                <div className="p-4 sm:p-8 sm:w-2/3 min-w-0">
+                                {/* --- CHANGE: CRITICAL FIX. Applied same mobile padding and min-w-0 fix to the modal --- */}
+                                <div className="p-4 pt-0 sm:p-8 sm:w-2/3 min-w-0">
                                     <MovieCardContent
                                         movie={{
                                             title: modalMovie.title,
@@ -456,7 +460,7 @@ const App = () => {
                                     />
                                 </div>
                             </div>
-                            {modalMovie.trailerKey && (<div className="p-6 bg-[var(--color-card-bg)]/50"><h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-2">{t.cardTrailer}</h3><div className="trailer-responsive rounded-lg overflow-hidden"><iframe src={`https://www.youtube.com/embed/${modalMovie.trailerKey}`} title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe></div></div>)}
+                            {modalMovie.trailerKey && (<div className="p-4 sm:p-6 bg-[var(--color-card-bg)]/50"><h3 className="text-lg sm:text-xl font-semibold text-[var(--color-accent-text)] mb-2">{t.cardTrailer}</h3><div className="trailer-responsive rounded-lg overflow-hidden"><iframe src={`https://www.youtube.com/embed/${modalMovie.trailerKey}`} title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe></div></div>)}
                         </div>
                     )}
                 </div>
