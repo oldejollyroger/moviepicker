@@ -300,21 +300,99 @@ const App = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => { document.removeEventListener("mousedown", handleClickOutside); };
   }, []);
-  const fetchFullMovieDetails = useCallback(async (movieId, lang) => {
-    try {
-        const res = await fetch(`${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,videos,watch/providers,keywords,similar`);
-        if (!res.ok) throw new Error(`Details: ${res.statusText}`);
-        const data = await res.json();
-        const regionProviders = data['watch/providers']?.results?.[userRegion];
-        const rentProviders = regionProviders?.rent || [];
-        const buyProviders = regionProviders?.buy || [];
-        const combinedPayProviders = [...rentProviders, ...buyProviders];
-        const uniquePayProviderIds = new Set();
-        const uniquePayProviders = combinedPayProviders.filter(p => { if (uniquePayProviderIds.has(p.provider_id)) return false; uniquePayProviderIds.add(p.provider_id); return true; });
-        let similarMovies = data.similar?.results?.filter(m => m.poster_path && m.vote_average > 5 && m.id !== parseInt(movieId)).slice(0, 10) || [];
-        return { ...data, duration: data.runtime || null, providers: regionProviders?.flatrate || [], rentalProviders: uniquePayProviders, cast: data.credits?.cast?.slice(0, 5) || [], director: data.credits?.crew?.find(p => p.job === 'Director') || null, trailerKey: (data.videos?.results?.filter(v => v.type === 'Trailer' && v.site === 'YouTube') || [])[0]?.key || null, similar: similarMovies };
-    } catch (err) { console.error("Error fetching all details for movie", movieId, err); return null; }
-  }, [userRegion]);
+
+    // ==================================================================
+    // --- THIS IS THE FULLY REWRITTEN, SMARTER RECOMMENDATION LOGIC ---
+    // ==================================================================
+    const fetchFullMovieDetails = useCallback(async (movieId, lang) => {
+        try {
+            // Step 1: Get the primary movie's details, including credits and collection info
+            const mainDetailsUrl = `${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,videos,watch/providers`;
+            const mainDetailsRes = await fetch(mainDetailsUrl);
+            if (!mainDetailsRes.ok) throw new Error(`Details: ${mainDetailsRes.statusText}`);
+            const data = await mainDetailsRes.json();
+
+            let recommendations = [];
+            const addedMovieIds = new Set([parseInt(movieId)]);
+
+            // Helper function to process and add movies to the list
+            const addMovies = (movies) => {
+                for (const movie of movies) {
+                    if (recommendations.length >= 15) break; // Stop if we have enough
+                    if (!addedMovieIds.has(movie.id)) {
+                        recommendations.push(movie);
+                        addedMovieIds.add(movie.id);
+                    }
+                }
+            };
+
+            // Step 2: (Highest Priority) Add movies from the same collection/saga
+            if (data.belongs_to_collection) {
+                const collectionRes = await fetch(`${TMDB_BASE_URL}/collection/${data.belongs_to_collection.id}?api_key=${TMDB_API_KEY}&language=${lang}`);
+                if (collectionRes.ok) {
+                    const collectionData = await collectionRes.json();
+                    addMovies(collectionData.parts);
+                }
+            }
+            
+            // Step 3: Add movies from the same director
+            const director = data.credits?.crew?.find(p => p.job === 'Director');
+            if (director) {
+                 const directorMoviesRes = await fetch(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${lang}&with_crew=${director.id}&sort_by=popularity.desc`);
+                 if(directorMoviesRes.ok) {
+                    const directorMoviesData = await directorMoviesRes.json();
+                    addMovies(directorMoviesData.results);
+                 }
+            }
+
+            // Step 4: Add movies from the top 2 lead actors
+            const leadActors = data.credits?.cast?.slice(0, 2).map(actor => actor.id);
+            if (leadActors?.length > 0) {
+                const actorMoviesRes = await fetch(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${lang}&with_cast=${leadActors.join('|')}&sort_by=popularity.desc`);
+                if(actorMoviesRes.ok) {
+                    const actorMoviesData = await actorMoviesRes.json();
+                    addMovies(actorMoviesData.results);
+                }
+            }
+
+            // Step 5: (Lowest Priority) Fill the rest with general similar movies if needed
+            if (recommendations.length < 10) {
+                const similarMoviesRes = await fetch(`${TMDB_BASE_URL}/movie/${movieId}/similar?api_key=${TMDB_API_KEY}&language=${lang}`);
+                 if(similarMoviesRes.ok) {
+                    const similarMoviesData = await similarMoviesRes.json();
+                    addMovies(similarMoviesData.results);
+                 }
+            }
+
+            // Step 6: Final quality filter and slice
+            const highQualitySimilar = recommendations
+                .filter(m => m.poster_path && m.overview && m.vote_average > 6.0 && m.vote_count > 100)
+                .slice(0, 10);
+
+            // Finalize main movie details
+            const regionProviders = data['watch/providers']?.results?.[userRegion];
+            const rentProviders = regionProviders?.rent || [];
+            const buyProviders = regionProviders?.buy || [];
+            const combinedPayProviders = [...rentProviders, ...buyProviders];
+            const uniquePayProviderIds = new Set();
+            const uniquePayProviders = combinedPayProviders.filter(p => { if (uniquePayProviderIds.has(p.provider_id)) return false; uniquePayProviderIds.add(p.provider_id); return true; });
+
+            return { 
+                ...data, 
+                duration: data.runtime || null, 
+                providers: regionProviders?.flatrate || [], 
+                rentalProviders: uniquePayProviders, 
+                cast: data.credits?.cast?.slice(0, 5) || [], 
+                director: director, 
+                trailerKey: (data.videos?.results?.filter(v => v.type === 'Trailer' && v.site === 'YouTube') || [])[0]?.key || null,
+                similar: highQualitySimilar
+            };
+        } catch (err) { 
+            console.error("Error fetching all details for movie", movieId, err); 
+            return null; 
+        }
+    }, [userRegion, language]);
+
   useEffect(() => {
     if (selectedMovie && cardRef.current) { cardRef.current.classList.remove('movie-card-enter'); setTimeout(() => cardRef.current.classList.add('movie-card-enter'), 10); }
     setShareStatus('idle');
@@ -477,16 +555,12 @@ const App = () => {
                     <h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-3">{t.cardSimilarMovies}</h3>
                     {isFetchingDetails ? <div className="flex justify-center"><div className="small-loader"></div></div> :  movieDetails.similar?.length > 0 ? ( 
                         <div className="horizontal-scroll-container">
-                            {/* --- THIS IS THE UPDATED, UNIFORM LAYOUT FOR SIMILAR MOVIES --- */}
                             {movieDetails.similar.map(movie => ( 
                                 <button 
                                     key={movie.id} 
                                     onClick={() => handleSimilarMovieClick(movie)} 
-                                    // 1. Fixed width is applied to the button itself (w-32 is 128px)
-                                    // 2. flex-shrink-0 prevents it from shrinking inside the flex container
                                     className="flex-shrink-0 w-32 text-center group hover:scale-105 transition-transform duration-150"
                                 >
-                                    {/* 3. This div creates the poster container with a guaranteed 2:3 aspect ratio */}
                                     <div className="w-full aspect-[2/3] bg-[var(--color-border)] rounded-lg overflow-hidden">
                                          <img 
                                              loading="lazy" 
@@ -495,7 +569,6 @@ const App = () => {
                                              className="w-full h-full object-cover"
                                          />
                                     </div>
-                                    {/* 4. The `truncate` class ensures a single, clean line of text with an ellipsis */}
                                     <span className="block w-full text-xs text-center text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-text)] transition-colors pt-2 truncate">
                                         {movie.title}
                                     </span>
