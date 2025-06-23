@@ -1,31 +1,26 @@
-const CACHE_NAME = 'moviepicker-v1';
-// This list includes your core app shell files and the CDN scripts.
+const CACHE_NAME = 'moviepicker-v2'; // Changed version to force an update
+// We are ONLY caching local files. The browser will still get the others from the network.
 const URLS_TO_CACHE = [
   '/',
   '/index.html',
   '/style.css',
   '/script.js',
   '/config.js',
-  '/icon.svg',
-  '/manifest.json',
-  'https://cdn.tailwindcss.com',
-  'https://unpkg.com/react@17/umd/react.development.js',
-  'https://unpkg.com/react-dom@17/umd/react-dom.development.js',
-  'https://unpkg.com/@babel/standalone/babel.min.js'
+  '/icon-192x192.png',
+  '/icon-512x512.png',
+  '/manifest.json'
 ];
 
-// Install event: cache the application shell
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
-        console.log('Opened cache');
+        console.log('Opened cache and caching app shell');
         return cache.addAll(URLS_TO_CACHE);
       })
   );
 });
 
-// Activate event: clean up old caches
 self.addEventListener('activate', event => {
   const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
@@ -33,6 +28,7 @@ self.addEventListener('activate', event => {
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheWhitelist.indexOf(cacheName) === -1) {
+            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -41,36 +37,22 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Fetch event: serve from cache first, then network
 self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Cache hit - return response
-        if (response) {
-          return response;
+  // We only handle requests for local pages (HTML navigation) to enable offline mode.
+  // All other requests (CSS, JS, images, APIs) will go directly to the network.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      (async () => {
+        try {
+          const networkResponse = await fetch(event.request);
+          return networkResponse;
+        } catch (error) {
+          console.log('Fetch failed; returning offline page from cache.');
+          const cache = await caches.open(CACHE_NAME);
+          const cachedResponse = await cache.match('/');
+          return cachedResponse;
         }
-
-        // Clone the request because it's a one-time-use stream
-        const fetchRequest = event.request.clone();
-
-        return fetch(fetchRequest).then(
-          response => {
-            // Check if we received a valid response
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            const responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then(cache => {
-                cache.put(event.request, responseToCache);
-              });
-
-            return response;
-          }
-        );
-      })
+      })()
     );
+  }
 });
