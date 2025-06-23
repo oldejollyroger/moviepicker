@@ -8,8 +8,8 @@ const TMDB_THUMBNAIL_BASE_URL = 'https://image.tmdb.org/t/p/w92';
 const CURATED_COUNTRY_LIST = new Set([ 'AR', 'AU', 'AT', 'BE', 'BR', 'CA', 'CL', 'CO', 'CZ', 'DK', 'EG', 'FI', 'FR', 'DE', 'GR', 'HK', 'HU', 'IN', 'ID', 'IE', 'IL', 'IT', 'JP', 'MY', 'MX', 'NL', 'NZ', 'NG', 'NO', 'PE', 'PH', 'PL', 'PT', 'RO', 'RU', 'SA', 'SG', 'ZA', 'KR', 'ES', 'SE', 'CH', 'TW', 'TH', 'TR', 'AE', 'GB', 'US' ]);
 const ACCENT_COLORS = [ { name: 'Cyberpunk', color: '#d946ef', text: '#f0abfc', from: '#22d3ee', to: '#d946ef' }, { name: 'Ocean', color: '#22d3ee', text: '#67e8f9', from: '#22d3ee', to: '#3b82f6' }, { name: 'Forest', color: '#22c55e', text: '#4ade80', from: '#4ade80', to: '#a3e635' }, { name: 'Volcano', color: '#dc2626', text: '#f87171', from: '#f97316', to: '#ef4444' }, { name: 'Sunset', color: '#f97316', text: '#fbbf24', from: '#fb923c', to: '#f59e0b' }, ];
 const translations = {
-    es: { title: 'Movie Randomizer', subtitle: '¿Qué vemos esta noche?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros', showFilters: 'Más Filtros', hideFilters: 'Ocultar Filtros', applyFilters: 'Aplicar Filtros', sortBy: 'Ordenar por:', sortOptions: [ { name: 'Popularidad', id: 'popularity.desc' }, { name: 'Mejor Calificación', id: 'vote_average.desc' }, { name: 'Fecha de Estreno', id: 'primary_release_date.desc' } ], region: 'País:', selectRegionPrompt: 'Por favor, selecciona tu país para empezar', platform: 'Plataformas (Opcional):', platformSearchPlaceholder: 'Buscar plataforma...', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:', decade: 'Década:', allDecades: 'Cualquiera', minRating: 'Calificación Mínima:', surpriseMe: '¡Sorpréndeme!', goBack: 'Atrás', searching: 'Buscando...', searchPlaceholder: 'O busca una película específica...', welcomeMessage: "¡Ajusta los filtros y haz clic en '¡Sorpréndeme!' para descubrir una película!", noMoviesFound: 'No se encontraron películas con los filtros actuales. ¡Prueba con otros!', cardYear: 'Año:', cardDuration: 'Duración:', cardRating: 'Nota TMDb:', cardDirector: 'Director:', cardGenres: 'Géneros:', cardAvailableOn: 'Disponible en (Suscripción):', cardAvailableToRent: 'Disponible para Alquilar/Comprar:', cardStreamingNotFound: 'No encontrado en streaming.', cardCast: 'Reparto Principal:', cardCastNotFound: 'Reparto no disponible.', cardMarkAsWatched: 'No mostrar por 3 meses', cardTrailer: 'Ver Tráiler', cardTrailerNotFound: 'Tráiler no disponible.', cardSimilarMovies: 'Películas Similares', footer: 'Datos de películas cortesía de', shareButton: 'Compartir', shareSuccess: '¡Enlace copiado!', clearAllFilters: 'Limpiar todos los filtros', },
-    en: { title: 'Movie Randomizer', subtitle: "What should we watch tonight?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters', showFilters: 'More Filters', hideFilters: 'Hide Filters', applyFilters: 'Apply Filters', sortBy: 'Sort by:', sortOptions: [ { name: 'Popularity', id: 'popularity.desc' }, { name: 'Top Rated', id: 'vote_average.desc' }, { name: 'Release Date', id: 'primary_release_date.desc' } ], region: 'Country:', selectRegionPrompt: 'Please select your country to begin', platform: 'Platforms (Optional):', platformSearchPlaceholder: 'Search platform...', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:', decade: 'Decade:', allDecades: 'Any', minRating: 'Minimum Rating:', surpriseMe: 'Surprise Me!', goBack: 'Back', searching: 'Searching...', searchPlaceholder: 'Or search for a specific movie...', welcomeMessage: "Adjust the filters and click 'Surprise Me!' to discover a movie!", noMoviesFound: 'No movies found with the current filters. Try changing them!', cardYear: 'Year:', cardDuration: 'Duration:', cardRating: 'TMDb Rating:', cardDirector: 'Director:', cardGenres: 'Genres:', cardAvailableOn: 'Available on (Subscription):', cardAvailableToRent: 'Available for Rent or Buy:', cardStreamingNotFound: 'Not found on streaming.', cardCast: 'Main Cast:', cardCastNotFound: 'Cast not available.', cardMarkAsWatched: "Don't show for 3 months", cardTrailer: 'Watch Trailer', cardTrailerNotFound: 'Trailer not available.', cardSimilarMovies: 'Similar Movies', footer: 'Movie data courtesy of', shareButton: 'Share', shareSuccess: 'Link Copied!', clearAllFilters: 'Clear All Filters', }
+    es: { title: 'Movie Randomizer', subtitle: '¿Qué vemos esta noche?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros', showFilters: 'Más Filtros', hideFilters: 'Ocultar Filtros', applyFilters: 'Aplicar Filtros', sortBy: 'Ordenar por:', sortOptions: [ { name: 'Popularidad', id: 'popularity.desc' }, { name: 'Mejor Calificación', id: 'vote_average.desc' }, { name: 'Fecha de Estreno', id: 'primary_release_date.desc' } ], region: 'País:', selectRegionPrompt: 'Por favor, selecciona tu país para empezar', platform: 'Plataformas (Opcional):', platformSearchPlaceholder: 'Buscar plataforma...', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:', decade: 'Década:', allDecades: 'Cualquiera', minRating: 'Calificación Mínima:', surpriseMe: '¡Sorpréndeme!', goBack: 'Atrás', searching: 'Buscando...', searchPlaceholder: 'O busca una película específica...', welcomeMessage: "¡Ajusta los filtros y haz clic en '¡Sorpréndeme!' para descubrir una película!", noMoviesFound: 'No se encontraron películas con los filtros actuales. ¡Prueba con otros!', cardYear: 'Año:', cardDuration: 'Duración:', cardRating: 'Nota TMDb:', cardDirector: 'Director:', cardGenres: 'Géneros:', cardAvailableOn: 'Disponible en (Suscripción):', cardAvailableToRent: 'Disponible para Alquilar/Comprar:', cardStreamingNotFound: 'No encontrado en streaming.', cardCast: 'Reparto Principal:', cardCastNotFound: 'Reparto no disponible.', cardMarkAsWatched: 'No mostrar por 3 meses', cardTrailer: 'Ver Tráiler', cardTrailerNotFound: 'Tráiler no disponible.', cardSimilarMovies: 'Películas Similares', footer: 'Datos de películas cortesía de', shareButton: 'Compartir', shareSuccess: '¡Enlace copiado!', clearAllFilters: 'Limpiar todos los filtros', details: "Details" },
+    en: { title: 'Movie Randomizer', subtitle: "What should we watch tonight?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters', showFilters: 'More Filters', hideFilters: 'Hide Filters', applyFilters: 'Apply Filters', sortBy: 'Sort by:', sortOptions: [ { name: 'Popularity', id: 'popularity.desc' }, { name: 'Top Rated', id: 'vote_average.desc' }, { name: 'Release Date', id: 'primary_release_date.desc' } ], region: 'Country:', selectRegionPrompt: 'Please select your country to begin', platform: 'Platforms (Optional):', platformSearchPlaceholder: 'Search platform...', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:', decade: 'Decade:', allDecades: 'Any', minRating: 'Minimum Rating:', surpriseMe: 'Surprise Me!', goBack: 'Back', searching: 'Searching...', searchPlaceholder: 'Or search for a specific movie...', welcomeMessage: "Adjust the filters and click 'Surprise Me!' to discover a movie!", noMoviesFound: 'No movies found with the current filters. Try changing them!', cardYear: 'Year:', cardDuration: 'Duration:', cardRating: 'TMDb Rating:', cardDirector: 'Director:', cardGenres: 'Genres:', cardAvailableOn: 'Available on (Subscription):', cardAvailableToRent: 'Available for Rent or Buy:', cardStreamingNotFound: 'Not found on streaming.', cardCast: 'Main Cast:', cardCastNotFound: 'Cast not available.', cardMarkAsWatched: "Don't show for 3 months", cardTrailer: 'Watch Trailer', cardTrailerNotFound: 'Trailer not available.', cardSimilarMovies: 'Similar Movies', footer: 'Movie data courtesy of', shareButton: 'Share', shareSuccess: 'Link Copied!', clearAllFilters: 'Clear All Filters', details: "Details" }
 };
 
 const formatDuration = (totalMinutes) => {
@@ -19,21 +19,21 @@ const formatDuration = (totalMinutes) => {
     return `${hours}h ${minutes}min`;
 };
 
-// --- CHANGE: Smaller font sizes on mobile, scaling up for desktop ---
+// NOTE: The MovieCardContent component is no longer used in the main card view
+// to allow for a more flexible, section-based layout.
+// It is still used for the pop-up modal for Similar Movies.
 const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
     const displayDetails = isFetching ? {} : details;
     return (
         <React.Fragment>
-            {/* Title: smaller on mobile (text-2xl), larger on desktop (sm:text-4xl) */}
-            <h2 className="text-2xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-2 sm:mb-3 break-words">{movie.title}</h2>
-            {/* Synopsis: smaller on mobile (text-sm), larger on desktop (sm:text-base) */}
-            <p className="mt-1 sm:mt-2 text-[var(--color-text-secondary)] text-sm sm:text-base leading-relaxed break-words">{movie.synopsis}</p>
-            <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4 text-sm">
-                <p><strong className="text-[var(--color-accent-text)]">{t.cardYear}</strong> {movie.year}</p>
-                {isFetching ? <div className="inline-flex items-center"><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong><div className="small-loader"></div></div> : displayDetails.duration && <p><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong> {formatDuration(displayDetails.duration)}</p>}
-                <p><strong className="text-[var(--color-accent-text)]">{t.cardRating}</strong> {movie.imdbRating}/10 ⭐</p>
-                {isFetching ? null : displayDetails.director?.name && <p><strong className="text-[var(--color-accent-text)]">{t.cardDirector}</strong> {displayDetails.director.name}</p>}
-                <p><strong className="text-[var(--color-accent-text)]">{t.cardGenres}</strong> {movie.genres.join(', ')}</p>
+            <h2 className="text-2xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-2 sm:mb-3 break-words text-center sm:text-left">{movie.title}</h2>
+            <p className="mt-1 sm:mt-2 text-[var(--color-text-secondary)] text-sm sm:text-base leading-relaxed break-words text-center sm:text-left">{movie.synopsis}</p>
+            <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4 text-sm text-left">
+                 <div><strong className="text-[var(--color-accent-text)]">{t.cardYear}</strong> {movie.year}</div>
+                {isFetching ? <div className="inline-flex items-center"><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong><div className="small-loader"></div></div> : displayDetails.duration && <div><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong> {formatDuration(displayDetails.duration)}</div>}
+                <div><strong className="text-[var(--color-accent-text)]">{t.cardRating}</strong> {movie.imdbRating}/10 ⭐</div>
+                {isFetching ? null : displayDetails.director?.name && <div><strong className="text-[var(--color-accent-text)]">{t.cardDirector}</strong> {displayDetails.director.name}</div>}
+                <div><strong className="text-[var(--color-accent-text)]">{t.cardGenres}</strong> {movie.genres.join(', ')}</div>
                 <div>
                     <strong className="text-[var(--color-accent-text)] block mb-1">{`${t.cardAvailableOn} ${userRegion}`}</strong>
                     {isFetching ? <div className="small-loader"></div> : displayDetails.providers?.length > 0 ? (
@@ -71,22 +71,15 @@ const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
 const SkeletonMovieCard = () => {
     return (
         <div className="max-w-4xl mx-auto bg-[var(--color-card-bg)] rounded-xl shadow-2xl overflow-hidden mb-10 border border-[var(--color-border)] animate-pulse">
-            <div className="flex flex-col sm:flex-row">
-                <div className="sm:w-1/3 flex-shrink-0 p-4">
-                    <div className="w-full aspect-[2/3] bg-gray-700 rounded-lg"></div>
-                </div>
-                <div className="p-4 sm:p-8 sm:w-2/3">
-                    <div className="h-8 sm:h-10 bg-gray-700 rounded w-3/4 mb-4"></div>
-                    <div className="space-y-3 mt-4">
-                        <div className="h-4 bg-gray-700 rounded"></div>
-                        <div className="h-4 bg-gray-700 rounded"></div>
-                        <div className="h-4 bg-gray-700 rounded w-5/6"></div>
-                    </div>
-                    <div className="mt-8 space-y-4">
-                        <div className="h-5 bg-gray-700 rounded w-1/2"></div>
-                        <div className="h-5 bg-gray-700 rounded w-1/3"></div>
-                        <div className="h-5 bg-gray-700 rounded w-2/3"></div>
-                    </div>
+            <div className="p-6">
+                <div className="w-1/2 h-auto mx-auto aspect-[2/3] bg-gray-700 rounded-lg"></div>
+            </div>
+             <div className="p-6 space-y-4">
+                <div className="h-8 bg-gray-700 rounded w-3/4 mx-auto"></div>
+                <div className="space-y-3 mt-4">
+                    <div className="h-4 bg-gray-700 rounded w-full mx-auto"></div>
+                    <div className="h-4 bg-gray-700 rounded w-full mx-auto"></div>
+                    <div className="h-4 bg-gray-700 rounded w-5/6 mx-auto"></div>
                 </div>
             </div>
         </div>
@@ -318,7 +311,7 @@ const App = () => {
   const handleRegionChange = (newRegion) => { setUserRegion(newRegion); };
   const handleSearchChange = (e) => { setSearchQuery(e.target.value); };
   const handleSearchResultClick = (movie) => { const formattedMovie = { id: movie.id.toString(), title: movie.title, synopsis: movie.overview, year: movie.release_date ? parseInt(movie.release_date.split('-')[0]) : null, imdbRating: movie.vote_average.toFixed(1), genres: movie.genre_ids.map(id => genresMap[id]).filter(Boolean) || ["Desconocido"], poster: movie.poster_path, }; if (selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]); setSelectedMovie(formattedMovie); setSearchQuery(''); setSearchResults([]); };
-  const handleGoBack = () => { if (movieHistory.length === 0) return; const newHistory = [...movie]; const previousMovie = newHistory.pop(); setMovieHistory(newHistory); setSelectedMovie(previousMovie); if(selectedMovie) setSessionShownMovies(prev => new Set(prev).add(selectedMovie.id)); };
+  const handleGoBack = () => { if (movieHistory.length === 0) return; const newHistory = [...movieHistory]; const previousMovie = newHistory.pop(); setMovieHistory(newHistory); setSelectedMovie(previousMovie); if(selectedMovie) setSessionShownMovies(prev => new Set(prev).add(selectedMovie.id)); };
   const handleMarkAsWatched = (movieId) => { if(!movieId) return; const threeMonths = 3 * 30 * 24 * 60 * 60 * 1000; setWatchedMovies(prev => ({...prev, [movieId]: Date.now() + threeMonths})); setAllMovies(prev => prev.filter(m => m.id !== movieId)); handleSurpriseMe(); };
   const handleShare = useCallback(() => { if (!selectedMovie) return; const movieUrl = `https://www.themoviedb.org/movie/${selectedMovie.id}`; const shareData = { title: selectedMovie.title, text: `Check out this movie I found: ${selectedMovie.title}`, url: movieUrl }; if (navigator.share) { navigator.share(shareData).catch(err => console.error("Couldn't share", err)); } else { navigator.clipboard.writeText(movieUrl).then(() => { setShareStatus('success'); setTimeout(() => setShareStatus('idle'), 2000); }); } }, [selectedMovie]);
   const handleSimilarMovieClick = async (movie) => { setIsFetchingModalDetails(true); setModalMovie(null); const langParam = language === 'es' ? 'es-ES' : 'en-US'; const details = await fetchFullMovieDetails(movie.id, langParam); setModalMovie(details); setIsFetchingModalDetails(false); };
@@ -374,40 +367,90 @@ const App = () => {
             {filters.platform.map(id => <div key={`pill-p-${id}`} className="filter-pill"><span>{platformOptions.find(p=>p.id===id)?.name}</span><button onClick={() => removeFilter('platform', id)}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button></div>)}
         </div>
       
+        {/* ================================================================== */}
+        {/* ============ START OF THE NEW, RESTRUCTURED MOVIE CARD ============ */}
+        {/* ================================================================== */}
         {isDiscovering ? <SkeletonMovieCard /> : selectedMovie ? ( 
             <div ref={cardRef} className="max-w-4xl mx-auto bg-[var(--color-card-bg)] rounded-xl shadow-2xl overflow-hidden mb-10 border border-[var(--color-border)] movie-card-enter">
-                <div className="flex flex-col sm:flex-row">
-                    {/* --- CHANGE: Optimized poster image for mobile (w-1/2) and desktop (sm:w-1/3) --- */}
-                    <div className="sm:w-1/3 flex-shrink-0">
-                        <div className="relative poster-container p-4 sm:p-0">
-                            <img loading="lazy" className="h-auto w-1/2 sm:w-full mx-auto sm:mx-0 object-cover rounded-md" src={`${TMDB_IMAGE_BASE_URL}${selectedMovie.poster}`} alt={`Poster for ${selectedMovie.title}`}/>
-                        </div>
+
+                {/* This grid container ensures the two-column layout on desktop (sm:) */}
+                <div className="sm:grid sm:grid-cols-3 sm:gap-x-8">
+                    
+                    {/* --- Column 1: Poster and Trailer --- */}
+                    <div className="sm:col-span-1 p-4 sm:p-6">
+                        <img loading="lazy" className="h-auto w-3/4 sm:w-full mx-auto object-cover rounded-lg shadow-lg" src={`${TMDB_IMAGE_BASE_URL}${selectedMovie.poster}`} alt={`Poster for ${selectedMovie.title}`}/>
                         {!isFetchingDetails && movieDetails.trailerKey && (
-                            <div className="p-4 pt-0 flex justify-center">
-                                <button onClick={openTrailerModal} className="w-full max-w-[200px] sm:max-w-[300px] rounded-lg overflow-hidden relative group shadow-lg hover:shadow-2xl transition-shadow">
+                            <div className="mt-4 flex justify-center">
+                                <button onClick={openTrailerModal} className="w-full max-w-[300px] rounded-lg overflow-hidden relative group shadow-lg hover:shadow-2xl transition-shadow">
                                     <img loading="lazy" src={`https://img.youtube.com/vi/${movieDetails.trailerKey}/mqdefault.jpg`} alt="Trailer thumbnail" className="w-full" />
                                     <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                                        <div className="bg-black/50 backdrop-blur-sm rounded-full p-2 sm:p-3">
-                                            <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
+                                        <div className="bg-black/50 backdrop-blur-sm rounded-full p-3">
+                                            <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>
                                         </div>
                                     </div>
                                 </button>
                             </div>
                         )}
                     </div>
-                    {/* --- CHANGE: CRITICAL FIX. Reduced padding for mobile and added min-w-0 to prevent flex overflow --- */}
-                    <div className="p-4 pt-0 sm:p-8 sm:w-2/3 min-w-0">
-                        <MovieCardContent movie={selectedMovie} details={movieDetails} isFetching={isFetchingDetails} t={t} userRegion={userRegion} />
-                        <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row gap-4">
-                           <button onClick={() => handleMarkAsWatched(selectedMovie.id)} className="w-full py-2 sm:py-3 px-4 bg-red-600/80 hover:bg-red-600 text-white font-bold rounded-lg shadow-md transition-colors">{t.cardMarkAsWatched}</button>
-                           <button onClick={handleShare} className="w-full py-2 sm:py-3 px-4 bg-blue-600/80 hover:bg-blue-600 text-white font-bold rounded-lg shadow-md transition-colors">
+
+                    {/* --- Column 2: All Textual Information --- */}
+                    <div className="sm:col-span-2 p-4 sm:p-6 sm:pl-0">
+                        {/* Section: Title and Synopsis */}
+                        <div className="text-center sm:text-left">
+                            <h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{selectedMovie.title}</h2>
+                            <p className="mt-2 text-[var(--color-text-secondary)] text-base leading-relaxed break-words">{selectedMovie.synopsis}</p>
+                        </div>
+
+                        {/* Section: Action Buttons */}
+                        <div className="mt-6 flex flex-col sm:flex-row gap-4">
+                           <button onClick={() => handleMarkAsWatched(selectedMovie.id)} className="w-full py-3 px-4 bg-red-600/80 hover:bg-red-600 text-white font-bold rounded-lg shadow-md transition-colors">{t.cardMarkAsWatched}</button>
+                           <button onClick={handleShare} className="w-full py-3 px-4 bg-blue-600/80 hover:bg-blue-600 text-white font-bold rounded-lg shadow-md transition-colors">
                              {shareStatus === 'success' ? t.shareSuccess : t.shareButton}
                            </button>
                         </div>
+                        
+                        {/* Section: Details (Year, Rating, etc.) */}
+                        <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
+                             <h3 className="text-lg font-semibold text-[var(--color-accent-text)] mb-2">{t.details}</h3>
+                             <div className="space-y-2 text-sm">
+                                <div><strong className="font-semibold">{t.cardYear}</strong> {selectedMovie.year}</div>
+                                {isFetchingDetails ? <div className="small-loader"></div> : (movieDetails.duration && <div><strong className="font-semibold">{t.cardDuration}</strong> {formatDuration(movieDetails.duration)}</div>)}
+                                <div><strong className="font-semibold">{t.cardRating}</strong> {selectedMovie.imdbRating}/10 ⭐</div>
+                                {isFetchingDetails ? null : (movieDetails.director?.name && <div><strong className="font-semibold">{t.cardDirector}</strong> {movieDetails.director.name}</div>)}
+                                <div><strong className="font-semibold">{t.cardGenres}</strong> {selectedMovie.genres.join(', ')}</div>
+                             </div>
+                        </div>
+
+                        {/* Section: Streaming Providers */}
+                        <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
+                            <h3 className="text-lg font-semibold text-[var(--color-accent-text)] mb-2">{`${t.cardAvailableOn} ${userRegion}`}</h3>
+                            {isFetchingDetails ? <div className="small-loader"></div> : movieDetails.providers?.length > 0 ? (
+                                <div className="flex flex-wrap gap-2 items-center">
+                                    {movieDetails.providers.map(p => (<img key={p.provider_id} loading="lazy" src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo"/>))}
+                                </div>
+                            ) : <p className="text-sm text-[var(--color-text-secondary)]">{t.cardStreamingNotFound}</p>}
+                        </div>
+
+                         {/* Section: Cast */}
+                        <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
+                            <h3 className="text-lg font-semibold text-[var(--color-accent-text)] mb-3">{t.cardCast}</h3>
+                            {isFetchingDetails ? <div className="small-loader"></div> : movieDetails.cast?.length > 0 ? (
+                                <div className="flex flex-wrap gap-4">
+                                    {movieDetails.cast.map(actor => (
+                                        <div key={actor.id} className="flex flex-col items-center text-center w-20">
+                                            <img loading="lazy" src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1 rounded-md"/>
+                                            <span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : <p className="text-sm text-[var(--color-text-secondary)]">{t.cardCastNotFound}</p>}
+                        </div>
                     </div>
                 </div>
-                <div className="p-4 sm:p-6 bg-[var(--color-bg)] border-t border-[var(--color-border)]">
-                    <h3 className="text-lg sm:text-xl font-semibold text-[var(--color-accent-text)] mb-3">{t.cardSimilarMovies}</h3>
+
+                {/* --- Section: Similar Movies (Full Width) --- */}
+                <div className="p-4 sm:p-6 bg-[var(--color-bg)]/50 border-t border-[var(--color-border)]">
+                    <h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-3">{t.cardSimilarMovies}</h3>
                     {isFetchingDetails ? <div className="flex justify-center"><div className="small-loader"></div></div> :  movieDetails.similar?.length > 0 ? ( 
                         <div className="horizontal-scroll-container">
                             {movieDetails.similar.map(movie => ( 
@@ -417,10 +460,11 @@ const App = () => {
                                 </button> 
                             ))}
                         </div> 
-                    ) : <p className="text-sm text-[var(--color-text-secondary)] text-sm">{t.noMoviesFound}</p>}
+                    ) : <p className="text-sm text-[var(--color-text-secondary)]">{t.noMoviesFound}</p>}
                 </div>
-            </div> ) : ( 
-            <div className="text-center text-gray-400 mt-10 text-lg px-4">
+            </div> 
+        ) : ( 
+            <div className="text-center text-gray-400 mt-10 text-lg">
                 {hasSearched && allMovies.length === 0 && !isDiscovering 
                     ? (<div><p>{t.noMoviesFound}</p><button onClick={handleClearFilters} className="mt-4 px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg">{t.clearAllFilters}</button></div>) 
                     : !hasSearched && t.welcomeMessage
@@ -436,31 +480,21 @@ const App = () => {
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                     {isFetchingModalDetails ? <div className="h-96 flex items-center justify-center"><div className="loader"></div></div> : (
-                        <div className="max-w-4xl mx-auto rounded-xl shadow-2xl overflow-hidden">
-                            <div className="flex flex-col sm:flex-row">
-                                <div className="sm:w-1/3 flex-shrink-0">
-                                     <div className="relative poster-container p-4 sm:p-0">
-                                        <img loading="lazy" className="h-auto w-1/2 sm:w-full mx-auto sm:mx-0 object-cover rounded-md" src={`${TMDB_IMAGE_BASE_URL}${modalMovie.poster_path}`} alt={`Poster for ${modalMovie.title}`}/>
-                                     </div>
-                                </div>
-                                {/* --- CHANGE: CRITICAL FIX. Applied same mobile padding and min-w-0 fix to the modal --- */}
-                                <div className="p-4 pt-0 sm:p-8 sm:w-2/3 min-w-0">
-                                    <MovieCardContent
-                                        movie={{
-                                            title: modalMovie.title,
-                                            synopsis: modalMovie.overview,
-                                            year: modalMovie.release_date?.split('-')[0],
-                                            imdbRating: modalMovie.vote_average?.toFixed(1),
-                                            genres: modalMovie.genres?.map(g => g.name) || [],
-                                        }}
-                                        details={modalMovie}
-                                        isFetching={false}
-                                        t={t}
-                                        userRegion={userRegion}
-                                    />
-                                </div>
-                            </div>
-                            {modalMovie.trailerKey && (<div className="p-4 sm:p-6 bg-[var(--color-card-bg)]/50"><h3 className="text-lg sm:text-xl font-semibold text-[var(--color-accent-text)] mb-2">{t.cardTrailer}</h3><div className="trailer-responsive rounded-lg overflow-hidden"><iframe src={`https://www.youtube.com/embed/${modalMovie.trailerKey}`} title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe></div></div>)}
+                        // We use the MovieCardContent component here as the modal is complex
+                        <div className="p-4 sm:p-8">
+                             <MovieCardContent
+                                movie={{
+                                    title: modalMovie.title,
+                                    synopsis: modalMovie.overview,
+                                    year: modalMovie.release_date?.split('-')[0],
+                                    imdbRating: modalMovie.vote_average?.toFixed(1),
+                                    genres: modalMovie.genres?.map(g => g.name) || [],
+                                }}
+                                details={modalMovie}
+                                isFetching={false}
+                                t={t}
+                                userRegion={userRegion}
+                            />
                         </div>
                     )}
                 </div>
