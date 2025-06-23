@@ -1,0 +1,23 @@
+{
+  "short_name": "MoviePicker",
+  "name": "MoviePicker",
+  "description": "Discover your next favorite movie with powerful filters and smart recommendations.",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#D946EF",
+  "background_color": "#111827"
+}
