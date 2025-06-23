@@ -42,7 +42,7 @@ const SettingsDropdown = ({ mode, setMode, accent, setAccent, language, setLangu
                 className="p-2 rounded-full bg-[var(--color-card-bg)] shadow border border-[var(--color-border)] hover:bg-[var(--color-border)]"
                 aria-label="Settings"
             >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.096 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.096 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
             </button>
 
             {isOpen && (
@@ -473,35 +473,32 @@ const App = () => {
                     </div>
                 </div>
                 
-                {/* ================================================================== */}
-                {/* --- THIS IS THE UPDATED SECTION FOR SIMILAR MOVIES --- */}
-                {/* ================================================================== */}
                 <div className="p-4 sm:p-6 bg-[var(--color-bg)]/50 border-t border-[var(--color-border)]">
                     <h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-3">{t.cardSimilarMovies}</h3>
                     {isFetchingDetails ? <div className="flex justify-center"><div className="small-loader"></div></div> :  movieDetails.similar?.length > 0 ? ( 
                         <div className="horizontal-scroll-container">
+                            {/* --- THIS IS THE UPDATED, UNIFORM LAYOUT FOR SIMILAR MOVIES --- */}
                             {movieDetails.similar.map(movie => ( 
                                 <button 
                                     key={movie.id} 
                                     onClick={() => handleSimilarMovieClick(movie)} 
-                                    className="flex flex-col items-center text-center hover:scale-105 transition-transform duration-150 group"
+                                    // 1. Fixed width is applied to the button itself (w-32 is 128px)
+                                    // 2. flex-shrink-0 prevents it from shrinking inside the flex container
+                                    className="flex-shrink-0 w-32 text-center group hover:scale-105 transition-transform duration-150"
                                 >
-                                    {/* This div enforces a 2:3 aspect ratio for all posters, ensuring they have the same size */}
-                                    <div className="relative w-full aspect-[2/3] bg-[var(--color-border)] rounded-lg overflow-hidden">
+                                    {/* 3. This div creates the poster container with a guaranteed 2:3 aspect ratio */}
+                                    <div className="w-full aspect-[2/3] bg-[var(--color-border)] rounded-lg overflow-hidden">
                                          <img 
                                              loading="lazy" 
                                              src={movie.poster_path ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}` : 'https://placehold.co/200x300/4A5568/FFFFFF?text=No+Poster'} 
                                              alt={movie.title} 
-                                             className="absolute inset-0 w-full h-full object-cover"
+                                             className="w-full h-full object-cover"
                                          />
                                     </div>
-                                   
-                                    {/* This div creates a fixed-height space for the title, and truncates it with an ellipsis if it's too long */}
-                                    <div className="h-14 w-full pt-2 flex items-start justify-center">
-                                         <span className="text-xs text-center text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-text)] transition-colors line-clamp-2">
-                                            {movie.title}
-                                        </span>
-                                    </div>
+                                    {/* 4. The `truncate` class ensures a single, clean line of text with an ellipsis */}
+                                    <span className="block w-full text-xs text-center text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-text)] transition-colors pt-2 truncate">
+                                        {movie.title}
+                                    </span>
                                 </button> 
                             ))}
                         </div> 
