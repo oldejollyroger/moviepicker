@@ -37,9 +37,9 @@ body, #root { min-height: 100vh; }
 .small-loader { border: 3px solid rgba(128,128,128,0.2); border-top-color: var(--color-accent); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; margin-left: 8px; vertical-align: middle; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* --- THIS CLASS HAS BEEN UPDATED --- */
+/* --- CSS FIX 1: Smaller logos on mobile by default --- */
 .platform-logo { 
-    height: 28px; 
+    height: 24px;  /* Smaller default height for mobile */
     width: auto; 
     border-radius: 4px; 
     background-color: #4A5568; 
@@ -47,7 +47,25 @@ body, #root { min-height: 100vh; }
     vertical-align: middle; 
 }
 
-.actor-thumbnail { width: 50px; height: 75px; object-fit: cover; border-radius: 4px; background-color: #4A5568; }
+/* --- CSS FIX 2: Smaller actor thumbnails on mobile by default --- */
+.actor-thumbnail { 
+    width: 44px; /* Smaller default width */
+    height: 66px; /* Smaller default height */
+    object-fit: cover; 
+    border-radius: 4px; 
+    background-color: #4A5568; 
+}
+
+/* Media query to scale things up on screens 640px and wider */
+@media (min-width: 640px) {
+    .platform-logo {
+        height: 28px; /* Original height for desktop */
+    }
+    .actor-thumbnail {
+        width: 50px; /* Original width for desktop */
+        height: 75px; /* Original height for desktop */
+    }
+}
 
 .trailer-responsive { position: relative; overflow: hidden; padding-top: 56.25%; }
 .trailer-responsive iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }

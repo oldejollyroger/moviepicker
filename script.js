@@ -19,12 +19,15 @@ const formatDuration = (totalMinutes) => {
     return `${hours}h ${minutes}min`;
 };
 
+// --- JS FIX 1: Smaller font sizes on mobile ---
 const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
     const displayDetails = isFetching ? {} : details;
     return (
         <React.Fragment>
-            <h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{movie.title}</h2>
-            <p className="mt-2 text-[var(--color-text-secondary)] text-base leading-relaxed break-words">{movie.synopsis}</p>
+            {/* Title is smaller on mobile (text-2xl) and larger on desktop (sm:text-4xl) */}
+            <h2 className="text-2xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{movie.title}</h2>
+            {/* Synopsis is smaller on mobile (text-sm) and larger on desktop (sm:text-base) */}
+            <p className="mt-2 text-[var(--color-text-secondary)] text-sm sm:text-base leading-relaxed break-words">{movie.synopsis}</p>
             <div className="mt-6 space-y-4 text-sm">
                 <p><strong className="text-[var(--color-accent-text)]">{t.cardYear}</strong> {movie.year}</p>
                 {isFetching ? <div className="inline-flex items-center"><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong><div className="small-loader"></div></div> : displayDetails.duration && <p><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong> {formatDuration(displayDetails.duration)}</p>}
@@ -72,7 +75,7 @@ const SkeletonMovieCard = () => {
                 <div className="sm:w-1/3 flex-shrink-0 p-4">
                     <div className="w-full aspect-[2/3] bg-gray-700 rounded-lg"></div>
                 </div>
-                <div className="p-6 sm:p-8 sm:w-2/3">
+                <div className="p-4 sm:p-8 sm:w-2/3">
                     <div className="h-10 bg-gray-700 rounded w-3/4 mb-4"></div>
                     <div className="space-y-3 mt-4">
                         <div className="h-4 bg-gray-700 rounded"></div>
@@ -391,10 +394,8 @@ const App = () => {
                             </div>
                         )}
                     </div>
-                    {/* ================================================================== */}
-                    {/* THIS IS THE LINE THAT WAS CHANGED                                 */}
-                    {/* ================================================================== */}
-                    <div className="p-6 sm:p-8 sm:w-2/3 min-w-0">
+                    {/* --- JS FIX 2: Reduced padding on mobile (p-4) and added min-w-0 --- */}
+                    <div className="p-4 sm:p-8 sm:w-2/3 min-w-0">
                         <MovieCardContent movie={selectedMovie} details={movieDetails} isFetching={isFetchingDetails} t={t} userRegion={userRegion} />
                         <div className="mt-8 flex flex-col sm:flex-row gap-4">
                            <button onClick={() => handleMarkAsWatched(selectedMovie.id)} className="w-full py-3 px-4 bg-red-600/80 hover:bg-red-600 text-white font-bold rounded-lg shadow-md transition-colors">{t.cardMarkAsWatched}</button>
@@ -439,7 +440,7 @@ const App = () => {
                                 <div className="sm:w-1/3 flex-shrink-0">
                                     <img loading="lazy" className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${modalMovie.poster_path}`} alt={`Poster for ${modalMovie.title}`}/>
                                 </div>
-                                <div className="p-6 sm:p-8 sm:w-2/3 min-w-0">
+                                <div className="p-4 sm:p-8 sm:w-2/3 min-w-0">
                                     <MovieCardContent
                                         movie={{
                                             title: modalMovie.title,
