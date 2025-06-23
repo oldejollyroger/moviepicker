@@ -19,8 +19,50 @@ const formatDuration = (totalMinutes) => {
     return `${hours}h ${minutes}min`;
 };
 
-const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => { /* Unchanged from your last working version */ };
-const SkeletonMovieCard = () => { /* Unchanged from your last working version */ };
+const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
+    const displayDetails = isFetching ? {} : details;
+    return (
+        <React.Fragment>
+            <h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{movie.title}</h2>
+            <p className="mt-2 text-[var(--color-text-secondary)] text-base leading-relaxed break-words">{movie.synopsis}</p>
+            <div className="mt-6 space-y-4 text-sm">
+                <p><strong className="text-[var(--color-accent-text)]">{t.cardYear}</strong> {movie.year}</p>
+                {isFetching ? <div className="inline-flex items-center"><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong><div className="small-loader"></div></div> : displayDetails.duration && <p><strong className="text-[var(--color-accent-text)]">{t.cardDuration}</strong> {formatDuration(displayDetails.duration)}</p>}
+                <p><strong className="text-[var(--color-accent-text)]">{t.cardRating}</strong> {movie.imdbRating}/10 ⭐</p>
+                {isFetching ? null : displayDetails.director?.name && <p><strong className="text-[var(--color-accent-text)]">{t.cardDirector}</strong> {displayDetails.director.name}</p>}
+                <p><strong className="text-[var(--color-accent-text)]">{t.cardGenres}</strong> {movie.genres.join(', ')}</p>
+                <div><strong className="text-[var(--color-accent-text)]">{`${t.cardAvailableOn} ${userRegion}`} </strong>{isFetching ? <div className="small-loader"></div> : displayDetails.providers?.length > 0 ? displayDetails.providers.map(p => ( <img key={p.provider_id} loading="lazy" src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/> )) : <span className="text-[var(--color-text-secondary)]">{t.cardStreamingNotFound}</span>}</div>
+                {isFetching ? null : displayDetails.rentalProviders?.length > 0 && (<div><strong className="text-[var(--color-accent-text)]">{t.cardAvailableToRent}</strong><div className="mt-1">{displayDetails.rentalProviders.map(p => ( <img key={p.provider_id} loading="lazy" src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo inline-block"/> ))}</div></div>)}
+                <div className="mt-4"><strong className="text-[var(--color-accent-text)] block mb-1">{t.cardCast}</strong>{isFetching ? <div className="small-loader"></div> : displayDetails.cast?.length > 0 ? ( <div className="flex flex-wrap gap-x-4 gap-y-2">{displayDetails.cast.map(actor => ( <div key={actor.id} className="flex flex-col items-center text-center w-20"><img loading="lazy" src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1"/><span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span></div> ))}</div> ) : <span className="text-xs text-[var(--color-text-secondary)]">{t.cardCastNotFound}</span>}</div>
+            </div>
+        </React.Fragment>
+    );
+};
+
+const SkeletonMovieCard = () => {
+    return (
+        <div className="max-w-4xl mx-auto bg-[var(--color-card-bg)] rounded-xl shadow-2xl overflow-hidden mb-10 border border-[var(--color-border)] animate-pulse">
+            <div className="flex flex-col sm:flex-row">
+                <div className="sm:w-1/3 flex-shrink-0 p-4">
+                    <div className="w-full aspect-[2/3] bg-gray-700 rounded-lg"></div>
+                </div>
+                <div className="p-6 sm:p-8 sm:w-2/3">
+                    <div className="h-10 bg-gray-700 rounded w-3/4 mb-4"></div>
+                    <div className="space-y-3 mt-4">
+                        <div className="h-4 bg-gray-700 rounded"></div>
+                        <div className="h-4 bg-gray-700 rounded"></div>
+                        <div className="h-4 bg-gray-700 rounded w-5/6"></div>
+                    </div>
+                    <div className="mt-8 space-y-4">
+                        <div className="h-5 bg-gray-700 rounded w-1/2"></div>
+                        <div className="h-5 bg-gray-700 rounded w-1/3"></div>
+                        <div className="h-5 bg-gray-700 rounded w-2/3"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const FilterModal = ({ isOpen, close, filters, handleGenreChange, handlePlatformChange, t, genresMap, platformOptions, platformSearchQuery, handlePlatformSearchChange }) => {
     if (!isOpen) return null;
@@ -356,32 +398,40 @@ const App = () => {
         )}
         
         <FilterModal isOpen={isFilterModalOpen} close={closeFilterModal} filters={filters} handleGenreChange={handleGenreChange} handlePlatformChange={handlePlatformChange} t={t} genresMap={genresMap} platformOptions={platformOptions} platformSearchQuery={platformSearchQuery} handlePlatformSearchChange={handlePlatformSearchChange} />
-        {modalMovie && (<div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={closeModal}><div className="bg-[var(--color-card-bg)] rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}><button onClick={closeModal} className="absolute top-3 right-3 text-white bg-gray-900 rounded-full p-1 hover:bg-gray-700 z-10"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>{isFetchingModalDetails ? <div className="h-96 flex items-center justify-center"><div className="loader"></div></div> : (
-            <div className="max-w-4xl mx-auto rounded-xl shadow-2xl overflow-hidden">
-                <div className="flex flex-col sm:flex-row">
-                    <div className="sm:w-1/3 flex-shrink-0">
-                        <img loading="lazy" className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${modalMovie.poster_path}`} alt={`Poster for ${modalMovie.title}`}/>
-                    </div>
-                    <div className="p-6 sm:p-8 sm:w-2/3">
-                        <MovieCardContent
-                            movie={{
-                                title: modalMovie.title,
-                                synopsis: modalMovie.overview,
-                                year: modalMovie.release_date?.split('-')[0],
-                                imdbRating: modalMovie.vote_average?.toFixed(1),
-                                genres: modalMovie.genres?.map(g => g.name) || [],
-                            }}
-                            details={modalMovie}
-                            isFetching={false}
-                            t={t}
-                            userRegion={userRegion}
-                        />
-                    </div>
+        {modalMovie && (
+            <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={closeModal}>
+                <div className="bg-[var(--color-card-bg)] rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={closeModal} className="absolute top-3 right-3 text-white bg-gray-900 rounded-full p-1 hover:bg-gray-700 z-10">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                    {isFetchingModalDetails ? <div className="h-96 flex items-center justify-center"><div className="loader"></div></div> : (
+                        <div className="max-w-4xl mx-auto rounded-xl shadow-2xl overflow-hidden">
+                            <div className="flex flex-col sm:flex-row">
+                                <div className="sm:w-1/3 flex-shrink-0">
+                                    <img loading="lazy" className="h-auto w-3/5 sm:w-full mx-auto sm:mx-0 object-cover" src={`${TMDB_IMAGE_BASE_URL}${modalMovie.poster_path}`} alt={`Poster for ${modalMovie.title}`}/>
+                                </div>
+                                <div className="p-6 sm:p-8 sm:w-2/3">
+                                    <MovieCardContent
+                                        movie={{
+                                            title: modalMovie.title,
+                                            synopsis: modalMovie.overview,
+                                            year: modalMovie.release_date?.split('-')[0],
+                                            imdbRating: modalMovie.vote_average?.toFixed(1),
+                                            genres: modalMovie.genres?.map(g => g.name) || [],
+                                        }}
+                                        details={modalMovie}
+                                        isFetching={false}
+                                        t={t}
+                                        userRegion={userRegion}
+                                    />
+                                </div>
+                            </div>
+                            {modalMovie.trailerKey && (<div className="p-6 bg-[var(--color-card-bg)]/50"><h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-2">{t.cardTrailer}</h3><div className="trailer-responsive rounded-lg overflow-hidden"><iframe src={`https://www.youtube.com/embed/${modalMovie.trailerKey}`} title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe></div></div>)}
+                        </div>
+                    )}
                 </div>
-                {modalMovie.trailerKey && (<div className="p-6 bg-[var(--color-card-bg)]/50"><h3 className="text-xl font-semibold text-[var(--color-accent-text)] mb-2">{t.cardTrailer}</h3><div className="trailer-responsive rounded-lg overflow-hidden"><iframe src={`https://www.youtube.com/embed/${modalMovie.trailerKey}`} title="Trailer" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen></iframe></div></div>)}
             </div>
-        )}</div></div>)}
-
+        )}
         {isTrailerModalOpen && movieDetails.trailerKey && (
             <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50" onClick={closeTrailerModal}>
                 <div className="bg-[var(--color-card-bg)] rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden relative" onClick={e => e.stopPropagation()}>
@@ -402,7 +452,6 @@ const App = () => {
                 </div>
             </div>
         )}
-
         {!userRegion && (
             <div className="fixed inset-0 bg-gray-900 bg-opacity-90 z-40 flex items-center justify-center p-4">
               <div className="text-center max-w-md bg-[var(--color-card-bg)] p-8 rounded-xl shadow-2xl">
