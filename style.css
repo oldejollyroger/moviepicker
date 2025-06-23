@@ -1,4 +1,7 @@
 /* --- CHANGE: Global box-sizing reset for layout safety --- */
+* {
+  border: 1px solid red !important;
+}
 *,
 *::before,
 *::after {
