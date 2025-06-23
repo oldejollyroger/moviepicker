@@ -68,6 +68,9 @@ const SettingsDropdown = ({ mode, setMode, accent, setAccent, language, setLangu
     );
 }
 
+// ==================================================================
+// --- MODIFICATION #1: Reworked the JSX to use the `provider.link` we will add. ---
+// ==================================================================
 const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
     const displayDetails = isFetching ? {} : details;
     return (
@@ -80,11 +83,17 @@ const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
                 <div><strong className="text-[var(--color-accent-text)]">{t.cardRating}</strong> {movie.imdbRating}/10 ⭐</div>
                 {isFetching ? null : displayDetails.director?.name && <div><strong className="text-[var(--color-accent-text)]">{t.cardDirector}</strong> {displayDetails.director.name}</div>}
                 <div><strong className="text-[var(--color-accent-text)]">{t.cardGenres}</strong> {movie.genres.join(', ')}</div>
+                
+                {/* --- The icons are now wrapped in <a> tags --- */}
                 <div>
                     <strong className="text-[var(--color-accent-text)] block mb-1">{`${t.cardAvailableOn} ${userRegion}`}</strong>
                     {isFetching ? <div className="small-loader"></div> : displayDetails.providers?.length > 0 ? (
                         <div className="flex flex-wrap gap-2 items-center">
-                            {displayDetails.providers.map(p => ( <img key={p.provider_id} loading="lazy" src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo"/> ))}
+                            {displayDetails.providers.map(p => ( 
+                                <a key={p.provider_id} href={p.link} target="_blank" rel="noopener noreferrer">
+                                    <img loading="lazy" src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo"/> 
+                                </a>
+                            ))}
                         </div>
                     ) : <span className="text-[var(--color-text-secondary)]">{t.cardStreamingNotFound}</span>}
                 </div>
@@ -92,9 +101,14 @@ const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
                 <div>
                     <strong className="text-[var(--color-accent-text)] block mb-1">{t.cardAvailableToRent}</strong>
                     <div className="flex flex-wrap gap-2 items-center">
-                        {displayDetails.rentalProviders.map(p => ( <img key={p.provider_id} loading="lazy" src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo"/> ))}
+                        {displayDetails.rentalProviders.map(p => (
+                            <a key={p.provider_id} href={p.link} target="_blank" rel="noopener noreferrer">
+                                <img loading="lazy" src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo"/> 
+                            </a>
+                        ))}
                     </div>
                 </div>)}
+
                 <div>
                     <strong className="text-[var(--color-accent-text)] block mb-1">{t.cardCast}</strong>
                     {isFetching ? <div className="small-loader"></div> : displayDetails.cast?.length > 0 ? (
@@ -301,46 +315,42 @@ const App = () => {
     return () => { document.removeEventListener("mousedown", handleClickOutside); };
   }, []);
   
-    const fetchFullMovieDetails = useCallback(async (movieId, lang) => {
+  // ==================================================================
+  // --- MODIFICATION #2: Reworked the entire function to add the `link` property to providers ---
+  // ==================================================================
+  const fetchFullMovieDetails = useCallback(async (movieId, lang) => {
         try {
             const mainDetailsUrl = `${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,videos,watch/providers`;
             const mainDetailsRes = await fetch(mainDetailsUrl);
             if (!mainDetailsRes.ok) throw new Error(`Details: ${mainDetailsRes.statusText}`);
             const data = await mainDetailsRes.json();
-
+            
+            // --- This part is for Similar Movies, it remains unchanged from the previous smart version ---
             let recommendations = [];
             const addedMovieIds = new Set([parseInt(movieId)]);
-
             const addMovies = (movies) => {
                 for (const movie of movies) {
-                    if (recommendations.length >= 20) break;
+                    if (recommendations.length >= 20) break; 
                     if (!addedMovieIds.has(movie.id)) {
                         recommendations.push(movie);
                         addedMovieIds.add(movie.id);
                     }
                 }
             };
-            
             if (data.belongs_to_collection) {
                 const collectionRes = await fetch(`${TMDB_BASE_URL}/collection/${data.belongs_to_collection.id}?api_key=${TMDB_API_KEY}&language=${lang}`);
-                if (collectionRes.ok) {
-                    const collectionData = await collectionRes.json();
-                    addMovies(collectionData.parts.sort((a,b) => b.popularity - a.popularity));
-                }
+                if (collectionRes.ok) addMovies((await collectionRes.json()).parts.sort((a,b) => b.popularity - a.popularity));
             }
-            
             const director = data.credits?.crew?.find(p => p.job === 'Director');
             if (director) {
                  const directorMoviesRes = await fetch(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${lang}&with_crew=${director.id}&sort_by=popularity.desc`);
                  if(directorMoviesRes.ok) addMovies((await directorMoviesRes.json()).results);
             }
-
             const leadActors = data.credits?.cast?.slice(0, 2).map(actor => actor.id);
             if (leadActors?.length > 0) {
                 const actorMoviesRes = await fetch(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${lang}&with_cast=${leadActors.join('|')}&sort_by=popularity.desc`);
                 if(actorMoviesRes.ok) addMovies((await actorMoviesRes.json()).results);
             }
-
             if (recommendations.length < 15) {
                 const [similarRes, genreRes] = await Promise.all([
                     fetch(`${TMDB_BASE_URL}/movie/${movieId}/similar?api_key=${TMDB_API_KEY}&language=${lang}`),
@@ -349,22 +359,32 @@ const App = () => {
                 if(similarRes.ok) addMovies((await similarRes.json()).results);
                 if(genreRes.ok) addMovies((await genreRes.json()).results);
             }
-            
             const highQualitySimilar = recommendations
                 .filter(m => m.poster_path && m.overview && m.vote_average > 6.0 && m.vote_count > 100)
                 .slice(0, 10);
+            // --- End of Similar Movies logic ---
 
-            const regionProviders = data['watch/providers']?.results?.[userRegion];
-            const rentProviders = regionProviders?.rent || [];
-            const buyProviders = regionProviders?.buy || [];
+
+            // --- This is where we process providers to add the link ---
+            const regionData = data['watch/providers']?.results?.[userRegion];
+            const watchLink = regionData?.link || `https://www.themoviedb.org/movie/${movieId}/watch`;
+
+            const providers = (regionData?.flatrate || []).map(p => ({ ...p, link: watchLink }));
+            
+            const rentProviders = (regionData?.rent || []).map(p => ({ ...p, link: watchLink }));
+            const buyProviders = (regionData?.buy || []).map(p => ({ ...p, link: watchLink }));
             const combinedPayProviders = [...rentProviders, ...buyProviders];
             const uniquePayProviderIds = new Set();
-            const uniquePayProviders = combinedPayProviders.filter(p => { if (uniquePayProviderIds.has(p.provider_id)) return false; uniquePayProviderIds.add(p.provider_id); return true; });
+            const uniquePayProviders = combinedPayProviders.filter(p => { 
+                if (uniquePayProviderIds.has(p.provider_id)) return false; 
+                uniquePayProviderIds.add(p.provider_id); 
+                return true; 
+            });
 
             return { 
                 ...data, 
                 duration: data.runtime || null, 
-                providers: regionProviders?.flatrate || [], 
+                providers: providers, 
                 rentalProviders: uniquePayProviders, 
                 cast: data.credits?.cast?.slice(0, 5) || [], 
                 director: director, 
@@ -447,9 +467,7 @@ const App = () => {
         </div>
       
         <header className="text-center mb-4 pt-16 sm:pt-16"><h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)]">{t.title}</h1><h2 className="text-xl sm:text-2xl text-[var(--color-text-secondary)] mt-2">{t.subtitle}</h2><div className="max-w-xl mx-auto mt-6 flex flex-col sm:flex-row items-center gap-4"><div ref={searchRef} className="relative w-full sm:flex-grow"><input type="text" value={searchQuery} onChange={handleSearchChange} placeholder={t.searchPlaceholder} className="w-full p-3 pl-10 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-full focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)] shadow-sm"/><div className="absolute top-0 left-0 inline-flex items-center p-3">{isSearching ? <div className="small-loader !m-0 !w-5 !h-5"></div> : <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>}</div>{searchResults.length > 0 && (<ul className="absolute w-full mt-2 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg shadow-lg z-20 max-h-80 overflow-y-auto">{searchResults.map(movie => (<li key={movie.id} onClick={() => handleSearchResultClick(movie)} className="p-3 hover:bg-[var(--color-bg)] cursor-pointer flex items-center gap-4"><img loading="lazy" src={movie.poster_path ? `${TMDB_THUMBNAIL_BASE_URL}${movie.poster_path}` : 'https://placehold.co/92x138/4A5568/FFFFFF?text=?'} alt={movie.title} className="w-12 h-auto rounded-md" /><div className="text-left"><p className="font-semibold text-[var(--color-text-primary)]">{movie.title}</p><p className="text-sm text-[var(--color-text-secondary)]">{movie.release_date?.split('-')[0]}</p></div></li>))}</ul>)}</div></div></header>
-        {/* ================================================================== */}
-        {/* --- THIS IS THE UPDATED BUTTON WITH THE CORRECT ONCLICK AND ICON --- */}
-        {/* ================================================================== */}
+
         <div className="max-w-3xl mx-auto mb-8 p-4 bg-[var(--color-card-bg)] rounded-xl shadow-lg border border-[var(--color-border)]">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div><label htmlFor="decade-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.decade}</label><select id="decade-filter" value={filters.decade} onChange={e => handleFilterChange('decade', e.target.value)} className="w-full p-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"><option value="todos">{t.allDecades}</option>{[2020, 2010, 2000, 1990, 1980, 1970].map(d=>(<option key={d} value={d}>{`${d}s`}</option>))}</select></div>
@@ -519,7 +537,7 @@ const App = () => {
                             <h3 className="text-lg font-semibold text-[var(--color-accent-text)] mb-2">{`${t.cardAvailableOn} ${userRegion}`}</h3>
                             {isFetchingDetails ? <div className="small-loader"></div> : movieDetails.providers?.length > 0 ? (
                                 <div className="flex flex-wrap gap-2 items-center">
-                                    {movieDetails.providers.map(p => (<img key={p.provider_id} loading="lazy" src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo"/>))}
+                                    {movieDetails.providers.map(p => (<a key={p.provider_id} href={p.link} target="_blank" rel="noopener noreferrer"><img loading="lazy" src={`${TMDB_IMAGE_BASE_URL}${p.logo_path}`} title={p.provider_name} className="platform-logo"/></a>))}
                                 </div>
                             ) : <p className="text-sm text-[var(--color-text-secondary)]">{t.cardStreamingNotFound}</p>}
                         </div>
