@@ -103,14 +103,14 @@ html.light-mode .filter-pill { background-color: var(--color-accent); color: whi
 /* --- Styles for the PWA Install Button --- */
 
 .app-container > footer {
-  position: relative;
-  padding-bottom: 80px; /* Add space at the bottom for the install button */
+  /* Adds space at the bottom so the footer text isn't hidden by the floating button */
+  padding-bottom: 100px; 
 }
 
 .install-button-wrapper {
-  position: fixed;
-  bottom: 16px;
-  left: 50%;
+  position: fixed; /* This makes it float over the content */
+  bottom: 24px;   /* Places it 24px from the bottom */
+  left: 50%;      /* Centers it horizontally */
   transform: translateX(-50%);
-  z-index: 20;
+  z-index: 20; /* Ensures it's above other content */
 }
