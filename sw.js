@@ -1,5 +1,4 @@
-const CACHE_NAME = 'moviepicker-v2'; // Changed version to force an update
-// We are ONLY caching local files. The browser will still get the others from the network.
+const CACHE_NAME = 'moviepicker-v3'; // Changed version to force an update
 const URLS_TO_CACHE = [
   '/',
   '/index.html',
@@ -8,7 +7,9 @@ const URLS_TO_CACHE = [
   '/config.js',
   '/icon-192x192.png',
   '/icon-512x512.png',
-  '/manifest.json'
+  '/manifest.json',
+  '/screenshot-desktop.png', // Added the new screenshot
+  '/screenshot-mobile.png'  // Added the new screenshot
 ];
 
 self.addEventListener('install', event => {
@@ -38,8 +39,6 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // We only handle requests for local pages (HTML navigation) to enable offline mode.
-  // All other requests (CSS, JS, images, APIs) will go directly to the network.
   if (event.request.mode === 'navigate') {
     event.respondWith(
       (async () => {
