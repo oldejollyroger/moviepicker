@@ -107,6 +107,7 @@ const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
                 <div><strong className="text-[var(--color-accent-text)]">{t.cardRating}</strong> {movie.imdbRating}/10 ⭐</div>
                 {isFetching ? null : displayDetails.director?.name && <div><strong className="text-[var(--color-accent-text)]">{t.cardDirector}</strong> {displayDetails.director.name}</div>}
                 <div><strong className="text-[var(--color-accent-text)]">{t.cardGenres}</strong> {movie.genres.join(', ')}</div>
+                
                 <div>
                     <strong className="text-[var(--color-accent-text)] block mb-1">{`${t.cardAvailableOn} ${userRegion}`}</strong>
                     {isFetching ? <div className="small-loader"></div> : displayDetails.providers?.length > 0 ? (
@@ -130,6 +131,7 @@ const MovieCardContent = ({ movie, details, isFetching, t, userRegion }) => {
                         ))}
                     </div>
                 </div>)}
+
                 <div>
                     <strong className="text-[var(--color-accent-text)] block mb-1">{t.cardCast}</strong>
                     {isFetching ? <div className="small-loader"></div> : displayDetails.cast?.length > 0 ? (
@@ -215,6 +217,7 @@ const App = () => {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isIos, setIsIos] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [showInstallBanner, setShowInstallBanner] = useState(false); // The missing state, now declared.
   const initialFilters = { genre: [], excludeGenres: [], decade: 'todos', platform: [], sortBy: 'popularity.desc', minRating: 0 };
   const [filters, setFilters] = useState(() => {
     const savedFilters = localStorage.getItem('movieRandomizerFilters');
@@ -244,12 +247,19 @@ const App = () => {
     const handleInstallPrompt = (e) => {
       e.preventDefault();
       setInstallPrompt(e);
+      if (!window.matchMedia('(display-mode: standalone)').matches) {
+        setShowInstallBanner(true);
+      }
     };
     window.addEventListener('beforeinstallprompt', handleInstallPrompt);
+    if (isIosDevice && !window.matchMedia('(display-mode: standalone)').matches) {
+      setShowInstallBanner(true);
+    }
     return () => {
       window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
     };
   }, []);
+  
   useEffect(() => {
     document.documentElement.classList.toggle('light-mode', mode === 'light');
     localStorage.setItem('movieRandomizerMode', mode);
@@ -372,20 +382,24 @@ const App = () => {
                     }
                 }
             };
+            
             if (data.belongs_to_collection) {
                 const collectionRes = await fetch(`${TMDB_BASE_URL}/collection/${data.belongs_to_collection.id}?api_key=${TMDB_API_KEY}&language=${lang}`);
                 if (collectionRes.ok) addMovies((await collectionRes.json()).parts.sort((a,b) => b.popularity - a.popularity));
             }
+            
             const director = data.credits?.crew?.find(p => p.job === 'Director');
             if (director) {
                  const directorMoviesRes = await fetch(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${lang}&with_crew=${director.id}&sort_by=popularity.desc`);
                  if(directorMoviesRes.ok) addMovies((await directorMoviesRes.json()).results);
             }
+
             const leadActors = data.credits?.cast?.slice(0, 2).map(actor => actor.id);
             if (leadActors?.length > 0) {
                 const actorMoviesRes = await fetch(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${lang}&with_cast=${leadActors.join('|')}&sort_by=popularity.desc`);
                 if(actorMoviesRes.ok) addMovies((await actorMoviesRes.json()).results);
             }
+
             if (recommendations.length < 15) {
                 const [similarRes, genreRes] = await Promise.all([
                     fetch(`${TMDB_BASE_URL}/movie/${movieId}/similar?api_key=${TMDB_API_KEY}&language=${lang}`),
@@ -394,6 +408,7 @@ const App = () => {
                 if(similarRes.ok) addMovies((await similarRes.json()).results);
                 if(genreRes.ok) addMovies((await genreRes.json()).results);
             }
+            
             const highQualitySimilar = recommendations
                 .filter(m => m.poster_path && m.overview && m.vote_average > 6.0 && m.vote_count > 100)
                 .slice(0, 10);
@@ -477,7 +492,7 @@ const App = () => {
     if (!installPrompt) return;
     const result = await installPrompt.prompt();
     if (result.outcome === 'accepted') {
-        setShowInstallBanner(false);
+      setShowInstallBanner(false);
     }
     setInstallPrompt(null);
   };
@@ -694,11 +709,11 @@ const App = () => {
               </div>
             </div>
         )}
-
+        
       <footer className="text-center mt-auto py-4 text-sm text-[var(--color-text-subtle)]">
-            {showInstallBanner && installPrompt && <InstallPwaButton t={t} handleInstallClick={handleInstallClick} />}
-            {showInstallBanner && isIos && <InstallPwaInstructions t={t} />}
-            <p className="pt-4">{t.footer} <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-text)] hover:underline">TMDb</a>.</p>
+          {showInstallBanner && !isIos && !isStandalone && <InstallPwaButton t={t} handleInstallClick={handleInstallClick} />}
+          {showInstallBanner && isIos && !isStandalone && <InstallPwaInstructions t={t} />}
+          <p className="pt-4">{t.footer} <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-text)] hover:underline">TMDb</a>.</p>
       </footer>
     </div>
   );

@@ -117,16 +117,15 @@ html.light-mode .filter-pill { background-color: var(--color-accent); color: whi
 /* --- Styles for the PWA Install Button/Instructions --- */
 
 .app-container > footer {
-  /* Adds space at the bottom so the footer text isn't hidden by the floating button */
   padding-bottom: 100px; 
 }
 
 .install-button-wrapper {
-  position: fixed; /* This makes it float over the content */
-  bottom: 24px;   /* Places it 24px from the bottom */
-  left: 50%;      /* Centers it horizontally */
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
   transform: translateX(-50%);
-  z-index: 20; /* Ensures it's above other content */
-  width: calc(100% - 32px); /* Makes it responsive on small screens */
+  z-index: 20;
+  width: calc(100% - 32px);
   max-width: 400px;
 }
