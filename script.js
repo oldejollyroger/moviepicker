@@ -217,7 +217,7 @@ const App = () => {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isIos, setIsIos] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
-  const [showInstallBanner, setShowInstallBanner] = useState(false); // The missing state, now declared.
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
   const initialFilters = { genre: [], excludeGenres: [], decade: 'todos', platform: [], sortBy: 'popularity.desc', minRating: 0 };
   const [filters, setFilters] = useState(() => {
     const savedFilters = localStorage.getItem('movieRandomizerFilters');
@@ -382,24 +382,20 @@ const App = () => {
                     }
                 }
             };
-            
             if (data.belongs_to_collection) {
                 const collectionRes = await fetch(`${TMDB_BASE_URL}/collection/${data.belongs_to_collection.id}?api_key=${TMDB_API_KEY}&language=${lang}`);
                 if (collectionRes.ok) addMovies((await collectionRes.json()).parts.sort((a,b) => b.popularity - a.popularity));
             }
-            
             const director = data.credits?.crew?.find(p => p.job === 'Director');
             if (director) {
                  const directorMoviesRes = await fetch(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${lang}&with_crew=${director.id}&sort_by=popularity.desc`);
                  if(directorMoviesRes.ok) addMovies((await directorMoviesRes.json()).results);
             }
-
             const leadActors = data.credits?.cast?.slice(0, 2).map(actor => actor.id);
             if (leadActors?.length > 0) {
                 const actorMoviesRes = await fetch(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${lang}&with_cast=${leadActors.join('|')}&sort_by=popularity.desc`);
                 if(actorMoviesRes.ok) addMovies((await actorMoviesRes.json()).results);
             }
-
             if (recommendations.length < 15) {
                 const [similarRes, genreRes] = await Promise.all([
                     fetch(`${TMDB_BASE_URL}/movie/${movieId}/similar?api_key=${TMDB_API_KEY}&language=${lang}`),
@@ -408,11 +404,9 @@ const App = () => {
                 if(similarRes.ok) addMovies((await similarRes.json()).results);
                 if(genreRes.ok) addMovies((await genreRes.json()).results);
             }
-            
             const highQualitySimilar = recommendations
                 .filter(m => m.poster_path && m.overview && m.vote_average > 6.0 && m.vote_count > 100)
                 .slice(0, 10);
-
             const regionData = data['watch/providers']?.results?.[userRegion];
             const watchLink = regionData?.link || `https://www.themoviedb.org/movie/${movieId}/watch`;
             const providers = (regionData?.flatrate || []).map(p => ({ ...p, link: watchLink }));
@@ -488,6 +482,7 @@ const App = () => {
   const handleGoBack = () => { if (movieHistory.length === 0) return; const newHistory = [...movieHistory]; const previousMovie = newHistory.pop(); setMovieHistory(newHistory); setSelectedMovie(previousMovie); if(selectedMovie) setSessionShownMovies(prev => new Set(prev).add(selectedMovie.id)); };
   const handleMarkAsWatched = (movieId) => { if(!movieId) return; const threeMonths = 3 * 30 * 24 * 60 * 60 * 1000; setWatchedMovies(prev => ({...prev, [movieId]: Date.now() + threeMonths})); setAllMovies(prev => prev.filter(m => m.id !== movieId)); handleSurpriseMe(); };
   const handleShare = useCallback(() => { if (!selectedMovie) return; const movieUrl = `https://www.themoviedb.org/movie/${selectedMovie.id}`; const shareData = { title: selectedMovie.title, text: `Check out this movie I found: ${selectedMovie.title}`, url: movieUrl }; if (navigator.share) { navigator.share(shareData).catch(err => console.error("Couldn't share", err)); } else { navigator.clipboard.writeText(movieUrl).then(() => { setShareStatus('success'); setTimeout(() => setShareStatus('idle'), 2000); }); } }, [selectedMovie]);
+  
   const handleInstallClick = async () => {
     if (!installPrompt) return;
     const result = await installPrompt.prompt();
@@ -496,6 +491,7 @@ const App = () => {
     }
     setInstallPrompt(null);
   };
+  
   const handleSimilarMovieClick = async (movie) => { setIsFetchingModalDetails(true); setModalMovie(null); const langParam = language === 'es' ? 'es-ES' : 'en-US'; const details = await fetchFullMovieDetails(movie.id, langParam); setModalMovie(details); setIsFetchingModalDetails(false); };
   const handlePlatformSearchChange = (e) => { setPlatformSearchQuery(e.target.value); };
   const filteredPlatforms = useMemo(() => { return platformOptions.filter(p => p.name.toLowerCase().includes(platformSearchQuery.toLowerCase())); }, [platformOptions, platformSearchQuery]);
@@ -711,12 +707,12 @@ const App = () => {
         )}
         
       <footer className="text-center mt-auto py-4 text-sm text-[var(--color-text-subtle)]">
-          {showInstallBanner && !isIos && !isStandalone && <InstallPwaButton t={t} handleInstallClick={handleInstallClick} />}
-          {showInstallBanner && isIos && !isStandalone && <InstallPwaInstructions t={t} />}
-          <p className="pt-4">{t.footer} <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-text)] hover:underline">TMDb</a>.</p>
+            {showInstallBanner && installPrompt && <InstallPwaButton t={t} handleInstallClick={handleInstallClick} />}
+            {showInstallBanner && isIos && <InstallPwaInstructions t={t} />}
+            <p className="pt-4">{t.footer} <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-text)] hover:underline">TMDb</a>.</p>
       </footer>
     </div>
   );
 };
 
-ReactDOM.render(<App />, document.getElementById('root'));
+ReactDOM.render(<App />, document.getElementById('root'));  
