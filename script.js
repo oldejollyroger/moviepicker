@@ -6,10 +6,19 @@ const TMDB_PROFILE_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w185';
 const TMDB_THUMBNAIL_BASE_URL = 'https://image.tmdb.org/t/p/w92';
 
 const CURATED_COUNTRY_LIST = new Set([ 'AR', 'AU', 'AT', 'BE', 'BR', 'CA', 'CL', 'CO', 'CZ', 'DK', 'EG', 'FI', 'FR', 'DE', 'GR', 'HK', 'HU', 'IN', 'ID', 'IE', 'IL', 'IT', 'JP', 'MY', 'MX', 'NL', 'NZ', 'NG', 'NO', 'PE', 'PH', 'PL', 'PT', 'RO', 'RU', 'SA', 'SG', 'ZA', 'KR', 'ES', 'SE', 'CH', 'TW', 'TH', 'TR', 'AE', 'GB', 'US' ]);
-const ACCENT_COLORS = [ { name: 'Cyberpunk', color: '#d946ef', text: '#f0abfc', from: '#22d3ee', to: '#d946ef' }, { name: 'Ocean', color: '#22d3ee', text: '#67e8f9', from: '#22d3ee', to: '#3b82f6' }, { name: 'Forest', color: '#22c55e', text: '#4ade80', from: '#4ade80', to: '#a3e635' }, { name: 'Volcano', color: '#dc2626', text: '#f87171', from: '#f97316', to: '#ef4444' }, { name: 'Sunset', color: '#f97316', text: '#fbbf24', from: '#fb923c', to: '#f59e0b' }, ];
+const ACCENT_COLORS = [ 
+    { name: 'Cyberpunk', color: '#d946ef', text: '#f0abfc', from: '#22d3ee', to: '#d946ef' }, 
+    { name: 'Ocean', color: '#22d3ee', text: '#67e8f9', from: '#22d3ee', to: '#3b82f6' }, 
+    { name: 'Forest', color: '#22c55e', text: '#4ade80', from: '#4ade80', to: '#a3e635' }, 
+    { name: 'Volcano', color: '#dc2626', text: '#f87171', from: '#f97316', to: '#ef4444' }, 
+    { name: 'Sunset', color: '#f97316', text: '#fbbf24', from: '#fb923c', to: '#f59e0b' },
+    { name: 'Galaxy', color: '#8b5cf6', text: '#d8b4fe', from: '#a855f7', to: '#d946ef' }, 
+    { name: 'Mint', color: '#10b981', text: '#6ee7b7', from: '#34d399', to: '#6ee7b7'},
+    { name: 'Gold', color: '#f59e0b', text: '#fcd34d', from: '#fbbf24', to: '#fde047'}
+];
 const translations = {
-    es: { settings: "Ajustes", installApp: "Instalar App", installInstructions: "Para instalar, presiona Compartir y luego 'Agregar a la pantalla de inicio'", title: 'Movie Randomizer', subtitle: '¿Qué vemos esta noche?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros', showFilters: 'Más Filtros', hideFilters: 'Ocultar Filtros', applyFilters: 'Aplicar Filtros', sortBy: 'Ordenar por:', sortOptions: [ { name: 'Popularidad', id: 'popularity.desc' }, { name: 'Mejor Calificación', id: 'vote_average.desc' }, { name: 'Fecha de Estreno', id: 'primary_release_date.desc' } ], region: 'País:', selectRegionPrompt: 'Por favor, selecciona tu país para empezar', platform: 'Plataformas (Opcional):', platformSearchPlaceholder: 'Buscar plataforma...', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:', decade: 'Década:', allDecades: 'Cualquiera', minRating: 'Calificación Mínima:', surpriseMe: '¡Sorpréndeme!', goBack: 'Atrás', searching: 'Buscando...', searchPlaceholder: 'O busca una película específica...', welcomeMessage: "¡Ajusta los filtros y haz clic en '¡Sorpréndeme!' para descubrir una película!", noMoviesFound: 'No se encontraron películas con los filtros actuales. ¡Prueba con otros!', cardYear: 'Año:', cardDuration: 'Duración:', cardRating: 'Nota TMDb:', cardDirector: 'Director:', cardGenres: 'Géneros:', cardAvailableOn: 'Disponible en (Suscripción):', cardAvailableToRent: 'Disponible para Alquilar/Comprar:', cardStreamingNotFound: 'No encontrado en streaming.', cardCast: 'Reparto Principal:', cardCastNotFound: 'Reparto no disponible.', cardMarkAsWatched: 'Already Seen', cardTrailer: 'Ver Tráiler', cardTrailerNotFound: 'Tráiler no disponible.', cardSimilarMovies: 'Películas Similares', footer: 'Datos de películas cortesía de', shareButton: 'Compartir', shareSuccess: '¡Enlace copiado!', clearAllFilters: 'Limpiar todos los filtros', details: "Details" },
-    en: { settings: "Settings", installApp: "Install App", installInstructions: "To install, tap Share then 'Add to Home Screen'", title: 'Movie Randomizer', subtitle: "What should we watch tonight?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters', showFilters: 'More Filters', hideFilters: 'Hide Filters', applyFilters: 'Apply Filters', sortBy: 'Sort by:', sortOptions: [ { name: 'Popularity', id: 'popularity.desc' }, { name: 'Top Rated', id: 'vote_average.desc' }, { name: 'Release Date', id: 'primary_release_date.desc' } ], region: 'Country:', selectRegionPrompt: 'Please select your country to begin', platform: 'Platforms (Optional):', platformSearchPlaceholder: 'Search platform...', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:', decade: 'Decade:', allDecades: 'Any', minRating: 'Minimum Rating:', surpriseMe: 'Surprise Me!', goBack: 'Back', searching: 'Searching...', searchPlaceholder: 'Or search for a specific movie...', welcomeMessage: "Adjust the filters and click 'Surprise Me!' to discover a movie!", noMoviesFound: 'No movies found with the current filters. Try changing them!', cardYear: 'Year:', cardDuration: 'Duration:', cardRating: 'TMDb Rating:', cardDirector: 'Director:', cardGenres: 'Genres:', cardAvailableOn: 'Available on (Subscription):', cardAvailableToRent: 'Available for Rent or Buy:', cardStreamingNotFound: 'Not found on streaming.', cardCast: 'Main Cast:', cardCastNotFound: 'Cast not available.', cardMarkAsWatched: "Already Seen", cardTrailer: 'Watch Trailer', cardTrailerNotFound: 'Trailer not available.', cardSimilarMovies: 'Similar Movies', footer: 'Movie data courtesy of', shareButton: 'Share', shareSuccess: 'Link Copied!', clearAllFilters: 'Clear All Filters', details: "Details" }
+    es: { settings: "Ajustes", installApp: "Instalar App", installInstructions: "Para instalar, presiona Compartir y luego 'Agregar a la pantalla de inicio'", watchedMoviesTitle: "Películas Vistas", unmark: "Quitar", noMoviesWatched: "Aún no has marcado ninguna película como vista.", title: 'Movie Randomizer', subtitle: '¿Qué vemos esta noche?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros', showFilters: 'Más Filtros', hideFilters: 'Ocultar Filtros', applyFilters: 'Aplicar Filtros', sortBy: 'Ordenar por:', sortOptions: [ { name: 'Popularidad', id: 'popularity.desc' }, { name: 'Mejor Calificación', id: 'vote_average.desc' }, { name: 'Fecha de Estreno', id: 'primary_release_date.desc' } ], region: 'País:', selectRegionPrompt: 'Por favor, selecciona tu país para empezar', platform: 'Plataformas (Opcional):', platformSearchPlaceholder: 'Buscar plataforma...', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:', decade: 'Década:', allDecades: 'Cualquiera', minRating: 'Calificación Mínima:', surpriseMe: '¡Sorpréndeme!', goBack: 'Atrás', searching: 'Buscando...', searchPlaceholder: 'O busca una película específica...', welcomeMessage: "¡Ajusta los filtros y haz clic en '¡Sorpréndeme!' para descubrir una película!", noMoviesFound: 'No se encontraron películas con los filtros actuales. ¡Prueba con otros!', cardYear: 'Año:', cardDuration: 'Duración:', cardRating: 'Nota TMDb:', cardDirector: 'Director:', cardGenres: 'Géneros:', cardAvailableOn: 'Disponible en (Suscripción):', cardAvailableToRent: 'Disponible para Alquilar/Comprar:', cardStreamingNotFound: 'No encontrado en streaming.', cardCast: 'Reparto Principal:', cardCastNotFound: 'Reparto no disponible.', cardMarkAsWatched: 'Ya la he visto', cardTrailer: 'Ver Tráiler', cardTrailerNotFound: 'Tráiler no disponible.', cardSimilarMovies: 'Películas Similares', footer: 'Datos de películas cortesía de', shareButton: 'Compartir', shareSuccess: '¡Enlace copiado!', clearAllFilters: 'Limpiar todos los filtros', details: "Details", watchedMoviesTitle: "Películas Vistas", unmark: "Quitar", noMoviesWatched: "Aún no has marcado ninguna película como vista." },
+    en: { settings: "Settings", installApp: "Install App", installInstructions: "To install, tap Share then 'Add to Home Screen'", watchedMoviesTitle: "Watched Movies", unmark: "Unmark", noMoviesWatched: "You haven't marked any movies as watched yet.", title: 'Movie Randomizer', subtitle: "What should we watch tonight?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters', showFilters: 'More Filters', hideFilters: 'Hide Filters', applyFilters: 'Apply Filters', sortBy: 'Sort by:', sortOptions: [ { name: 'Popularity', id: 'popularity.desc' }, { name: 'Top Rated', id: 'vote_average.desc' }, { name: 'Release Date', id: 'primary_release_date.desc' } ], region: 'Country:', selectRegionPrompt: 'Please select your country to begin', platform: 'Platforms (Optional):', platformSearchPlaceholder: 'Search platform...', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:', decade: 'Decade:', allDecades: 'Any', minRating: 'Minimum Rating:', surpriseMe: 'Surprise Me!', goBack: 'Back', searching: 'Searching...', searchPlaceholder: 'Or search for a specific movie...', welcomeMessage: "Adjust the filters and click 'Surprise Me!' to discover a movie!", noMoviesFound: 'No movies found with the current filters. Try changing them!', cardYear: 'Year:', cardDuration: 'Duration:', cardRating: 'TMDb Rating:', cardDirector: 'Director:', cardGenres: 'Genres:', cardAvailableOn: 'Available on (Subscription):', cardAvailableToRent: 'Available for Rent or Buy:', cardStreamingNotFound: 'Not found on streaming.', cardCast: 'Main Cast:', cardCastNotFound: 'Cast not available.', cardMarkAsWatched: "Already Seen", cardTrailer: 'Watch Trailer', cardTrailerNotFound: 'Trailer not available.', cardSimilarMovies: 'Similar Movies', footer: 'Movie data courtesy of', shareButton: 'Share', shareSuccess: 'Link Copied!', clearAllFilters: 'Clear All Filters', details: "Details", watchedMoviesTitle: "Watched Movies", unmark: "Unmark", noMoviesWatched: "You haven't marked any movies as watched yet." }
 };
 
 const formatDuration = (totalMinutes) => {
@@ -18,7 +27,6 @@ const formatDuration = (totalMinutes) => {
     const minutes = totalMinutes % 60;
     return `${hours}h ${minutes}min`;
 };
-
 const InstallPwaInstructions = ({ t }) => {
     return (
         <div className="install-button-wrapper">
@@ -46,7 +54,7 @@ const InstallPwaButton = ({ t, handleInstallClick }) => {
     );
 }
 
-const SettingsDropdown = ({ mode, setMode, accent, setAccent, language, setLanguage, t }) => {
+const SettingsDropdown = ({ mode, setMode, accent, setAccent, language, setLanguage, t, openWatchedModal={openWatchedModal},isWatchedModalOpen, closeWatchedModal }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -87,8 +95,13 @@ const SettingsDropdown = ({ mode, setMode, accent, setAccent, language, setLangu
                                 </button>
                             </div>
                             <div className="flex items-center bg-[var(--color-bg)] p-1 rounded-full"><button onClick={() => setLanguage('es')} className={`w-full lang-btn ${language === 'es' ? 'lang-btn-active' : 'lang-btn-inactive'}`}>Español</button><button onClick={() => setLanguage('en')} className={`w-full lang-btn ${language === 'en' ? 'lang-btn-active' : 'lang-btn-inactive'}`}>English</button></div>
-                        </div>
-                    </div>
+                       <div>
+        <button onClick={openWatchedModal} className="w-full p-2 text-sm bg-[var(--color-bg)] hover:bg-[var(--color-border)] rounded-full font-semibold transition-colors">
+            {t.watchedMoviesTitle}
+        </button>
+    </div>
+    <div className="flex items-center bg-[var(--color-bg)] ...">...</div>
+</div>             </div>
                 </div>
             )}
         </div>
@@ -176,12 +189,11 @@ const FilterModal = ({ isOpen, close, filters, handleGenreChange, handlePlatform
         <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={close}>
             <div className="bg-[var(--color-card-bg)] rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-[var(--color-border)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
                 <div className="p-6 border-b border-[var(--color-border)] flex justify-between items-center">
-                    <h2 className="text-2xl font-semibold text-[var(--color-accent-text)]">{t.advancedFilters}</h2>
-                    {/* --- UI FIX 3: Close button added to Filter Modal --- */}
-                    <button onClick={close} className="text-[var(--color-text-secondary)] hover:text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                </div>
+    <h2 className="text-2xl font-semibold text-[var(--color-accent-text)]">{t.advancedFilters}</h2>
+    <button onClick={close} className="text-[var(--color-text-secondary)] hover:text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+    </button>
+</div>
                 <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-8 overflow-y-auto">
                     <div><label className="block text-lg font-medium text-[var(--color-text-primary)] mb-3">{t.includeGenre}</label><div className="filter-checkbox-list space-y-2">{Object.entries(genresMap).sort(([,a],[,b]) => a.localeCompare(b)).map(([id, name]) => (<div key={`inc-modal-${id}`} className="flex items-center"><input id={`inc-modal-genre-${id}`} type="checkbox" checked={filters.genre.includes(id)} onChange={() => handleGenreChange(id, 'genre')} disabled={filters.excludeGenres.includes(id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)] disabled:opacity-50"/><label htmlFor={`inc-modal-genre-${id}`} className={`ml-3 text-base text-[var(--color-text-secondary)] ${filters.excludeGenres.includes(id) ? 'opacity-50' : ''}`}>{name}</label></div>))}</div></div>
                     <div><label className="block text-lg font-medium text-[var(--color-text-primary)] mb-3">{t.excludeGenre}</label><div className="filter-checkbox-list space-y-2">{Object.entries(genresMap).sort(([,a],[,b]) => a.localeCompare(b)).map(([id, name]) => (<div key={`ex-modal-${id}`} className="flex items-center"><input id={`ex-modal-genre-${id}`} type="checkbox" checked={filters.excludeGenres.includes(id)} onChange={() => handleGenreChange(id, 'excludeGenres')} disabled={filters.genre.includes(id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-red-600 focus:ring-red-500 accent-red-600 disabled:opacity-50"/><label htmlFor={`ex-modal-genre-${id}`} className={`ml-3 text-base text-[var(--color-text-secondary)] ${filters.genre.includes(id) ? 'opacity-50' : ''}`}>{name}</label></div>))}</div></div>
@@ -194,7 +206,37 @@ const FilterModal = ({ isOpen, close, filters, handleGenreChange, handlePlatform
         </div>
     );
 };
-
+const WatchedListModal = ({ isOpen, close, watchedMovies, unmarkMovie, t }) => {
+    if (!isOpen) return null;
+    const watchedArray = Object.entries(watchedMovies);
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-start z-50 p-4 pt-16 sm:pt-24" onClick={close}>
+            <div className="bg-[var(--color-card-bg)] rounded-xl max-w-2xl w-full max-h-[80vh] flex flex-col border border-[var(--color-border)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center sticky top-0 bg-[var(--color-card-bg)] rounded-t-xl">
+                    <h2 className="text-xl font-semibold text-[var(--color-accent-text)]">{t.watchedMoviesTitle}</h2>
+                    <button onClick={close} className="text-[var(--color-text-secondary)] hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div className="p-4 overflow-y-auto">
+                    {watchedArray.length > 0 ? (
+                        <ul className="space-y-3">
+                            {watchedArray.sort(([, a], [, b]) => a.title.localeCompare(b.title)).map(([movieId, movieData]) => (
+                                <li key={movieId} className="flex items-center justify-between gap-4 p-2 bg-[var(--color-bg)] rounded-lg">
+                                    <img src={movieData.poster ? `${TMDB_THUMBNAIL_BASE_URL}${movieData.poster}` : 'https://placehold.co/92x138/4A5568/FFFFFF?text=?'} alt={`Poster for ${movieData.title}`} className="w-12 h-auto rounded-md" />
+                                    <p className="flex-grow font-semibold break-words">{movieData.title}</p>
+                                    <button onClick={() => unmarkMovie(movieId)} className="flex-shrink-0 px-3 py-1 text-sm bg-red-600/80 hover:bg-red-600 text-white font-semibold rounded-md transition-colors">{t.unmark}</button>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-center text-[var(--color-text-secondary)] py-8">{t.noMoviesWatched}</p>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const App = () => {
   const [mode, setMode] = useState(() => localStorage.getItem('movieRandomizerMode') || 'dark');
@@ -241,6 +283,8 @@ const App = () => {
   const [watchedMovies, setWatchedMovies] = useState({});
   const [sessionShownMovies, setSessionShownMovies] = useState(new Set());
   const cardRef = useRef(null);
+  const [isWatchedModalOpen, setIsWatchedModalOpen] = useState(false);
+
   
   useEffect(() => {
     const isIosDevice = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -484,7 +528,29 @@ const App = () => {
   const handleSearchChange = (e) => { setSearchQuery(e.target.value); };
   const handleSearchResultClick = (movie) => { const formattedMovie = { id: movie.id.toString(), title: movie.title, synopsis: movie.overview, year: movie.release_date ? parseInt(movie.release_date.split('-')[0]) : null, imdbRating: movie.vote_average.toFixed(1), genres: movie.genre_ids.map(id => genresMap[id]).filter(Boolean) || ["Desconocido"], poster: movie.poster_path, }; if (selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]); setSelectedMovie(formattedMovie); setSearchQuery(''); setSearchResults([]); };
   const handleGoBack = () => { if (movieHistory.length === 0) return; const newHistory = [...movieHistory]; const previousMovie = newHistory.pop(); setMovieHistory(newHistory); setSelectedMovie(previousMovie); if(selectedMovie) setSessionShownMovies(prev => new Set(prev).add(selectedMovie.id)); };
-  const handleMarkAsWatched = (movieId) => { if(!movieId) return; const threeMonths = 3 * 30 * 24 * 60 * 60 * 1000; setWatchedMovies(prev => ({...prev, [movieId]: Date.now() + threeMonths})); setAllMovies(prev => prev.filter(m => m.id !== movieId)); handleSurpriseMe(); };
+  const handleMarkAsWatched = (movie) => {
+    if (!movie || !movie.id) return;
+    const threeMonths = 3 * 30 * 24 * 60 * 60 * 1000;
+    const movieToStore = {
+        title: movie.title,
+        poster: movie.poster,
+        expiry: Date.now() + threeMonths
+    };
+    setWatchedMovies(prev => ({...prev, [movie.id]: movieToStore }));
+    setAllMovies(prev => prev.filter(m => m.id !== movie.id));
+    handleSurpriseMe(); 
+};
+
+// Add these THREE new functions alongside your other handlers:
+const handleUnmarkAsWatched = (movieId) => {
+    setWatchedMovies(prev => {
+        const newWatched = { ...prev };
+        delete newWatched[movieId];
+        return newWatched;
+    });
+};
+const openWatchedModal = () => setIsWatchedModalOpen(true);
+const closeWatchedModal = () => setIsWatchedModalOpen(false);fSettingsDropdown 
   const handleShare = useCallback(() => { if (!selectedMovie) return; const movieUrl = `https://www.themoviedb.org/movie/${selectedMovie.id}`; const shareData = { title: selectedMovie.title, text: `Check out this movie I found: ${selectedMovie.title}`, url: movieUrl }; if (navigator.share) { navigator.share(shareData).catch(err => console.error("Couldn't share", err)); } else { navigator.clipboard.writeText(movieUrl).then(() => { setShareStatus('success'); setTimeout(() => setShareStatus('idle'), 2000); }); } }, [selectedMovie]);
   const handleInstallClick = async () => {
     if (!installPrompt) return;
@@ -525,14 +591,14 @@ const App = () => {
                 <div className="sm:col-span-1"><label htmlFor="rating-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.minRating} {Number(filters.minRating).toFixed(1)}</label><input type="range" id="rating-filter" min="0" max="9.5" step="0.5" value={filters.minRating} onChange={e => handleFilterChange('minRating', e.target.value)} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]" /></div>
                 {/* --- UI FIX 1 & 2: New icon and classes for light/dark mode --- */}
                 <button 
-                  onClick={openFilterModal} 
-                  className="w-full sm:col-span-1 p-2 bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-500 hover:bg-gray-300 font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M5 4a1 1 0 00-2 0v2.016a2.5 2.5 0 004.532 1.442A2.5 2.5 0 009.5 9.016V16a1 1 0 102 0V9.016a2.5 2.5 0 00-1.032-1.942A2.5 2.5 0 004.5 9.016V4zM3 10a1 1 0 011-1h.016a2.5 2.5 0 004.968 0H16a1 1 0 110 2h-7.016a2.5 2.5 0 00-4.968 0H3a1 1 0 01-1-1z" />
-                    </svg>
-                    {t.showFilters}
-                </button>
+    onClick={openFilterModal} 
+    className="w-full sm:col-span-1 p-2 bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-500 font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
+    </svg>
+    {t.showFilters}
+</button>
             </div>
         </div>
       
@@ -574,15 +640,15 @@ const App = () => {
                         </div>
                         {/* --- UI FIX 4 & 5: Updated button styles, icons, and text --- */}
                         <div className="mt-6 flex flex-col sm:flex-row gap-4">
-                           <button onClick={() => handleMarkAsWatched(selectedMovie.id)} className="w-full py-3 px-4 bg-gray-600/60 hover:bg-gray-500/80 text-white font-bold rounded-lg shadow-md transition-colors flex items-center justify-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                               {t.cardMarkAsWatched}
-                           </button>
-                           <button onClick={handleShare} className="w-full py-3 px-4 bg-blue-600/80 hover:bg-blue-600 text-white font-bold rounded-lg shadow-md transition-colors flex items-center justify-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>
-                             {shareStatus === 'success' ? t.shareSuccess : t.shareButton}
-                           </button>
-                        </div>
+   <button onClick={() => handleMarkAsWatched(selectedMovie)} className="w-full py-3 px-4 bg-gray-600/60 hover:bg-gray-500/80 text-white font-bold rounded-lg shadow-md transition-colors flex items-center justify-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+       {t.cardMarkAsWatched}
+   </button>
+   <button onClick={handleShare} className="w-full py-3 px-4 bg-blue-600/80 hover:bg-blue-600 text-white font-bold rounded-lg shadow-md transition-colors flex items-center justify-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>
+        {shareStatus === 'success' ? t.shareSuccess : t.shareButton}
+   </button>
+</div>
                         <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
                              <h3 className="text-lg font-semibold text-[var(--color-accent-text)] mb-2">{t.details}</h3>
                              <div className="space-y-2 text-sm">
@@ -654,7 +720,13 @@ const App = () => {
         )}
         
         <FilterModal isOpen={isFilterModalOpen} close={closeFilterModal} filters={filters} handleGenreChange={handleGenreChange} handlePlatformChange={handlePlatformChange} t={t} genresMap={genresMap} platformOptions={platformOptions} platformSearchQuery={platformSearchQuery} handlePlatformSearchChange={handlePlatformSearchChange} />
-        
+         <WatchedListModal 
+            isOpen={isWatchedModalOpen} 
+            close={closeWatchedModal} 
+            watchedMovies={watchedMovies} 
+            unmarkMovie={handleUnmarkAsWatched} 
+            t={t}
+        />
         {modalMovie && (
             <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={closeModal}>
                 <div className="bg-[var(--color-card-bg)] rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}>
