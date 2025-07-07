@@ -8,8 +8,10 @@ const TMDB_THUMBNAIL_BASE_URL = 'https://image.tmdb.org/t/p/w92';
 const CURATED_COUNTRY_LIST = new Set([ 'AR', 'AU', 'AT', 'BE', 'BR', 'CA', 'CL', 'CO', 'CZ', 'DK', 'EG', 'FI', 'FR', 'DE', 'GR', 'HK', 'HU', 'IN', 'ID', 'IE', 'IL', 'IT', 'JP', 'MY', 'MX', 'NL', 'NZ', 'NG', 'NO', 'PE', 'PH', 'PL', 'PT', 'RO', 'RU', 'SA', 'SG', 'ZA', 'KR', 'ES', 'SE', 'CH', 'TW', 'TH', 'TR', 'AE', 'GB', 'US' ]);
 const ACCENT_COLORS = [ { name: 'Cyberpunk', color: '#d946ef', text: '#f0abfc', from: '#22d3ee', to: '#d946ef' }, { name: 'Ocean', color: '#22d3ee', text: '#67e8f9', from: '#22d3ee', to: '#3b82f6' }, { name: 'Forest', color: '#22c55e', text: '#4ade80', from: '#4ade80', to: '#a3e635' }, { name: 'Volcano', color: '#dc2626', text: '#f87171', from: '#f97316', to: '#ef4444' }, { name: 'Sunset', color: '#f97316', text: '#fbbf24', from: '#fb923c', to: '#f59e0b' }, { name: 'Galaxy', color: '#8b5cf6', text: '#d8b4fe', from: '#a855f7', to: '#d946ef' }, { name: 'Mint', color: '#10b981', text: '#6ee7b7', from: '#34d399', to: '#6ee7b7' }, { name: 'Gold', color: '#f59e0b', text: '#fcd34d', from: '#fbbf24', to: '#fde047'}];
 const translations = {
-    es: { settings: "Ajustes", watchedMoviesTitle: "Películas Vistas", unmark: "Quitar", noMoviesWatched: "Aún no has marcado ninguna película como vista.", installApp: "Instalar App", installInstructions: "Para instalar, presiona Compartir y luego 'Agregar a la pantalla de inicio'", title: 'Movie Randomizer', subtitle: '¿Qué vemos esta noche?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros', showFilters: 'Más Filtros', hideFilters: 'Ocultar Filtros', applyFilters: 'Aplicar Filtros', sortBy: 'Ordenar por:', sortOptions: [ { name: 'Popularidad', id: 'popularity.desc' }, { name: 'Mejor Calificación', id: 'vote_average.desc' }, { name: 'Fecha de Estreno', id: 'primary_release_date.desc' } ], region: 'País:', selectRegionPrompt: 'Por favor, selecciona tu país para empezar', platform: 'Plataformas (Opcional):', platformSearchPlaceholder: 'Buscar plataforma...', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:', decade: 'Década:', allDecades: 'Cualquiera', minRating: 'Calificación Mínima:', surpriseMe: '¡Sorpréndeme!', goBack: 'Atrás', searching: 'Buscando...', searchPlaceholder: 'O busca una película específica...', welcomeMessage: "¡Ajusta los filtros y haz clic en '¡Sorpréndeme!' para descubrir una película!", noMoviesFound: 'No se encontraron películas con los filtros actuales. ¡Prueba con otros!', cardYear: 'Año:', cardDuration: 'Duración:', cardRating: 'Nota TMDb:', cardDirector: 'Director:', cardGenres: 'Géneros:', cardAvailableOn: 'Disponible en (Suscripción):', cardAvailableToRent: 'Disponible para Alquilar/Comprar:', cardStreamingNotFound: 'No encontrado en streaming.', cardCast: 'Reparto Principal:', cardCastNotFound: 'Reparto no disponible.', cardMarkAsWatched: 'Ya la he visto', cardTrailer: 'Ver Tráiler', cardTrailerNotFound: 'Tráiler no disponible.', cardSimilarMovies: 'Películas Similares', footer: 'Datos de películas cortesía de', shareButton: 'Compartir', shareSuccess: '¡Enlace copiado!', clearAllFilters: 'Limpiar todos los filtros', details: "Details" },
-    en: { settings: "Settings", watchedMoviesTitle: "Watched Movies", unmark: "Unmark", noMoviesWatched: "You haven't marked any movies as watched yet.", installApp: "Install App", installInstructions: "To install, tap Share then 'Add to Home Screen'", title: 'Movie Randomizer', subtitle: "What should we watch tonight?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters', showFilters: 'More Filters', hideFilters: 'Hide Filters', applyFilters: 'Apply Filters', sortBy: 'Sort by:', sortOptions: [ { name: 'Popularity', id: 'popularity.desc' }, { name: 'Top Rated', id: 'vote_average.desc' }, { name: 'Release Date', id: 'primary_release_date.desc' } ], region: 'Country:', selectRegionPrompt: 'Please select your country to begin', platform: 'Platforms (Optional):', platformSearchPlaceholder: 'Search platform...', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:', decade: 'Decade:', allDecades: 'Any', minRating: 'Minimum Rating:', surpriseMe: 'Surprise Me!', goBack: 'Back', searching: 'Searching...', searchPlaceholder: 'Or search for a specific movie...', welcomeMessage: "Adjust the filters and click 'Surprise Me!' to discover a movie!", noMoviesFound: 'No movies found with the current filters. Try changing them!', cardYear: 'Year:', cardDuration: 'Duration:', cardRating: 'TMDb Rating:', cardDirector: 'Director:', cardGenres: 'Genres:', cardAvailableOn: 'Available on (Subscription):', cardAvailableToRent: 'Available for Rent or Buy:', cardStreamingNotFound: 'Not found on streaming.', cardCast: 'Main Cast:', cardCastNotFound: 'Cast not available.', cardMarkAsWatched: "Already Seen", cardTrailer: 'Watch Trailer', cardTrailerNotFound: 'Trailer not available.', cardSimilarMovies: 'Similar Movies', footer: 'Movie data courtesy of', shareButton: 'Share', shareSuccess: 'Link Copied!', clearAllFilters: 'Clear All Filters', details: "Details" }
+    es: { settings: "Ajustes", watchedMoviesTitle: "Películas Vistas", unmark: "Quitar", noMoviesWatched: "Aún no has marcado ninguna película como vista.", installApp: "Instalar App", installInstructions: "Para instalar, presiona Compartir y luego 'Agregar a la pantalla de inicio'", title: 'Movie Randomizer', subtitle: '¿Qué vemos esta noche?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros', showFilters: 'Más Filtros', hideFilters: 'Ocultar Filtros', applyFilters: 'Aplicar Filtros', sortBy: 'Ordenar por:', sortOptions: [ { name: 'Popularidad', id: 'popularity.desc' }, { name: 'Mejor Calificación', id: 'vote_average.desc' }, { name: 'Fecha de Estreno', id: 'primary_release_date.desc' } ], region: 'País:', selectRegionPrompt: 'Por favor, selecciona tu país para empezar', platform: 'Plataformas (Opcional):', platformSearchPlaceholder: 'Buscar plataforma...', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:', decade: 'Década:', allDecades: 'Cualquiera', minRating: 'Calificación Mínima:', surpriseMe: '¡Sorpréndeme!', goBack: 'Atrás', searching: 'Buscando...', searchPlaceholder: 'O busca una película específica...', welcomeMessage: "¡Ajusta los filtros y haz clic en '¡Sorpréndeme!' para descubrir una película!", noMoviesFound: 'No se encontraron películas con los filtros actuales. ¡Prueba con otros!', cardYear: 'Año:', cardDuration: 'Duración:', cardRating: 'Nota TMDb:', cardDirector: 'Director:', cardGenres: 'Géneros:', cardAvailableOn: 'Disponible en (Suscripción):', cardAvailableToRent: 'Disponible para Alquilar/Comprar:', cardStreamingNotFound: 'No encontrado en streaming.', cardCast: 'Reparto Principal:', cardCastNotFound: 'Reparto no disponible.', cardMarkAsWatched: 'Ya la he visto', cardTrailer: 'Ver Tráiler', cardTrailerNotFound: 'Tráiler no disponible.', cardSimilarMovies: 'Películas Similares', footer: 'Datos de películas cortesía de', shareButton: 'Compartir', shareSuccess: '¡Enlace copiado!', clearAllFilters: 'Limpiar todos los filtros', details: "Details", actorBiography: "Biografía",
+    actorKnownFor: "Conocido/a por" },
+    en: { settings: "Settings", watchedMoviesTitle: "Watched Movies", unmark: "Unmark", noMoviesWatched: "You haven't marked any movies as watched yet.", installApp: "Install App", installInstructions: "To install, tap Share then 'Add to Home Screen'", title: 'Movie Randomizer', subtitle: "What should we watch tonight?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters', showFilters: 'More Filters', hideFilters: 'Hide Filters', applyFilters: 'Apply Filters', sortBy: 'Sort by:', sortOptions: [ { name: 'Popularity', id: 'popularity.desc' }, { name: 'Top Rated', id: 'vote_average.desc' }, { name: 'Release Date', id: 'primary_release_date.desc' } ], region: 'Country:', selectRegionPrompt: 'Please select your country to begin', platform: 'Platforms (Optional):', platformSearchPlaceholder: 'Search platform...', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:', decade: 'Decade:', allDecades: 'Any', minRating: 'Minimum Rating:', surpriseMe: 'Surprise Me!', goBack: 'Back', searching: 'Searching...', searchPlaceholder: 'Or search for a specific movie...', welcomeMessage: "Adjust the filters and click 'Surprise Me!' to discover a movie!", noMoviesFound: 'No movies found with the current filters. Try changing them!', cardYear: 'Year:', cardDuration: 'Duration:', cardRating: 'TMDb Rating:', cardDirector: 'Director:', cardGenres: 'Genres:', cardAvailableOn: 'Available on (Subscription):', cardAvailableToRent: 'Available for Rent or Buy:', cardStreamingNotFound: 'Not found on streaming.', cardCast: 'Main Cast:', cardCastNotFound: 'Cast not available.', cardMarkAsWatched: "Already Seen", cardTrailer: 'Watch Trailer', cardTrailerNotFound: 'Trailer not available.', cardSimilarMovies: 'Similar Movies', footer: 'Movie data courtesy of', shareButton: 'Share', shareSuccess: 'Link Copied!', clearAllFilters: 'Clear All Filters', details: "Details", actorBiography: "Biography", 
+    actorKnownFor: "Known For"}
 };
 
 const formatDuration = (totalMinutes) => {
@@ -74,6 +76,57 @@ const WatchedListModal = ({ isOpen, close, watchedMovies, unmarkMovie, t }) => {
                     ) : (
                         <p className="text-center text-[var(--color-text-secondary)] py-8">{t.noMoviesWatched}</p>
                     )}
+                </div>
+            </div>
+        </div>
+    );
+};
+const ActorDetailModal = ({ actor, close, t, onMovieClick }) => {
+    if (!actor) return null;
+
+    const topMovies = actor.movie_credits?.cast
+        .sort((a, b) => b.popularity - a.popularity)
+        .slice(0, 10);
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={close}>
+            <div className="bg-[var(--color-card-bg)] rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col sm:flex-row border border-[var(--color-border)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                {/* Close Button */}
+                <button onClick={close} className="absolute top-3 right-3 text-white bg-gray-900 rounded-full p-1 hover:bg-gray-700 z-10">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                
+                {/* Left Column: Actor Image */}
+                <div className="w-full sm:w-1/3 flex-shrink-0">
+                    <img src={actor.profile_path ? `${TMDB_IMAGE_BASE_URL}${actor.profile_path}` : 'https://placehold.co/500x750/4A5568/FFFFFF?text=?'} alt={actor.name} className="w-full h-full object-cover sm:rounded-l-xl" />
+                </div>
+
+                {/* Right Column: Details */}
+                <div className="w-full sm:w-2/3 p-4 sm:p-6 overflow-y-auto">
+                    <h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3">{actor.name}</h2>
+                    
+                    {/* Biography Section */}
+                    <div className="mt-4">
+                        <h3 className="text-lg font-semibold text-[var(--color-accent-text)] mb-2">{t.actorBiography}</h3>
+                        <p className="text-[var(--color-text-secondary)] text-sm leading-relaxed max-h-48 overflow-y-auto">
+                            {actor.biography || "No biography available."}
+                        </p>
+                    </div>
+
+                    {/* Filmography Section */}
+                    <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
+                         <h3 className="text-lg font-semibold text-[var(--color-accent-text)] mb-3">{t.actorKnownFor}</h3>
+                         <div className="horizontal-scroll-container">
+                            {topMovies?.map(movie => (
+                                <button key={movie.id} onClick={() => onMovieClick(movie)} className="flex-shrink-0 w-32 text-center group hover:scale-105 transition-transform duration-150">
+                                    <div className="w-full aspect-[2/3] bg-[var(--color-border)] rounded-lg overflow-hidden">
+                                         <img loading="lazy" src={movie.poster_path ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}` : 'https://placehold.co/200x300/4A5568/FFFFFF?text=No+Poster'} alt={movie.title} className="w-full h-full object-cover"/>
+                                    </div>
+                                    <span className="block w-full text-xs text-center text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-text)] transition-colors pt-2 truncate">{movie.title}</span>
+                                </button> 
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -280,6 +333,8 @@ const App = () => {
   const [watchedMovies, setWatchedMovies] = useState({});
   const [sessionShownMovies, setSessionShownMovies] = useState(new Set());
   const cardRef = useRef(null);
+  const [selectedActor, setSelectedActor] = useState(null);
+const [isFetchingActor, setIsFetchingActor] = useState(false);
   
   useEffect(() => {
     const isIosDevice = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
@@ -561,6 +616,44 @@ const App = () => {
   const closeFilterModal = () => setIsFilterModalOpen(false);
   const openWatchedModal = () => setIsWatchedModalOpen(true);
   const closeWatchedModal = () => setIsWatchedModalOpen(false);
+  const fetchActorDetails = useCallback(async (actorId, lang) => {
+    setIsFetchingActor(true);
+    try {
+        const personUrl = `${TMDB_BASE_URL}/person/${actorId}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=movie_credits`;
+        const response = await fetch(personUrl);
+        if (!response.ok) throw new Error("Could not fetch actor details.");
+        const data = await response.json();
+        setSelectedActor(data);
+    } catch(err) {
+        console.error("Error fetching actor details:", err);
+        // You might want to set an error state here
+    } finally {
+        setIsFetchingActor(false);
+    }
+}, []);
+
+const handleActorClick = (actorId) => {
+    const langParam = language === 'es' ? 'es-ES' : 'en-US';
+    fetchActorDetails(actorId, langParam);
+};
+
+const handleSimilarMovieFromActorClick = (movie) => {
+    // This function reuses your existing logic to display a movie
+    const formattedMovie = { 
+        id: movie.id.toString(), 
+        title: movie.title, 
+        synopsis: movie.overview, 
+        year: movie.release_date ? parseInt(movie.release_date.split('-')[0]) : null, 
+        imdbRating: movie.vote_average.toFixed(1), 
+        genres: movie.genre_ids.map(id => genresMap[id]).filter(Boolean) || ["Desconocido"], 
+        poster: movie.poster_path, 
+    };
+    if (selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]);
+    setSelectedActor(null); // Close the actor modal
+    setSelectedMovie(formattedMovie);
+};
+
+const closeActorModal = () => setSelectedActor(null);
 
   if (isLoading) { return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="loader"></div></div> ); }
   if (error) { return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="text-center"><h1 className="text-3xl font-bold text-red-500 mb-4">Error</h1><p className="text-xl">{error}</p></div></div> ); }
@@ -662,14 +755,14 @@ const App = () => {
                         <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
                             <h3 className="text-lg font-semibold text-[var(--color-accent-text)] mb-3">{t.cardCast}</h3>
                             {isFetchingDetails ? <div className="small-loader"></div> : movieDetails.cast?.length > 0 ? (
-                                <div className="flex flex-wrap gap-4">
-                                    {movieDetails.cast.map(actor => (
-                                        <div key={actor.id} className="flex flex-col items-center text-center w-20">
-                                            <img loading="lazy" src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1 rounded-md"/>
-                                            <span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span>
-                                        </div>
-                                    ))}
-                                </div>
+                              <div className="flex flex-wrap gap-4">
+    {movieDetails.cast.map(actor => (
+        <button key={actor.id} onClick={() => handleActorClick(actor.id)} className="flex flex-col items-center text-center w-20 hover:scale-105 transition-transform duration-150">
+            <img loading="lazy" src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1 rounded-md shadow-lg"/>
+            <span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span>
+        </button>
+    ))}
+</div>
                             ) : <p className="text-sm text-[var(--color-text-secondary)]">{t.cardCastNotFound}</p>}
                         </div>
                     </div>
@@ -720,6 +813,12 @@ const App = () => {
             unmarkMovie={handleUnmarkAsWatched} 
             t={t}
         />
+        <ActorDetailModal 
+    actor={selectedActor} 
+    close={closeActorModal}
+    onMovieClick={handleSimilarMovieFromActorClick}
+    t={t}
+/>
         
         {modalMovie && (
             <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={closeModal}>
