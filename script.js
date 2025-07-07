@@ -111,7 +111,7 @@ const SettingsDropdown = ({ mode, setMode, accent, setAccent, language, setLangu
                     <div className="p-4">
                         <h3 className="font-semibold mb-3">{t.settings}</h3>
                         <div className="space-y-4">
-                             <div className="flex flex-wrap items-center gap-2 bg-[var(--color-bg)] p-1 rounded-full">{ACCENT_COLORS.map(colorOption => (<button key={colorOption.name} onClick={() => setAccent(colorOption)} className={`w-6 h-6 rounded-full transition-transform duration-150 ${accent.name === colorOption.name ? 'scale-125 ring-2 ring-offset-2 ring-offset-[var(--color-bg)] ring-[var(--color-accent)]' : ''}`} style={{backgroundColor: colorOption.color}} title={colorOption.name}></button>))}</div>
+                             <div className="grid grid-cols-8 gap-2 bg-[var(--color-bg)] p-1 rounded-full">{ACCENT_COLORS.map(colorOption => (<button key={colorOption.name} onClick={() => setAccent(colorOption)} className={`w-6 h-6 rounded-full transition-transform duration-150 ${accent.name === colorOption.name ? 'scale-125 ring-2 ring-offset-2 ring-offset-[var(--color-bg)] ring-[var(--color-accent)]' : ''}`} style={{backgroundColor: colorOption.color}} title={colorOption.name}></button>))}</div>
                              <div className="flex items-center gap-2 bg-[var(--color-bg)] p-1 rounded-full">
                                 <button onClick={() => setMode('light')} className={`w-full p-1.5 rounded-full flex justify-center items-center gap-2 ${mode === 'light' ? 'bg-[var(--color-accent)] text-white' : 'text-[var(--color-text-secondary)]'}`} title="Light Mode">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg> Light
@@ -586,7 +586,7 @@ const App = () => {
                 <button 
                   onClick={openFilterModal} 
                   className="w-full sm:col-span-1 p-2 bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-500 font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-                >
+>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                        <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
                     </svg>
