@@ -414,17 +414,31 @@ const [isFetchingActor, setIsFetchingActor] = useState(false);
     if(selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]);
     setSelectedMovie(null); setHasSearched(true);
     const langParam = language === 'es' ? 'es-ES' : 'en-US';
-    const fetchPage = async (voteCount) => {
-        let providersToQuery = [...filters.platform];
-        if (providersToQuery.includes('384') && !providersToQuery.includes('1899')) { providersToQuery.push('1899'); }
-        let baseDiscoverUrl = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${langParam}&vote_count.gte=${voteCount}&watch_region=${userRegion}`;
-        if (providersToQuery.length > 0) baseDiscoverUrl += `&with_watch_providers=${providersToQuery.join('|')}&with_watch_monetization_types=flatrate`;
-        if (filters.genre.length > 0) baseDiscoverUrl += `&with_genres=${filters.genre.join(',')}`;
-        if (filters.excludeGenres.length > 0) baseDiscoverUrl += `&without_genres=${filters.excludeGenres.join(',')}`;
-        if (filters.minRating > 0) baseDiscoverUrl += `&vote_average.gte=${filters.minRating}`;
-        if (filters.decade !== 'todos') { const year = parseInt(filters.decade); baseDiscoverUrl += `&primary_release_date.gte=${year}-01-01&primary_release_date.lte=${year + 9}-12-31`; }
-        const sortOptionsForVariety = ['popularity.desc', 'vote_average.desc', 'revenue.desc'];
-        const fetchPromises = sortOptionsForVariety.map(sortBy => { const randomPage = Math.floor(Math.random() * 20) + 1; return fetch(`${baseDiscoverUrl}&sort_by=${sortBy}&page=${randomPage}`); });
+    // This section now builds a URL to your OWN serverless function
+const fetchPage = async (voteCount) => {
+    const params = new URLSearchParams({
+        language: langParam,
+        vote_count: voteCount,
+        watch_region: userRegion,
+    });
+    if (providersToQuery.length > 0) params.append('with_watch_providers', providersToQuery.join('|'));
+    if (filters.genre.length > 0) params.append('with_genres', filters.genre.join(','));
+    if (filters.excludeGenres.length > 0) params.append('without_genres', filters.excludeGenres.join(','));
+    if (filters.minRating > 0) params.append('vote_average.gte', filters.minRating);
+    if (filters.decade !== 'todos') {
+        const year = parseInt(filters.decade);
+        params.append('primary_release_date.gte', `${year}-01-01`);
+        params.append('primary_release_date.lte', `${year + 9}-12-31`);
+    }
+
+    const fetchPromises = sortOptionsForVariety.map(sortBy => {
+        const randomPage = Math.floor(Math.random() * 20) + 1;
+        const currentParams = new URLSearchParams(params);
+        currentParams.append('sort_by', sortBy);
+        currentParams.append('page', randomPage);
+        // We now fetch from our own API endpoint, not TMDb
+        return fetch(`/api/discover?${currentParams.toString()}`);
+    });
         const results = await Promise.allSettled(fetchPromises);
         let allResults = [];
         for (const result of results) { if (result.status === 'fulfilled' && result.value.ok) { const data = await result.value.json(); allResults = allResults.concat(data.results); } else { const reason = result.reason || result.value?.statusText; console.warn(`A variety search failed:`, reason); } }
