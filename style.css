@@ -7,6 +7,10 @@
     --color-text-secondary: #d1d5db; /* gray-300 */
     --color-text-subtle: #6b7280; /* gray-500 */
     --color-border: #374151; /* gray-700 */
+
+    /* --- FIX #1: Added styles for the filter button --- */
+    --color-filter-button-bg: #4b5563; /* gray-600 */
+    --color-filter-button-bg-hover: #6b7280; /* gray-500 */
     
     /* Default Accent: Set by JavaScript */
     --color-accent: #d946ef;
@@ -25,25 +29,31 @@ html.light-mode {
     --color-text-subtle: #9ca3af; /* gray-400 */
     --color-border: #e5e7eb; /* gray-200 */
     --color-accent-text: var(--color-accent);
+
+    /* --- FIX #1: Added styles for the filter button in light mode --- */
+    --color-filter-button-bg: #e5e7eb; /* gray-200 */
+    --color-filter-button-bg-hover: #d1d5db; /* gray-300 */
 }
 
 /* General Styles */
 body, #root { min-height: 100vh; }
 #root { display: flex; flex-direction: column; }
 .app-container { flex-grow: 1; display: flex; flex-direction: column; }
+.app-container > footer { margin-top: auto; }
+
+/* --- FIX #1: Added a new class for the filter button --- */
+.filter-button {
+    background-color: var(--color-filter-button-bg);
+}
+.filter-button:hover {
+    background-color: var(--color-filter-button-bg-hover);
+}
 
 .loader { border: 5px solid rgba(128,128,128,0.2); border-top-color: var(--color-accent); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
 .small-loader { border: 3px solid rgba(128,128,128,0.2); border-top-color: var(--color-accent); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; margin-left: 8px; vertical-align: middle; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-.platform-logo { 
-    height: 28px; 
-    width: auto; 
-    border-radius: 4px; 
-    background-color: #4A5568; 
-    padding: 2px; 
-    vertical-align: middle; 
-}
+.platform-logo { height: 28px; width: auto; border-radius: 4px; background-color: #4A5568; padding: 2px; vertical-align: middle; }
 .actor-thumbnail { width: 50px; height: 75px; object-fit: cover; border-radius: 4px; background-color: #4A5568; }
 
 .trailer-responsive { position: relative; overflow: hidden; padding-top: 56.25%; }
@@ -72,15 +82,5 @@ html.light-mode .filter-pill { background-color: var(--color-accent); color: whi
 .filter-pill button { margin-left: 0.5rem; background-color: rgba(0,0,0,0.2); border-radius: 50%; width: 1.25rem; height: 1.25rem; display: inline-flex; align-items: center; justify-content: center; transition: background-color 0.2s; }
 .filter-pill button:hover { background-color: rgba(0,0,0,0.4); }
 
-.app-container > footer {
-  padding-bottom: 100px; 
-}
-.install-button-wrapper {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 20;
-  width: calc(100% - 32px);
-  max-width: 400px;
-}
+.app-container > footer { padding-bottom: 100px; }
+.install-button-wrapper { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 20; width: calc(100% - 32px); max-width: 400px; }
