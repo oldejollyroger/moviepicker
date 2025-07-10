@@ -25,8 +25,7 @@
       "src": "*.png",
       "use": "@vercel/static"
     }
-  ],
-  
+  ],  
   "functions": {
     "api/tmdb.js": {
       "runtime": "edge"
