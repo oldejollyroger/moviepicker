@@ -1,14 +1,17 @@
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
 
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w500';
 const TMDB_PROFILE_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w185';
 const TMDB_THUMBNAIL_BASE_URL = 'https://image.tmdb.org/t/p/w92';
 
 const CURATED_COUNTRY_LIST = new Set([ 'AR', 'AU', 'AT', 'BE', 'BR', 'CA', 'CL', 'CO', 'CZ', 'DK', 'EG', 'FI', 'FR', 'DE', 'GR', 'HK', 'HU', 'IN', 'ID', 'IE', 'IL', 'IT', 'JP', 'MY', 'MX', 'NL', 'NZ', 'NG', 'NO', 'PE', 'PH', 'PL', 'PT', 'RO', 'RU', 'SA', 'SG', 'ZA', 'KR', 'ES', 'SE', 'CH', 'TW', 'TH', 'TR', 'AE', 'GB', 'US' ]);
-const ACCENT_COLORS = [ { name: 'Cyberpunk', color: '#d946ef', text: '#f0abfc', from: '#22d3ee', to: '#d946ef' }, { name: 'Ocean', color: '#22d3ee', text: '#67e8f9', from: '#22d3ee', to: '#3b82f6' }, { name: 'Forest', color: '#22c55e', text: '#4ade80', from: '#4ade80', to: '#a3e635' }, { name: 'Volcano', color: '#dc2626', text: '#f87171', from: '#f97316', to: '#ef4444' }, { name: 'Sunset', color: '#f97316', text: '#fbbf24', from: '#fb923c', to: '#f59e0b' }, ];
+const ACCENT_COLORS = [ { name: 'Cyberpunk', color: '#d946ef', text: '#f0abfc', from: '#22d3ee', to: '#d946ef' }, { name: 'Ocean', color: '#22d3ee', text: '#67e8f9', from: '#22d3ee', to: '#3b82f6' }, { name: 'Forest', color: '#22c55e', text: '#4ade80', from: '#4ade80', to: '#a3e635' }, { name: 'Volcano', color: '#dc2626', text: '#f87171', from: '#f97316', to: '#ef4444' }, { name: 'Sunset', color: '#f97316', text: '#fbbf24', from: '#fb923c', to: '#f59e0b' }, { name: 'Galaxy', color: '#8b5cf6', text: '#d8b4fe', from: '#a855f7', to: '#d946ef' }, { name: 'Mint', color: '#10b981', text: '#6ee7b7', from: '#34d399', to: '#6ee7b7' }, { name: 'Gold', color: '#f59e0b', text: '#fcd34d', from: '#fbbf24', to: '#fde047'}];
 const translations = {
-    es: { settings: "Ajustes", installApp: "Instalar App", installInstructions: "Para instalar, presiona el ícono de Compartir y luego 'Agregar a la pantalla de inicio'", title: 'Movie Randomizer', subtitle: '¿Qué vemos esta noche?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros', showFilters: 'Más Filtros', hideFilters: 'Ocultar Filtros', applyFilters: 'Aplicar Filtros', sortBy: 'Ordenar por:', sortOptions: [ { name: 'Popularidad', id: 'popularity.desc' }, { name: 'Mejor Calificación', id: 'vote_average.desc' }, { name: 'Fecha de Estreno', id: 'primary_release_date.desc' } ], region: 'País:', selectRegionPrompt: 'Por favor, selecciona tu país para empezar', platform: 'Plataformas (Opcional):', platformSearchPlaceholder: 'Buscar plataforma...', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:', decade: 'Década:', allDecades: 'Cualquiera', minRating: 'Calificación Mínima:', surpriseMe: '¡Sorpréndeme!', goBack: 'Atrás', searching: 'Buscando...', searchPlaceholder: 'O busca una película específica...', welcomeMessage: "¡Ajusta los filtros y haz clic en '¡Sorpréndeme!' para descubrir una película!", noMoviesFound: 'No se encontraron películas con los filtros actuales. ¡Prueba con otros!', cardYear: 'Año:', cardDuration: 'Duración:', cardRating: 'Nota TMDb:', cardDirector: 'Director:', cardGenres: 'Géneros:', cardAvailableOn: 'Disponible en (Suscripción):', cardAvailableToRent: 'Disponible para Alquilar/Comprar:', cardStreamingNotFound: 'No encontrado en streaming.', cardCast: 'Reparto Principal:', cardCastNotFound: 'Reparto no disponible.', cardMarkAsWatched: 'No mostrar por 3 meses', cardTrailer: 'Ver Tráiler', cardTrailerNotFound: 'Tráiler no disponible.', cardSimilarMovies: 'Películas Similares', footer: 'Datos de películas cortesía de', shareButton: 'Compartir', shareSuccess: '¡Enlace copiado!', clearAllFilters: 'Limpiar todos los filtros', details: "Details" },
-    en: { settings: "Settings", installApp: "Install App", installInstructions: "To install, tap the Share icon and then 'Add to Home Screen'", title: 'Movie Randomizer', subtitle: "What should we watch tonight?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters', showFilters: 'More Filters', hideFilters: 'Hide Filters', applyFilters: 'Apply Filters', sortBy: 'Sort by:', sortOptions: [ { name: 'Popularity', id: 'popularity.desc' }, { name: 'Top Rated', id: 'vote_average.desc' }, { name: 'Release Date', id: 'primary_release_date.desc' } ], region: 'Country:', selectRegionPrompt: 'Please select your country to begin', platform: 'Platforms (Optional):', platformSearchPlaceholder: 'Search platform...', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:', decade: 'Decade:', allDecades: 'Any', minRating: 'Minimum Rating:', surpriseMe: 'Surprise Me!', goBack: 'Back', searching: 'Searching...', searchPlaceholder: 'Or search for a specific movie...', welcomeMessage: "Adjust the filters and click 'Surprise Me!' to discover a movie!", noMoviesFound: 'No movies found with the current filters. Try changing them!', cardYear: 'Year:', cardDuration: 'Duration:', cardRating: 'TMDb Rating:', cardDirector: 'Director:', cardGenres: 'Genres:', cardAvailableOn: 'Available on (Subscription):', cardAvailableToRent: 'Available for Rent or Buy:', cardStreamingNotFound: 'Not found on streaming.', cardCast: 'Main Cast:', cardCastNotFound: 'Cast not available.', cardMarkAsWatched: "Don't show for 3 months", cardTrailer: 'Watch Trailer', cardTrailerNotFound: 'Trailer not available.', cardSimilarMovies: 'Similar Movies', footer: 'Movie data courtesy of', shareButton: 'Share', shareSuccess: 'Link Copied!', clearAllFilters: 'Clear All Filters', details: "Details" }
+    es: { settings: "Ajustes", watchedMoviesTitle: "Películas Vistas", unmark: "Quitar", noMoviesWatched: "Aún no has marcado ninguna película como vista.", installApp: "Instalar App", installInstructions: "Para instalar, presiona Compartir y luego 'Agregar a la pantalla de inicio'", title: 'Movie Randomizer', subtitle: '¿Qué vemos esta noche?', advancedFilters: 'Filtros Avanzados', clearFilters: 'Limpiar Filtros', showFilters: 'Más Filtros', hideFilters: 'Ocultar Filtros', applyFilters: 'Aplicar Filtros', sortBy: 'Ordenar por:', sortOptions: [ { name: 'Popularidad', id: 'popularity.desc' }, { name: 'Mejor Calificación', id: 'vote_average.desc' }, { name: 'Fecha de Estreno', id: 'primary_release_date.desc' } ], region: 'País:', selectRegionPrompt: 'Por favor, selecciona tu país para empezar', platform: 'Plataformas (Opcional):', platformSearchPlaceholder: 'Buscar plataforma...', includeGenre: 'Incluir Géneros:', excludeGenre: 'Excluir Géneros:', decade: 'Década:', allDecades: 'Cualquiera', minRating: 'Calificación Mínima:', surpriseMe: '¡Sorpréndeme!', goBack: 'Atrás', searching: 'Buscando...', searchPlaceholder: 'O busca una película específica...', welcomeMessage: "¡Ajusta los filtros y haz clic en '¡Sorpréndeme!' para descubrir una película!", noMoviesFound: 'No se encontraron películas con los filtros actuales. ¡Prueba con otros!', cardYear: 'Año:', cardDuration: 'Duración:', cardRating: 'Nota TMDb:', cardDirector: 'Director:', cardGenres: 'Géneros:', cardAvailableOn: 'Disponible en (Suscripción):', cardAvailableToRent: 'Disponible para Alquilar/Comprar:', cardStreamingNotFound: 'No encontrado en streaming.', cardCast: 'Reparto Principal:', cardCastNotFound: 'Reparto no disponible.', cardMarkAsWatched: 'Ya la he visto', cardTrailer: 'Ver Tráiler', cardTrailerNotFound: 'Tráiler no disponible.', cardSimilarMovies: 'Películas Similares', footer: 'Datos de películas cortesía de', shareButton: 'Compartir', shareSuccess: '¡Enlace copiado!', clearAllFilters: 'Limpiar todos los filtros', details: "Details", actorBiography: "Biografía",
+    actorKnownFor: "Conocido/a por" },
+    en: { settings: "Settings", watchedMoviesTitle: "Watched Movies", unmark: "Unmark", noMoviesWatched: "You haven't marked any movies as watched yet.", installApp: "Install App", installInstructions: "To install, tap Share then 'Add to Home Screen'", title: 'Movie Randomizer', subtitle: "What should we watch tonight?", advancedFilters: 'Advanced Filters', clearFilters: 'Clear Filters', showFilters: 'More Filters', hideFilters: 'Hide Filters', applyFilters: 'Apply Filters', sortBy: 'Sort by:', sortOptions: [ { name: 'Popularity', id: 'popularity.desc' }, { name: 'Top Rated', id: 'vote_average.desc' }, { name: 'Release Date', id: 'primary_release_date.desc' } ], region: 'Country:', selectRegionPrompt: 'Please select your country to begin', platform: 'Platforms (Optional):', platformSearchPlaceholder: 'Search platform...', includeGenre: 'Include Genres:', excludeGenre: 'Exclude Genres:', decade: 'Decade:', allDecades: 'Any', minRating: 'Minimum Rating:', surpriseMe: 'Surprise Me!', goBack: 'Back', searching: 'Searching...', searchPlaceholder: 'Or search for a specific movie...', welcomeMessage: "Adjust the filters and click 'Surprise Me!' to discover a movie!", noMoviesFound: 'No movies found with the current filters. Try changing them!', cardYear: 'Year:', cardDuration: 'Duration:', cardRating: 'TMDb Rating:', cardDirector: 'Director:', cardGenres: 'Genres:', cardAvailableOn: 'Available on (Subscription):', cardAvailableToRent: 'Available for Rent or Buy:', cardStreamingNotFound: 'Not found on streaming.', cardCast: 'Main Cast:', cardCastNotFound: 'Cast not available.', cardMarkAsWatched: "Already Seen", cardTrailer: 'Watch Trailer', cardTrailerNotFound: 'Trailer not available.', cardSimilarMovies: 'Similar Movies', footer: 'Movie data courtesy of', shareButton: 'Share', shareSuccess: 'Link Copied!', clearAllFilters: 'Clear All Filters', details: "Details", actorBiography: "Biography", 
+    actorKnownFor: "Known For"}
 };
 
 const formatDuration = (totalMinutes) => {
@@ -45,7 +48,92 @@ const InstallPwaButton = ({ t, handleInstallClick }) => {
     );
 }
 
-const SettingsDropdown = ({ mode, setMode, accent, setAccent, language, setLanguage, t }) => {
+const WatchedListModal = ({ isOpen, close, watchedMovies, unmarkMovie, t }) => {
+    if (!isOpen) return null;
+
+    const watchedArray = Object.entries(watchedMovies);
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-start z-50 p-4 pt-16 sm:pt-24" onClick={close}>
+            <div className="bg-[var(--color-card-bg)] rounded-xl max-w-2xl w-full max-h-[80vh] flex flex-col border border-[var(--color-border)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                <div className="p-4 border-b border-[var(--color-border)] flex justify-between items-center sticky top-0 bg-[var(--color-card-bg)] rounded-t-xl">
+                    <h2 className="text-xl font-semibold text-[var(--color-accent-text)]">{t.watchedMoviesTitle}</h2>
+                    <button onClick={close} className="text-[var(--color-text-secondary)] hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+                <div className="p-4 overflow-y-auto">
+                    {watchedArray.length > 0 ? (
+                        <ul className="space-y-3">
+                            {watchedArray.sort(([, a], [, b]) => a.title.localeCompare(b.title)).map(([movieId, movieData]) => (
+                                <li key={movieId} className="flex items-center justify-between gap-4 p-2 bg-[var(--color-bg)] rounded-lg">
+                                    <img src={movieData.poster ? `${TMDB_THUMBNAIL_BASE_URL}${movieData.poster}` : 'https://placehold.co/92x138/4A5568/FFFFFF?text=?'} alt={`Poster for ${movieData.title}`} className="w-12 h-auto rounded-md" />
+                                    <p className="flex-grow font-semibold break-words">{movieData.title}</p>
+                                    <button onClick={() => unmarkMovie(movieId)} className="flex-shrink-0 px-3 py-1 text-sm bg-red-600/80 hover:bg-red-600 text-white font-semibold rounded-md transition-colors">{t.unmark}</button>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-center text-[var(--color-text-secondary)] py-8">{t.noMoviesWatched}</p>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+const ActorDetailModal = ({ actor, close, t, onMovieClick }) => {
+    if (!actor) return null;
+
+    const topMovies = actor.movie_credits?.cast
+        .sort((a, b) => b.popularity - a.popularity)
+        .slice(0, 10);
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={close}>
+            <div className="bg-[var(--color-card-bg)] rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col sm:flex-row border border-[var(--color-border)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                {/* Close Button */}
+                <button onClick={close} className="absolute top-3 right-3 text-white bg-gray-900 rounded-full p-1 hover:bg-gray-700 z-10">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                
+                {/* Left Column: Actor Image */}
+                <div className="w-full sm:w-1/3 flex-shrink-0">
+                    <img src={actor.profile_path ? `${TMDB_IMAGE_BASE_URL}${actor.profile_path}` : 'https://placehold.co/500x750/4A5568/FFFFFF?text=?'} alt={actor.name} className="w-full h-full object-cover sm:rounded-l-xl" />
+                </div>
+
+                {/* Right Column: Details */}
+                <div className="w-full sm:w-2/3 p-4 sm:p-6 overflow-y-auto">
+                    <h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3">{actor.name}</h2>
+                    
+                    {/* Biography Section */}
+                    <div className="mt-4">
+                        <h3 className="text-lg font-semibold text-[var(--color-accent-text)] mb-2">{t.actorBiography}</h3>
+                        <p className="text-[var(--color-text-secondary)] text-sm leading-relaxed max-h-48 overflow-y-auto">
+                            {actor.biography || "No biography available."}
+                        </p>
+                    </div>
+
+                    {/* Filmography Section */}
+                    <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
+                         <h3 className="text-lg font-semibold text-[var(--color-accent-text)] mb-3">{t.actorKnownFor}</h3>
+                         <div className="horizontal-scroll-container">
+                            {topMovies?.map(movie => (
+                                <button key={movie.id} onClick={() => onMovieClick(movie)} className="flex-shrink-0 w-32 text-center group hover:scale-105 transition-transform duration-150">
+                                    <div className="w-full aspect-[2/3] bg-[var(--color-border)] rounded-lg overflow-hidden">
+                                         <img loading="lazy" src={movie.poster_path ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}` : 'https://placehold.co/200x300/4A5568/FFFFFF?text=No+Poster'} alt={movie.title} className="w-full h-full object-cover"/>
+                                    </div>
+                                    <span className="block w-full text-xs text-center text-[var(--color-text-secondary)] group-hover:text-[var(--color-accent-text)] transition-colors pt-2 truncate">{movie.title}</span>
+                                </button> 
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const SettingsDropdown = ({ mode, setMode, accent, setAccent, language, setLanguage, t, openWatchedModal }) => {
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef(null);
 
@@ -76,7 +164,7 @@ const SettingsDropdown = ({ mode, setMode, accent, setAccent, language, setLangu
                     <div className="p-4">
                         <h3 className="font-semibold mb-3">{t.settings}</h3>
                         <div className="space-y-4">
-                             <div className="flex items-center gap-2 bg-[var(--color-bg)] p-1 rounded-full">{ACCENT_COLORS.map(colorOption => (<button key={colorOption.name} onClick={() => setAccent(colorOption)} className={`w-6 h-6 rounded-full transition-transform duration-150 ${accent.name === colorOption.name ? 'scale-125 ring-2 ring-offset-2 ring-offset-[var(--color-bg)] ring-[var(--color-accent)]' : ''}`} style={{backgroundColor: colorOption.color}} title={colorOption.name}></button>))}</div>
+                             <div className="grid grid-cols-8 gap-2 bg-[var(--color-bg)] p-1 rounded-full">{ACCENT_COLORS.map(colorOption => (<button key={colorOption.name} onClick={() => setAccent(colorOption)} className={`w-6 h-6 rounded-full transition-transform duration-150 ${accent.name === colorOption.name ? 'scale-125 ring-2 ring-offset-2 ring-offset-[var(--color-bg)] ring-[var(--color-accent)]' : ''}`} style={{backgroundColor: colorOption.color}} title={colorOption.name}></button>))}</div>
                              <div className="flex items-center gap-2 bg-[var(--color-bg)] p-1 rounded-full">
                                 <button onClick={() => setMode('light')} className={`w-full p-1.5 rounded-full flex justify-center items-center gap-2 ${mode === 'light' ? 'bg-[var(--color-accent)] text-white' : 'text-[var(--color-text-secondary)]'}`} title="Light Mode">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg> Light
@@ -86,6 +174,11 @@ const SettingsDropdown = ({ mode, setMode, accent, setAccent, language, setLangu
                                 </button>
                             </div>
                             <div className="flex items-center bg-[var(--color-bg)] p-1 rounded-full"><button onClick={() => setLanguage('es')} className={`w-full lang-btn ${language === 'es' ? 'lang-btn-active' : 'lang-btn-inactive'}`}>Español</button><button onClick={() => setLanguage('en')} className={`w-full lang-btn ${language === 'en' ? 'lang-btn-active' : 'lang-btn-inactive'}`}>English</button></div>
+                            <div>
+                                <button onClick={() => { setIsOpen(false); openWatchedModal(); }} className="w-full p-2 text-sm bg-[var(--color-bg)] hover:bg-[var(--color-border)] rounded-full font-semibold transition-colors">
+                                    {t.watchedMoviesTitle}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -174,8 +267,11 @@ const FilterModal = ({ isOpen, close, filters, handleGenreChange, handlePlatform
     return (
         <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={close}>
             <div className="bg-[var(--color-card-bg)] rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col border border-[var(--color-border)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                <div className="p-6 border-b border-[var(--color-border)]">
+                <div className="p-6 border-b border-[var(--color-border)] flex justify-between items-center">
                     <h2 className="text-2xl font-semibold text-[var(--color-accent-text)]">{t.advancedFilters}</h2>
+                    <button onClick={close} className="text-[var(--color-text-secondary)] hover:text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
                 </div>
                 <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-8 overflow-y-auto">
                     <div><label className="block text-lg font-medium text-[var(--color-text-primary)] mb-3">{t.includeGenre}</label><div className="filter-checkbox-list space-y-2">{Object.entries(genresMap).sort(([,a],[,b]) => a.localeCompare(b)).map(([id, name]) => (<div key={`inc-modal-${id}`} className="flex items-center"><input id={`inc-modal-genre-${id}`} type="checkbox" checked={filters.genre.includes(id)} onChange={() => handleGenreChange(id, 'genre')} disabled={filters.excludeGenres.includes(id)} className="h-4 w-4 rounded border-gray-500 bg-gray-600 text-[var(--color-accent)] focus:ring-[var(--color-accent)] disabled:opacity-50"/><label htmlFor={`inc-modal-genre-${id}`} className={`ml-3 text-base text-[var(--color-text-secondary)] ${filters.excludeGenres.includes(id) ? 'opacity-50' : ''}`}>{name}</label></div>))}</div></div>
@@ -216,6 +312,8 @@ const App = () => {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isIos, setIsIos] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [isWatchedModalOpen, setIsWatchedModalOpen] = useState(false);
   const initialFilters = { genre: [], excludeGenres: [], decade: 'todos', platform: [], sortBy: 'popularity.desc', minRating: 0 };
   const [filters, setFilters] = useState(() => {
     const savedFilters = localStorage.getItem('movieRandomizerFilters');
@@ -231,37 +329,35 @@ const App = () => {
   const [isSearching, setIsSearching] = useState(false);
   const searchRef = useRef(null);
   const [hasSearched, setHasSearched] = useState(false);
-  const WATCHED_MOVIES_KEY = 'watchedUserMoviesRandomizer_TMDb_v8';
+  const WATCHED_MOVIES_KEY = 'watchedUserMoviesRandomizer_TMDb_v9';
   const [watchedMovies, setWatchedMovies] = useState({});
   const [sessionShownMovies, setSessionShownMovies] = useState(new Set());
   const cardRef = useRef(null);
+  const [selectedActor, setSelectedActor] = useState(null);
+const [isFetchingActor, setIsFetchingActor] = useState(false);
   
   useEffect(() => {
     const isIosDevice = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
     setIsIos(isIosDevice);
-    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+    if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsStandalone(true);
     }
     const handleInstallPrompt = (e) => {
       e.preventDefault();
       setInstallPrompt(e);
+      if (!window.matchMedia('(display-mode: standalone)').matches) {
+        setShowInstallBanner(true);
+      }
     };
     window.addEventListener('beforeinstallprompt', handleInstallPrompt);
+    if (isIosDevice && !window.matchMedia('(display-mode: standalone)').matches) {
+      setShowInstallBanner(true);
+    }
     return () => {
       window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
     };
   }, []);
-
-  const fetchFromApi = async (path, query) => {
-    const params = new URLSearchParams(query);
-    const response = await fetch(`/api/tmdb?path=${encodeURIComponent(path)}&${params.toString()}`);
-    if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.status_message || `API error: ${response.status}`);
-    }
-    return response.json();
-  };
-
+  
   useEffect(() => {
     document.documentElement.classList.toggle('light-mode', mode === 'light');
     localStorage.setItem('movieRandomizerMode', mode);
@@ -284,117 +380,80 @@ const App = () => {
   useEffect(() => {
     localStorage.setItem('movieRandomizerFilters', JSON.stringify(filters));
   }, [filters]);
-  
   useEffect(() => {
     const bootstrapApp = async () => {
         setIsLoading(true);
         setError(null);
+        if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY) { setError("API Key not found. Please check config.js."); setIsLoading(false); return; }
         try {
-            const regionsData = await fetchFromApi('configuration/countries', {});
+            const regionsResponse = await fetch(`${TMDB_BASE_URL}/configuration/countries?api_key=${TMDB_API_KEY}`);
+            if (!regionsResponse.ok) throw new Error("Could not fetch TMDb regions");
+            const regionsData = await regionsResponse.json();
             const curatedRegions = regionsData.filter(r => CURATED_COUNTRY_LIST.has(r.iso_3166_1)).sort((a, b) => a.english_name.localeCompare(b.english_name));
             setAvailableRegions(curatedRegions);
         } catch (err) { console.error("Error during app bootstrap:", err); setError(err.message); } finally { setIsLoading(false); }
     };
     bootstrapApp();
   }, []);
-
   useEffect(() => {
     const fetchLanguageData = async () => {
         if (!language) return;
         try {
             const langParam = language === 'es' ? 'es-ES' : 'en-US';
-            const genresData = await fetchFromApi('genre/movie/list', { language: langParam });
+            const genresResponse = await fetch(`${TMDB_BASE_URL}/genre/movie/list?api_key=${TMDB_API_KEY}&language=${langParam}`);
+            if (!genresResponse.ok) throw new Error(`Could not fetch genres (Lang: ${langParam})`);
+            const genresData = await genresResponse.json();
             setGenresMap(genresData.genres.reduce((acc, genre) => ({ ...acc, [genre.id]: genre.name }), {}));
         } catch (err) { console.error("Error fetching language data:", err); }
     };
     fetchLanguageData();
   }, [language]);
-
   const fetchNewMovieBatch = useCallback(async () => {
     if (!userRegion || !genresMap || Object.keys(genresMap).length === 0) return;
-    setIsDiscovering(true);
-    setError(null);
-    if (selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]);
-    setSelectedMovie(null);
-    setHasSearched(true);
+    setIsDiscovering(true); setError(null);
+    if(selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]);
+    setSelectedMovie(null); setHasSearched(true);
     const langParam = language === 'es' ? 'es-ES' : 'en-US';
-
     const fetchPage = async (voteCount) => {
-      let providersToQuery = [...filters.platform];
-      if (providersToQuery.includes('384') && !providersToQuery.includes('1899')) {
-        providersToQuery.push('1899');
-      }
-      
-      const queryParams = {
-        language: langParam,
-        'vote_count.gte': voteCount,
-        watch_region: userRegion,
-        ...filters.platform.length > 0 && { with_watch_providers: providersToQuery.join('|'), with_watch_monetization_types: 'flatrate' },
-        ...filters.genre.length > 0 && { with_genres: filters.genre.join(',') },
-        ...filters.excludeGenres.length > 0 && { without_genres: filters.excludeGenres.join(',') },
-        ...filters.minRating > 0 && { 'vote_average.gte': filters.minRating },
-        ...filters.decade !== 'todos' && { 'primary_release_date.gte': `${parseInt(filters.decade)}-01-01`, 'primary_release_date.lte': `${parseInt(filters.decade) + 9}-12-31` },
-      };
-
-      const sortOptionsForVariety = ['popularity.desc', 'vote_average.desc', 'revenue.desc'];
-      const fetchPromises = sortOptionsForVariety.map(sortBy => {
-        const randomPage = Math.floor(Math.random() * 20) + 1;
-        return fetchFromApi('discover/movie', { ...queryParams, sort_by: sortBy, page: randomPage });
-      });
-
-      const results = await Promise.allSettled(fetchPromises);
-      return results.reduce((acc, result) => {
-        if (result.status === 'fulfilled' && result.value.results) {
-          return acc.concat(result.value.results);
-        }
-        return acc;
-      }, []);
+        let providersToQuery = [...filters.platform];
+        if (providersToQuery.includes('384') && !providersToQuery.includes('1899')) { providersToQuery.push('1899'); }
+        let baseDiscoverUrl = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${langParam}&vote_count.gte=${voteCount}&watch_region=${userRegion}`;
+        if (providersToQuery.length > 0) baseDiscoverUrl += `&with_watch_providers=${providersToQuery.join('|')}&with_watch_monetization_types=flatrate`;
+        if (filters.genre.length > 0) baseDiscoverUrl += `&with_genres=${filters.genre.join(',')}`;
+        if (filters.excludeGenres.length > 0) baseDiscoverUrl += `&without_genres=${filters.excludeGenres.join(',')}`;
+        if (filters.minRating > 0) baseDiscoverUrl += `&vote_average.gte=${filters.minRating}`;
+        if (filters.decade !== 'todos') { const year = parseInt(filters.decade); baseDiscoverUrl += `&primary_release_date.gte=${year}-01-01&primary_release_date.lte=${year + 9}-12-31`; }
+        const sortOptionsForVariety = ['popularity.desc', 'vote_average.desc', 'revenue.desc'];
+        const fetchPromises = sortOptionsForVariety.map(sortBy => { const randomPage = Math.floor(Math.random() * 20) + 1; return fetch(`${baseDiscoverUrl}&sort_by=${sortBy}&page=${randomPage}`); });
+        const results = await Promise.allSettled(fetchPromises);
+        let allResults = [];
+        for (const result of results) { if (result.status === 'fulfilled' && result.value.ok) { const data = await result.value.json(); allResults = allResults.concat(data.results); } else { const reason = result.reason || result.value?.statusText; console.warn(`A variety search failed:`, reason); } }
+        return allResults;
     };
-    
     try {
-      let initialResults = await fetchPage(100);
-      if (initialResults.length === 0) initialResults = await fetchPage(0);
-      const uniqueResults = Array.from(new Set(initialResults.map(m => m.id))).map(id => initialResults.find(m => m.id === id));
-      const transformedMovies = uniqueResults
-        .filter(movie => movie && movie.overview && movie.poster_path && movie.release_date)
-        .map(movie => ({ id: movie.id.toString(), title: movie.title, synopsis: movie.overview, year: parseInt(movie.release_date.split('-')[0]), imdbRating: movie.vote_average.toFixed(1), genres: movie.genre_ids.map(id => genresMap[id]).filter(Boolean) || ["Unknown"], poster: movie.poster_path, }));
-      const unwatchedMovies = transformedMovies.filter(m => !(watchedMovies[m.id] && watchedMovies[m.id] > Date.now()));
-      setAllMovies(unwatchedMovies);
-      if (unwatchedMovies.length > 0) {
-        const newMovie = unwatchedMovies[Math.floor(Math.random() * unwatchedMovies.length)];
-        setSelectedMovie(newMovie);
-        setSessionShownMovies(prev => new Set(prev).add(newMovie.id));
-      } else {
-        setSelectedMovie(null);
-      }
-    } catch (err) { console.error("Error discovering movies:", err); setError(err.message); setAllMovies([]); } 
-    finally { setIsDiscovering(false); }
+        let initialResults = await fetchPage(100);
+        if (initialResults.length === 0) initialResults = await fetchPage(0); 
+        const uniqueResults = Array.from(new Set(initialResults.map(m => m.id))).map(id => initialResults.find(m => m.id === id));
+        const transformedMovies = uniqueResults.filter(movie => movie && movie.overview && movie.poster_path && movie.release_date).map(movie => ({ id: movie.id.toString(), title: movie.title, synopsis: movie.overview, year: parseInt(movie.release_date.split('-')[0]), imdbRating: movie.vote_average.toFixed(1), genres: movie.genre_ids.map(id => genresMap[id]).filter(Boolean) || ["Desconocido"], poster: movie.poster_path, }));
+        const now = Date.now();
+        const unwatchedMovies = transformedMovies.filter(m => !(watchedMovies[m.id] && watchedMovies[m.id].expiry > now));
+        setAllMovies(unwatchedMovies);
+        if (unwatchedMovies.length > 0) { const newMovie = unwatchedMovies[Math.floor(Math.random() * unwatchedMovies.length)]; setSelectedMovie(newMovie); setSessionShownMovies(prev => new Set(prev).add(newMovie.id)); } else { setSelectedMovie(null); }
+    } catch (err) { console.error("Error discovering movies:", err); setError(String(err).includes("401") ? "Authorization error (401). Check your TMDb API Key." : `Could not discover movies. ${err.message}`); setAllMovies([]); } finally { setIsDiscovering(false); }
   }, [filters, language, userRegion, genresMap, watchedMovies, selectedMovie]);
-  
   const handleSurpriseMe = useCallback(() => {
     const availableMovies = allMovies.filter(m => !sessionShownMovies.has(m.id));
     if (availableMovies.length > 0) { const newMovie = availableMovies[Math.floor(Math.random() * availableMovies.length)]; if (selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]); setSelectedMovie(newMovie); setSessionShownMovies(prev => new Set(prev).add(newMovie.id)); } else { fetchNewMovieBatch(); }
   }, [allMovies, sessionShownMovies, selectedMovie, fetchNewMovieBatch]);
-  
   useEffect(() => {
-    if (!userRegion) return;
-    const fetchRegionPlatforms = async () => { 
-        try { 
-            const data = await fetchFromApi('watch/providers/movie', { watch_region: userRegion });
-            const flatrateProviders = data.results.filter(p => p.display_priorities?.[userRegion] !== undefined); 
-            const regionalProviders = flatrateProviders.sort((a, b) => (a.display_priorities[userRegion]) - (b.display_priorities[userRegion])).map(provider => ({ id: provider.provider_id.toString(), name: provider.provider_name })); setPlatformOptions(regionalProviders); } catch (err) { console.error(err); setPlatformOptions([]); } };
+    if (!userRegion || typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY) return;
+    const fetchRegionPlatforms = async () => { try { const response = await fetch(`${TMDB_BASE_URL}/watch/providers/movie?api_key=${TMDB_API_KEY}&watch_region=${userRegion}`); if (!response.ok) throw new Error('Failed to fetch providers for the selected region.'); const data = await response.json(); const flatrateProviders = data.results.filter(p => p.display_priorities?.[userRegion] !== undefined); const regionalProviders = flatrateProviders.sort((a, b) => (a.display_priorities[userRegion]) - (b.display_priorities[userRegion])).map(provider => ({ id: provider.provider_id.toString(), name: provider.provider_name })); setPlatformOptions(regionalProviders); } catch (err) { console.error(err); setPlatformOptions([]); } };
     fetchRegionPlatforms();
   }, [userRegion]);
-
   useEffect(() => {
     if (searchQuery.trim() === '') { setSearchResults([]); return; }
     setIsSearching(true);
-    const searchTimer = setTimeout(async () => {
-        try {
-            const data = await fetchFromApi('search/movie', { query: searchQuery, language: language === 'es' ? 'es-ES' : 'en-US' });
-            setSearchResults(data.results.slice(0, 5)); 
-        } catch (err) { console.error("Search error:", err); setSearchResults([]); } finally { setIsSearching(false); }
-    }, 300);
+    const searchTimer = setTimeout(async () => { try { const response = await fetch(`${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(searchQuery)}&language=${language === 'es' ? 'es-ES' : 'en-US'}`); if (!response.ok) throw new Error("Search failed"); const data = await response.json(); setSearchResults(data.results.slice(0, 5)); } catch (err) { console.error("Search error:", err); setSearchResults([]); } finally { setIsSearching(false); } }, 300);
     return () => clearTimeout(searchTimer);
   }, [searchQuery, language]);
   useEffect(() => {
@@ -405,7 +464,11 @@ const App = () => {
   
     const fetchFullMovieDetails = useCallback(async (movieId, lang) => {
         try {
-            const data = await fetchFromApi(`movie/${movieId}`, { language: lang, append_to_response: 'credits,videos,watch/providers'});
+            const mainDetailsUrl = `${TMDB_BASE_URL}/movie/${movieId}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=credits,videos,watch/providers`;
+            const mainDetailsRes = await fetch(mainDetailsUrl);
+            if (!mainDetailsRes.ok) throw new Error(`Details: ${mainDetailsRes.statusText}`);
+            const data = await mainDetailsRes.json();
+            
             let recommendations = [];
             const addedMovieIds = new Set([parseInt(movieId)]);
             const addMovies = (movies) => {
@@ -418,26 +481,26 @@ const App = () => {
                 }
             };
             if (data.belongs_to_collection) {
-                const collectionData = await fetchFromApi(`collection/${data.belongs_to_collection.id}`, { language: lang });
-                addMovies(collectionData.parts.sort((a,b) => b.popularity - a.popularity));
+                const collectionRes = await fetch(`${TMDB_BASE_URL}/collection/${data.belongs_to_collection.id}?api_key=${TMDB_API_KEY}&language=${lang}`);
+                if (collectionRes.ok) addMovies((await collectionRes.json()).parts.sort((a,b) => b.popularity - a.popularity));
             }
             const director = data.credits?.crew?.find(p => p.job === 'Director');
             if (director) {
-                 const directorMoviesData = await fetchFromApi('discover/movie', { language: lang, with_crew: director.id, sort_by: 'popularity.desc' });
-                 addMovies(directorMoviesData.results);
+                 const directorMoviesRes = await fetch(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${lang}&with_crew=${director.id}&sort_by=popularity.desc`);
+                 if(directorMoviesRes.ok) addMovies((await directorMoviesRes.json()).results);
             }
             const leadActors = data.credits?.cast?.slice(0, 2).map(actor => actor.id);
             if (leadActors?.length > 0) {
-                const actorMoviesData = await fetchFromApi('discover/movie', { language: lang, with_cast: leadActors.join('|'), sort_by: 'popularity.desc' });
-                addMovies(actorMoviesData.results);
+                const actorMoviesRes = await fetch(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${lang}&with_cast=${leadActors.join('|')}&sort_by=popularity.desc`);
+                if(actorMoviesRes.ok) addMovies((await actorMoviesRes.json()).results);
             }
             if (recommendations.length < 15) {
-                const [similarData, genreData] = await Promise.all([
-                    fetchFromApi(`movie/${movieId}/similar`, { language: lang }),
-                    fetchFromApi('discover/movie', { language: lang, with_genres: data.genres.map(g => g.id).join(','), sort_by: 'popularity.desc'})
+                const [similarRes, genreRes] = await Promise.all([
+                    fetch(`${TMDB_BASE_URL}/movie/${movieId}/similar?api_key=${TMDB_API_KEY}&language=${lang}`),
+                    fetch(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=${lang}&with_genres=${data.genres.map(g => g.id).join(',')}&sort_by=popularity.desc`)
                 ]);
-                if(similarData.results) addMovies(similarData.results);
-                if(genreData.results) addMovies(genreData.results);
+                if(similarRes.ok) addMovies((await similarRes.json()).results);
+                if(genreRes.ok) addMovies((await genreRes.json()).results);
             }
             const highQualitySimilar = recommendations
                 .filter(m => m.poster_path && m.overview && m.vote_average > 6.0 && m.vote_count > 100)
@@ -454,6 +517,7 @@ const App = () => {
                 uniquePayProviderIds.add(p.provider_id); 
                 return true; 
             });
+
             return { 
                 ...data, 
                 duration: data.runtime || null, 
@@ -482,7 +546,7 @@ const App = () => {
   }, [selectedMovie, language, fetchFullMovieDetails]);
   useEffect(() => {
     const storedWatched = localStorage.getItem(WATCHED_MOVIES_KEY);
-    if (storedWatched) { try { const parsed = JSON.parse(storedWatched); const now = Date.now(); const validWatched = Object.fromEntries(Object.entries(parsed).filter(([_, expiryTimestamp]) => expiryTimestamp > now)); setWatchedMovies(validWatched); } catch (e) { console.error("Could not parse watched movies from localStorage", e); } }
+    if (storedWatched) { try { const parsed = JSON.parse(storedWatched); const now = Date.now(); const validWatched = Object.fromEntries(Object.entries(parsed).filter(([_, movieData]) => movieData.expiry > now)); setWatchedMovies(validWatched); } catch (e) { console.error("Could not parse watched movies from localStorage", e); } }
   }, []);
   useEffect(() => {
     localStorage.setItem(WATCHED_MOVIES_KEY, JSON.stringify(watchedMovies));
@@ -514,11 +578,32 @@ const App = () => {
   const handleSearchChange = (e) => { setSearchQuery(e.target.value); };
   const handleSearchResultClick = (movie) => { const formattedMovie = { id: movie.id.toString(), title: movie.title, synopsis: movie.overview, year: movie.release_date ? parseInt(movie.release_date.split('-')[0]) : null, imdbRating: movie.vote_average.toFixed(1), genres: movie.genre_ids.map(id => genresMap[id]).filter(Boolean) || ["Desconocido"], poster: movie.poster_path, }; if (selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]); setSelectedMovie(formattedMovie); setSearchQuery(''); setSearchResults([]); };
   const handleGoBack = () => { if (movieHistory.length === 0) return; const newHistory = [...movieHistory]; const previousMovie = newHistory.pop(); setMovieHistory(newHistory); setSelectedMovie(previousMovie); if(selectedMovie) setSessionShownMovies(prev => new Set(prev).add(selectedMovie.id)); };
-  const handleMarkAsWatched = (movieId) => { if(!movieId) return; const threeMonths = 3 * 30 * 24 * 60 * 60 * 1000; setWatchedMovies(prev => ({...prev, [movieId]: Date.now() + threeMonths})); setAllMovies(prev => prev.filter(m => m.id !== movieId)); handleSurpriseMe(); };
+  const handleMarkAsWatched = (movie) => {
+    if (!movie || !movie.id) return;
+    const threeMonths = 3 * 30 * 24 * 60 * 60 * 1000;
+    const movieToStore = {
+        title: movie.title,
+        poster: movie.poster,
+        expiry: Date.now() + threeMonths
+    };
+    setWatchedMovies(prev => ({...prev, [movie.id]: movieToStore }));
+    setAllMovies(prev => prev.filter(m => m.id !== movie.id));
+    handleSurpriseMe(); 
+  };
+  const handleUnmarkAsWatched = (movieId) => {
+    setWatchedMovies(prev => {
+        const newWatched = { ...prev };
+        delete newWatched[movieId];
+        return newWatched;
+    });
+  };
   const handleShare = useCallback(() => { if (!selectedMovie) return; const movieUrl = `https://www.themoviedb.org/movie/${selectedMovie.id}`; const shareData = { title: selectedMovie.title, text: `Check out this movie I found: ${selectedMovie.title}`, url: movieUrl }; if (navigator.share) { navigator.share(shareData).catch(err => console.error("Couldn't share", err)); } else { navigator.clipboard.writeText(movieUrl).then(() => { setShareStatus('success'); setTimeout(() => setShareStatus('idle'), 2000); }); } }, [selectedMovie]);
   const handleInstallClick = async () => {
     if (!installPrompt) return;
-    await installPrompt.prompt();
+    const result = await installPrompt.prompt();
+    if (result.outcome === 'accepted') {
+        setShowInstallBanner(false);
+    }
     setInstallPrompt(null);
   };
   const handleSimilarMovieClick = async (movie) => { setIsFetchingModalDetails(true); setModalMovie(null); const langParam = language === 'es' ? 'es-ES' : 'en-US'; const details = await fetchFullMovieDetails(movie.id, langParam); setModalMovie(details); setIsFetchingModalDetails(false); };
@@ -529,14 +614,60 @@ const App = () => {
   const closeTrailerModal = () => setIsTrailerModalOpen(false);
   const openFilterModal = () => setIsFilterModalOpen(true);
   const closeFilterModal = () => setIsFilterModalOpen(false);
-  
+  const openWatchedModal = () => setIsWatchedModalOpen(true);
+  const closeWatchedModal = () => setIsWatchedModalOpen(false);
+  const fetchActorDetails = useCallback(async (actorId, lang) => {
+    setIsFetchingActor(true);
+    try {
+        const personUrl = `${TMDB_BASE_URL}/person/${actorId}?api_key=${TMDB_API_KEY}&language=${lang}&append_to_response=movie_credits`;
+        const response = await fetch(personUrl);
+        if (!response.ok) throw new Error("Could not fetch actor details.");
+        const data = await response.json();
+        setSelectedActor(data);
+    } catch(err) {
+        console.error("Error fetching actor details:", err);
+        // You might want to set an error state here
+    } finally {
+        setIsFetchingActor(false);
+    }
+}, []);
+
+const handleActorClick = (actorId) => {
+    const langParam = language === 'es' ? 'es-ES' : 'en-US';
+    fetchActorDetails(actorId, langParam);
+};
+
+const handleSimilarMovieFromActorClick = (movie) => {
+    // This function reuses your existing logic to display a movie
+    const formattedMovie = { 
+        id: movie.id.toString(), 
+        title: movie.title, 
+        synopsis: movie.overview, 
+        year: movie.release_date ? parseInt(movie.release_date.split('-')[0]) : null, 
+        imdbRating: movie.vote_average.toFixed(1), 
+        genres: movie.genre_ids.map(id => genresMap[id]).filter(Boolean) || ["Desconocido"], 
+        poster: movie.poster_path, 
+    };
+    if (selectedMovie) setMovieHistory(prev => [...prev, selectedMovie]);
+    setSelectedActor(null); // Close the actor modal
+    setSelectedMovie(formattedMovie);
+};
+
+const closeActorModal = () => setSelectedActor(null);
+
   if (isLoading) { return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="loader"></div></div> ); }
   if (error) { return ( <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text-primary)] p-8 flex items-center justify-center"><div className="text-center"><h1 className="text-3xl font-bold text-red-500 mb-4">Error</h1><p className="text-xl">{error}</p></div></div> ); }
   
   return (
     <div className="min-h-screen p-4 font-sans app-container relative">
         <div className="absolute top-4 right-4 z-20">
-            <SettingsDropdown mode={mode} setMode={setMode} accent={accent} setAccent={setAccent} language={language} setLanguage={setLanguage} t={t} />
+            <SettingsDropdown
+                mode={mode} setMode={setMode}
+                accent={accent} setAccent={setAccent}
+                language={language} setLanguage={setLanguage}
+                t={t}
+                openWatchedModal={openWatchedModal}
+            />
         </div>
       
         <header className="text-center mb-4 pt-16 sm:pt-16"><h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)]">{t.title}</h1><h2 className="text-xl sm:text-2xl text-[var(--color-text-secondary)] mt-2">{t.subtitle}</h2><div className="max-w-xl mx-auto mt-6 flex flex-col sm:flex-row items-center gap-4"><div ref={searchRef} className="relative w-full sm:flex-grow"><input type="text" value={searchQuery} onChange={handleSearchChange} placeholder={t.searchPlaceholder} className="w-full p-3 pl-10 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-full focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)] shadow-sm"/><div className="absolute top-0 left-0 inline-flex items-center p-3">{isSearching ? <div className="small-loader !m-0 !w-5 !h-5"></div> : <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>}</div>{searchResults.length > 0 && (<ul className="absolute w-full mt-2 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg shadow-lg z-20 max-h-80 overflow-y-auto">{searchResults.map(movie => (<li key={movie.id} onClick={() => handleSearchResultClick(movie)} className="p-3 hover:bg-[var(--color-bg)] cursor-pointer flex items-center gap-4"><img loading="lazy" src={movie.poster_path ? `${TMDB_THUMBNAIL_BASE_URL}${movie.poster_path}` : 'https://placehold.co/92x138/4A5568/FFFFFF?text=?'} alt={movie.title} className="w-12 h-auto rounded-md" /><div className="text-left"><p className="font-semibold text-[var(--color-text-primary)]">{movie.title}</p><p className="text-sm text-[var(--color-text-secondary)]">{movie.release_date?.split('-')[0]}</p></div></li>))}</ul>)}</div></div></header>
@@ -545,9 +676,12 @@ const App = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 <div><label htmlFor="decade-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.decade}</label><select id="decade-filter" value={filters.decade} onChange={e => handleFilterChange('decade', e.target.value)} className="w-full p-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"><option value="todos">{t.allDecades}</option>{[2020, 2010, 2000, 1990, 1980, 1970].map(d=>(<option key={d} value={d}>{`${d}s`}</option>))}</select></div>
                 <div className="sm:col-span-1"><label htmlFor="rating-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.minRating} {Number(filters.minRating).toFixed(1)}</label><input type="range" id="rating-filter" min="0" max="9.5" step="0.5" value={filters.minRating} onChange={e => handleFilterChange('minRating', e.target.value)} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]" /></div>
-                <button onClick={openFilterModal} className="w-full sm:col-span-1 p-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-lg transition-colors flex items-center justify-center gap-2">
+                <button 
+                  onClick={openFilterModal} 
+                  className="w-full sm:col-span-1 p-2 bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-500 font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M5 4a1 1 0 00-2 0v2.016a2.5 2.5 0 004.532 1.442A2.5 2.5 0 009.5 9.016V16a1 1 0 102 0V9.016a2.5 2.5 0 00-1.032-1.942A2.5 2.5 0 004.5 9.016V4zM3 10a1 1 0 011-1h.016a2.5 2.5 0 004.968 0H16a1 1 0 110 2h-7.016a2.5 2.5 0 00-4.968 0H3a1 1 0 01-1-1z" />
+                       <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
                     </svg>
                     {t.showFilters}
                 </button>
@@ -555,7 +689,7 @@ const App = () => {
         </div>
       
         <div className="text-center mb-10 flex justify-center items-center gap-4">
-            <button onClick={handleGoBack} disabled={movieHistory.length === 0} className="p-4 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg shadow-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
+            <button onClick={handleGoBack} disabled={movieHistory.length === 0} className="p-4 bg-gray-200 text-gray-800 dark:bg-gray-600 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-500 font-bold rounded-lg shadow-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg></button>
             <button onClick={handleSurpriseMe} disabled={isDiscovering || !userRegion} title={!userRegion ? t.selectRegionPrompt : ''} className={`px-8 py-4 bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-150 text-xl disabled:opacity-50 disabled:cursor-not-allowed`}>{isDiscovering ? t.searching : t.surpriseMe}</button>
         </div>
 
@@ -591,9 +725,13 @@ const App = () => {
                             <p className="mt-2 text-[var(--color-text-secondary)] text-base leading-relaxed break-words">{selectedMovie.synopsis}</p>
                         </div>
                         <div className="mt-6 flex flex-col sm:flex-row gap-4">
-                           <button onClick={() => handleMarkAsWatched(selectedMovie.id)} className="w-full py-3 px-4 bg-red-600/80 hover:bg-red-600 text-white font-bold rounded-lg shadow-md transition-colors">{t.cardMarkAsWatched}</button>
-                           <button onClick={handleShare} className="w-full py-3 px-4 bg-blue-600/80 hover:bg-blue-600 text-white font-bold rounded-lg shadow-md transition-colors">
-                             {shareStatus === 'success' ? t.shareSuccess : t.shareButton}
+                           <button onClick={() => handleMarkAsWatched(selectedMovie)} className="w-full py-3 px-4 bg-gray-600/60 hover:bg-gray-500/80 text-white font-bold rounded-lg shadow-md transition-colors flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                               {t.cardMarkAsWatched}
+                           </button>
+                           <button onClick={handleShare} className="w-full py-3 px-4 bg-blue-600/80 hover:bg-blue-600 text-white font-bold rounded-lg shadow-md transition-colors flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" /></svg>
+                                {shareStatus === 'success' ? t.shareSuccess : t.shareButton}
                            </button>
                         </div>
                         <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
@@ -617,14 +755,14 @@ const App = () => {
                         <div className="mt-4 pt-4 border-t border-[var(--color-border)]">
                             <h3 className="text-lg font-semibold text-[var(--color-accent-text)] mb-3">{t.cardCast}</h3>
                             {isFetchingDetails ? <div className="small-loader"></div> : movieDetails.cast?.length > 0 ? (
-                                <div className="flex flex-wrap gap-4">
-                                    {movieDetails.cast.map(actor => (
-                                        <div key={actor.id} className="flex flex-col items-center text-center w-20">
-                                            <img loading="lazy" src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1 rounded-md"/>
-                                            <span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span>
-                                        </div>
-                                    ))}
-                                </div>
+                              <div className="flex flex-wrap gap-4">
+    {movieDetails.cast.map(actor => (
+        <button key={actor.id} onClick={() => handleActorClick(actor.id)} className="flex flex-col items-center text-center w-20 hover:scale-105 transition-transform duration-150">
+            <img loading="lazy" src={actor.profile_path ? `${TMDB_PROFILE_IMAGE_BASE_URL}${actor.profile_path}`:'https://placehold.co/185x278/777/FFF?text=?'} alt={actor.name} className="actor-thumbnail mb-1 rounded-md shadow-lg"/>
+            <span className="text-xs text-[var(--color-text-secondary)] leading-tight">{actor.name}</span>
+        </button>
+    ))}
+</div>
                             ) : <p className="text-sm text-[var(--color-text-secondary)]">{t.cardCastNotFound}</p>}
                         </div>
                     </div>
@@ -667,6 +805,20 @@ const App = () => {
         )}
         
         <FilterModal isOpen={isFilterModalOpen} close={closeFilterModal} filters={filters} handleGenreChange={handleGenreChange} handlePlatformChange={handlePlatformChange} t={t} genresMap={genresMap} platformOptions={platformOptions} platformSearchQuery={platformSearchQuery} handlePlatformSearchChange={handlePlatformSearchChange} />
+        
+        <WatchedListModal 
+            isOpen={isWatchedModalOpen} 
+            close={closeWatchedModal} 
+            watchedMovies={watchedMovies} 
+            unmarkMovie={handleUnmarkAsWatched} 
+            t={t}
+        />
+        <ActorDetailModal 
+    actor={selectedActor} 
+    close={closeActorModal}
+    onMovieClick={handleSimilarMovieFromActorClick}
+    t={t}
+/>
         
         {modalMovie && (
             <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50 p-4" onClick={closeModal}>
@@ -729,11 +881,12 @@ const App = () => {
               </div>
             </div>
         )}
-        <footer className="text-center mt-auto py-4 text-sm text-[var(--color-text-subtle)]">
-            {installPrompt && !isIos && !isStandalone && <InstallPwaButton t={t} handleInstallClick={handleInstallClick} />}
-            {isIos && !isStandalone && <InstallPwaInstructions t={t} />}
+        
+      <footer className="text-center mt-auto py-4 text-sm text-[var(--color-text-subtle)]">
+            {showInstallBanner && installPrompt && !isIos && <InstallPwaButton t={t} handleInstallClick={handleInstallClick} />}
+            {showInstallBanner && isIos && <InstallPwaInstructions t={t} />}
             <p className="pt-4">{t.footer} <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-text)] hover:underline">TMDb</a>.</p>
-        </footer>
+      </footer>
     </div>
   );
 };
