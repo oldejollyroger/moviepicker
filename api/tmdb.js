@@ -1,45 +1,34 @@
-// This is a Vercel Edge Function. It runs on the server, not in the browser.
-export const config = {
-  runtime: 'edge',
-};
-
-export default async function handler(req) {
+// This is a standard Node.js Serverless Function
+export default async function handler(req, res) {
   // Get the secret API key from Vercel's environment variables
   const apiKey = process.env.TMDB_API_KEY;
 
   if (!apiKey) {
-    return new Response(JSON.stringify({ error: 'TMDB API key not configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(500).json({ error: 'TMDB API key not configured' });
   }
-
-  // Get the path and query parameters from the incoming request from our frontend
-  const url = new URL(req.url);
-  const path = url.searchParams.get('path');
-  const query = new URLSearchParams(url.searchParams);
   
-  // Remove our 'path' parameter so it doesn't get passed to TMDb
-  query.delete('path');
+  // Get the path and query parameters from the incoming request
+  const { path, ...query } = req.query;
 
-  // Build the final, secure URL to the real TMDb API
-  const tmdbUrl = `https://api.themoviedb.org/3/${path}?api_key=${apiKey}&${query.toString()}`;
+  // Build the full query string from the received query object
+  const queryString = new URLSearchParams(query).toString();
+  const tmdbUrl = `https://api.themoviedb.org/3/${path}?api_key=${apiKey}&${queryString}`;
 
   try {
     // Make the actual call to TMDb from the server
-    const response = await fetch(tmdbUrl);
+    const tmdbResponse = await fetch(tmdbUrl);
+
+    // Check if the request to TMDb was successful
+    if (!tmdbResponse.ok) {
+      const errorData = await tmdbResponse.json();
+      // Forward TMDb's error status and message to our frontend
+      return res.status(tmdbResponse.status).json(errorData);
+    }
     
-    // Pass the response from TMDb directly back to our frontend
-    return new Response(response.body, {
-      status: response.status,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    // Send the successful data back to our frontend
+    const data = await tmdbResponse.json();
+    res.status(200).json(data);
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Failed to fetch data from TMDB' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    res.status(500).json({ error: 'Failed to fetch data from TMDB' });
   }
 }
