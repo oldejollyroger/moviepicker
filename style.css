@@ -7,8 +7,6 @@
     --color-text-secondary: #d1d5db; /* gray-300 */
     --color-text-subtle: #6b7280; /* gray-500 */
     --color-border: #374151; /* gray-700 */
-
-    /* --- FIX #1: Added styles for the filter button --- */
     --color-filter-button-bg: #4b5563; /* gray-600 */
     --color-filter-button-bg-hover: #6b7280; /* gray-500 */
     
@@ -29,8 +27,6 @@ html.light-mode {
     --color-text-subtle: #9ca3af; /* gray-400 */
     --color-border: #e5e7eb; /* gray-200 */
     --color-accent-text: var(--color-accent);
-
-    /* --- FIX #1: Added styles for the filter button in light mode --- */
     --color-filter-button-bg: #e5e7eb; /* gray-200 */
     --color-filter-button-bg-hover: #d1d5db; /* gray-300 */
 }
@@ -41,7 +37,6 @@ body, #root { min-height: 100vh; }
 .app-container { flex-grow: 1; display: flex; flex-direction: column; }
 .app-container > footer { margin-top: auto; }
 
-/* --- FIX #1: Added a new class for the filter button --- */
 .filter-button {
     background-color: var(--color-filter-button-bg);
 }
@@ -53,7 +48,15 @@ body, #root { min-height: 100vh; }
 .small-loader { border: 3px solid rgba(128,128,128,0.2); border-top-color: var(--color-accent); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; margin-left: 8px; vertical-align: middle; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-.platform-logo { height: 28px; width: auto; border-radius: 4px; background-color: #4A5568; padding: 2px; vertical-align: middle; }
+.platform-logo { 
+    height: 36px;
+    width: 36px; 
+    object-fit: cover;
+    border-radius: 6px; 
+    background-color: #4A5568; 
+    padding: 3px; 
+    vertical-align: middle; 
+}
 .actor-thumbnail { width: 50px; height: 75px; object-fit: cover; border-radius: 4px; background-color: #4A5568; }
 
 .trailer-responsive { position: relative; overflow: hidden; padding-top: 56.25%; }
@@ -84,3 +87,25 @@ html.light-mode .filter-pill { background-color: var(--color-accent); color: whi
 
 .app-container > footer { padding-bottom: 100px; }
 .install-button-wrapper { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 20; width: calc(100% - 32px); max-width: 400px; }
+
+.quick-filter-pill {
+    padding: 0.5rem 1rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    transition: background-color 0.2s, color 0.2s;
+    border: 1px solid var(--color-border);
+    cursor: pointer;
+    background-color: transparent;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+.quick-filter-pill.active {
+    background-color: var(--color-accent);
+    color: white;
+    border-color: var(--color-accent);
+}
+
+html.light-mode .quick-filter-pill.active {
+    color: white;
+}
