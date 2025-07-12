@@ -1,4 +1,4 @@
-/* --- v0.0.6: "Neon Noir" Theme --- */
+/* --- v0.0.7: "Neon Noir" Theme (Stable) --- */
 
 /* --- Global Theme Variables --- */
 :root {
@@ -8,7 +8,7 @@
     --color-text-secondary: #a1a1aa;
     --color-text-subtle: #52525b;
     
-    /* Card/Modal Styling - Floating Glass/Neon Effect */
+    /* Card/Modal Styling */
     --color-card-bg: radial-gradient(circle at 100% 0%, rgba(100, 116, 139, 0.1), transparent 40%);
     --color-card-border: rgba(100, 116, 139, 0.2);
     --color-card-hover-border: rgba(168, 85, 247, 0.5);
@@ -20,7 +20,6 @@
     --color-accent-gradient-to: #ec4899;
 }
 
-/* --- Light Mode Restoration --- */
 .light-mode {
     --color-bg: #f4f4f5;
     --color-text-primary: #18181b;
@@ -39,7 +38,6 @@ body {
 }
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-
 /* --- Shared Card/Container Style --- */
 .container-style {
     background: var(--color-card-bg);
@@ -54,44 +52,16 @@ body {
     border-color: var(--color-card-hover-border);
 }
 
-
 /* --- Media Type Switcher & Buttons --- */
-.media-type-switcher { 
-    background-color: var(--color-card-bg);
-    border: 1px solid var(--color-card-border);
-}
-.media-type-btn { 
-    transition: all 0.2s ease-in-out; 
-    color: var(--color-text-secondary);
-    font-weight: 600;
-}
+.media-type-switcher { background-color: var(--color-card-bg); border: 1px solid var(--color-card-border); }
+.media-type-btn { transition: all 0.2s ease-in-out; color: var(--color-text-secondary); font-weight: 600; }
 .media-type-btn:hover { color: var(--color-text-primary); }
-.media-type-btn-active { 
-    background-image: linear-gradient(to right, var(--color-accent-gradient-from), var(--color-accent-gradient-to));
-    color: white !important; 
-    box-shadow: 0 4px 15px -5px rgba(168, 85, 247, 0.6);
-}
+.media-type-btn-active { background-image: linear-gradient(to right, var(--color-accent-gradient-from), var(--color-accent-gradient-to)); color: white !important; box-shadow: 0 4px 15px -5px rgba(168, 85, 247, 0.6); }
 
-.quick-filter-btn { 
-    border: 1px solid var(--color-card-border); 
-    background-color: var(--color-card-bg);
-    color: var(--color-text-secondary); 
-    transition: all 0.2s ease-in-out;
-}
-.quick-filter-btn:hover { 
-    border-color: var(--color-accent); 
-    color: var(--color-accent-text);
-    transform: translateY(-2px);
-}
-.light-mode .quick-filter-btn:hover {
-    color: var(--color-accent);
-}
-.quick-filter-btn-active { 
-    background-image: linear-gradient(to right, var(--color-accent-gradient-from), var(--color-accent-gradient-to));
-    border-color: transparent; 
-    color: white !important;
-    box-shadow: 0 4px 15px -5px rgba(168, 85, 247, 0.6);
-}
+.quick-filter-btn { border: 1px solid var(--color-card-border); background-color: var(--color-card-bg); color: var(--color-text-secondary); transition: all 0.2s ease-in-out; }
+.quick-filter-btn:hover { border-color: var(--color-accent); color: var(--color-accent-text); transform: translateY(-2px); }
+.light-mode .quick-filter-btn:hover { color: var(--color-accent); }
+.quick-filter-btn-active { background-image: linear-gradient(to right, var(--color-accent-gradient-from), var(--color-accent-gradient-to)); border-color: transparent; color: white !important; box-shadow: 0 4px 15px -5px rgba(168, 85, 247, 0.6); }
 
 /* --- Loader Animations --- */
 .loader, .small-loader { border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
@@ -100,95 +70,38 @@ body {
 @keyframes rotation { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 /* --- Modals --- */
-.modal-backdrop {
-    background-color: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-}
-.light-mode .modal-backdrop {
-    background-color: rgba(244, 244, 245, 0.7);
-}
-.modal-content {
-    background: var(--color-bg);
-    border: 1px solid var(--color-card-border);
-    border-radius: 1rem;
-}
+.modal-backdrop { background-color: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.light-mode .modal-backdrop { background-color: rgba(244, 244, 245, 0.7); }
+.modal-content { background: var(--color-bg); border: 1px solid var(--color-card-border); border-radius: 1rem; }
 
-/* --- List Items (Watched/Watchlist) --- */
-.user-list-item {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.75rem;
-    border-radius: 0.75rem;
-    background-color: var(--color-bg);
-    border: 1px solid var(--color-card-border);
-    transition: all 0.2s ease;
-}
-.user-list-item:hover {
-    transform: translateY(-2px);
-    border-color: var(--color-card-hover-border);
-}
-.light-mode .user-list-item:hover {
-    border-color: var(--color-accent);
-}
-.user-list-item img {
-    width: 3rem;
-    height: 4.5rem;
-    object-fit: cover;
-    border-radius: 0.375rem;
-    flex-shrink: 0;
-}
+/* --- List Items --- */
+.user-list-item { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 1rem; padding: 0.75rem; border-radius: 0.75rem; background-color: var(--color-bg); border: 1px solid var(--color-card-border); transition: all 0.2s ease; }
+.user-list-item:hover { transform: translateY(-2px); border-color: var(--color-card-hover-border); }
+.light-mode .user-list-item:hover { border-color: var(--color-accent); }
+.user-list-item img { width: 3rem; height: 4.5rem; object-fit: cover; border-radius: 0.375rem; flex-shrink: 0; }
 .user-list-item-info { overflow: hidden; }
 .user-list-item-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--color-text-primary); }
 .user-list-item-year { font-size: 0.875rem; color: var(--color-text-secondary); }
 
-
 /* --- Custom Component Styles --- */
 .platform-logo { width: 40px; height: 40px; border-radius: 0.5rem; object-fit: cover; transition: transform 0.2s; background-color: var(--color-card-border); }
 .platform-logo:hover { transform: scale(1.1); box-shadow: 0 0 15px rgba(168, 85, 247, 0.5); }
-
 .actor-thumbnail { width: 100%; height: auto; aspect-ratio: 2/3; object-fit: cover; border-radius: 0.375rem; background-color: var(--color-card-border); }
-
 .filter-pill { display: inline-flex; align-items: center; gap: 0.5rem; background-image: linear-gradient(to right, var(--color-accent-gradient-from), var(--color-accent-gradient-to)); color: white; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.875rem; font-weight: 500; }
 .filter-pill button { background: rgba(0,0,0,0.3); border-radius: 50%; padding: 2px; }
 .filter-pill button:hover { background: rgba(0,0,0,0.5); }
-
 .lang-btn { padding: 0.375rem 0; border-radius: 9999px; display: flex; justify-content: center; align-items: center; transition: all 0.2s ease; }
 .lang-btn-active { background-image: linear-gradient(to right, var(--color-accent-gradient-from), var(--color-accent-gradient-to)); color: white; }
 .lang-btn-inactive { color: var(--color-text-secondary); }
 .lang-btn-inactive:hover { background-color: var(--color-card-border); color: var(--color-text-primary); }
-
 .filter-checkbox-list { max-height: 50vh; overflow-y: auto; padding-right: 8px; }
-
 .horizontal-scroll-container { display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 1rem; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .horizontal-scroll-container::-webkit-scrollbar { display: none; }
-
 .movie-card-enter { animation: fadeIn 0.5s ease-out forwards; opacity: 0; }
 @keyframes fadeIn { to { opacity: 1; } }
-
 .trailer-responsive { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 0.75rem; }
 .trailer-responsive iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
 .install-button-wrapper { margin-bottom: 1rem; display: flex; justify-content: center; }
-
-.filter-label {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.25rem;
-}
-
-/* NEW: Style for the close button on search results */
-.search-results-close {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    background-color: rgba(100, 116, 139, 0.2);
-    border-radius: 50%;
-    padding: 0.25rem;
-    transition: background-color 0.2s;
-}
-.search-results-close:hover {
-    background-color: rgba(100, 116, 139, 0.4);
-}
+.filter-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; }
+.search-results-close { position: absolute; top: 0.5rem; right: 0.5rem; background-color: rgba(100, 116, 139, 0.2); border-radius: 50%; padding: 0.25rem; transition: background-color 0.2s; }
+.search-results-close:hover { background-color: rgba(100, 116, 139, 0.4); }

@@ -65,7 +65,9 @@ const App = () => {
     
     // --- FIXED: Correctly applies light/dark mode classes ---
     useEffect(() => {
-        document.documentElement.className = mode;
+        const doc = document.documentElement;
+        doc.classList.remove('light-mode', 'dark-mode');
+        doc.classList.add(`${mode}-mode`);
     }, [mode]);
 
     useEffect(() => { const r = document.documentElement; r.style.setProperty('--color-accent', accent.color); r.style.setProperty('--color-accent-text', accent.text); r.style.setProperty('--color-accent-gradient-from', accent.from); r.style.setProperty('--color-accent-gradient-to', accent.to); }, [accent]);
