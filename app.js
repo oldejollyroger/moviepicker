@@ -1,4 +1,4 @@
-// app.js (v0.0.1)
+// app.js (v0.0.2)
 
 const App = () => {
     const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -79,8 +79,56 @@ const App = () => {
     useEffect(() => { if (debouncedSearchQuery.trim() === '') { setSearchResults([]); return; } setIsSearching(true); const search = async () => { try { const data = await fetchApi(`search/${mediaType}`, { query: debouncedSearchQuery, language: tmdbLanguage }); setSearchResults(data.results.map(m => normalizeMediaData(m, mediaType, genresMap)).filter(Boolean).slice(0, 5)); } catch (err) { console.error(err); } finally { setIsSearching(false); }}; search();}, [debouncedSearchQuery, tmdbLanguage, mediaType, genresMap, fetchApi]);
     useEffect(() => { if (debouncedPersonSearchQuery.trim().length < 2) { setPersonSearchResults([]); return; } const searchPeople = async () => { try { const data = await fetchApi('search/person', { query: debouncedPersonSearchQuery }); setPersonSearchResults(data.results.filter(p => p.profile_path).slice(0, 5)); } catch (err) { console.error("Error searching for people:", err); }}; searchPeople(); }, [debouncedPersonSearchQuery, fetchApi]);  
 
-    const fetchFullMediaDetails = useCallback(async (mediaId, type) => { if (!mediaId || !type) return null; try { const data = await fetchApi(`${type}/${mediaId}`, { language: tmdbLanguage, append_to_response: 'credits,videos,watch/providers,similar,recommendations'}); const director = data.credits?.crew?.find(p => p.job === 'Director'); const similarMedia = [...(data.recommendations?.results || []), ...(data.similar?.results || [])].filter((v,i,a) => v.poster_path && a.findIndex(t=>(t.id === v.id))===i).map(r => normalizeMediaData(r, type, genresMap)).filter(Boolean).slice(0, 10); const regionData = data['watch/providers']?.results?.[userRegion]; const watchLink = regionData?.link || `https://www.themoviedb.org/${type}/${mediaId}/watch`; const providers = (regionData?.flatrate || []).map(p => ({ ...p, link: watchLink })); const rentProviders = (regionData?.rent || []).map(p => ({ ...p, link: watchLink })); const buyProviders = (regionData?.buy || []).map(p => ({ ...p, link: watchLink })); const combinedPayProviders = [...rentProviders, ...buyProviders]; const uniquePayProviderIds = new Set(); const uniquePayProviders = combinedPayProviders.filter(p => { if (uniquePayProviderIds.has(p.provider_id)) return false; uniquePayProviderIds.add(p.provider_id); return true; }); return { ...data, duration: data.runtime || (data.episode_run_time ? data.episode_run_time[0] : null), providers, rentalProviders: uniquePayProviders, cast: data.credits?.cast?.slice(0, 10) || [], director, seasons: data.number_of_seasons, trailerKey: (data.videos?.results?.filter(v => v.type === 'Trailer' && v.site === 'YouTube') || [])[0]?.key || null, similar: similarMedia, }; } catch (err) { console.error(`Error fetching details for ${type} ${mediaId}`, err); return null; } }, [userRegion, tmdbLanguage, genresMap, fetchApi]);
-    useEffect(() => { if (!selectedMedia) return; setIsFetchingDetails(true); setMediaDetails({}); fetchFullMediaDetails(selectedMedia.id, selectedMedia.mediaType).then(details => { if (details) setMediaDetails(details); setIsFetchingDetails(false); }); }, [selectedMedia]);
+    // --- UPDATED: Fetching now includes release_dates for certifications ---
+    const fetchFullMediaDetails = useCallback(async (mediaId, type) => {
+        if (!mediaId || !type) return null;
+        try {
+            const endpoint = type === 'movie' ? `${type}/${mediaId}` : `${type}/${mediaId}`;
+            const append_to_response = type === 'movie' ? 'credits,videos,watch/providers,similar,recommendations,release_dates' : 'credits,videos,watch/providers,similar,recommendations,content_ratings';
+            
+            const data = await fetchApi(endpoint, { language: tmdbLanguage, append_to_response });
+
+            let certification = '';
+            if (type === 'movie') {
+                const releaseDates = data.release_dates?.results || [];
+                const usRelease = releaseDates.find(r => r.iso_3166_1 === userRegion);
+                certification = usRelease?.release_dates.find(rd => rd.certification)?.certification || '';
+            } else { // type === 'tv'
+                const contentRatings = data.content_ratings?.results || [];
+                const usRating = contentRatings.find(r => r.iso_3166_1 === userRegion);
+                certification = usRating?.rating || '';
+            }
+
+            const director = data.credits?.crew?.find(p => p.job === 'Director');
+            const similarMedia = [...(data.recommendations?.results || []), ...(data.similar?.results || [])].filter((v,i,a) => v.poster_path && a.findIndex(t=>(t.id === v.id))===i).map(r => normalizeMediaData(r, type, genresMap)).filter(Boolean).slice(0, 10);
+            const regionData = data['watch/providers']?.results?.[userRegion];
+            const watchLink = regionData?.link || `https://www.themoviedb.org/${type}/${mediaId}/watch`;
+            const providers = (regionData?.flatrate || []).map(p => ({ ...p, link: watchLink }));
+            const rentProviders = (regionData?.rent || []).map(p => ({ ...p, link: watchLink }));
+            const buyProviders = (regionData?.buy || []).map(p => ({ ...p, link: watchLink }));
+            const combinedPayProviders = [...rentProviders, ...buyProviders];
+            const uniquePayProviderIds = new Set();
+            const uniquePayProviders = combinedPayProviders.filter(p => { if (uniquePayProviderIds.has(p.provider_id)) return false; uniquePayProviderIds.add(p.provider_id); return true; });
+            
+            return {
+                ...data,
+                duration: data.runtime || (data.episode_run_time ? data.episode_run_time[0] : null),
+                providers,
+                rentalProviders: uniquePayProviders,
+                cast: data.credits?.cast?.slice(0, 10) || [],
+                director,
+                seasons: data.number_of_seasons,
+                trailerKey: (data.videos?.results?.filter(v => v.type === 'Trailer' && v.site === 'YouTube') || [])[0]?.key || null,
+                similar: similarMedia,
+                certification: certification
+            };
+        } catch (err) {
+            console.error(`Error fetching details for ${type} ${mediaId}`, err);
+            return null;
+        }
+    }, [userRegion, tmdbLanguage, genresMap, fetchApi]);
+
+    useEffect(() => { if (!selectedMedia) return; setIsFetchingDetails(true); setMediaDetails({}); fetchFullMediaDetails(selectedMedia.id, selectedMedia.mediaType).then(details => { if (details) setMediaDetails(details); setIsFetchingDetails(false); }); }, [selectedMedia, fetchFullMediaDetails]);
     
     useEffect(() => { const wm = localStorage.getItem(WATCHED_KEY); const wl = localStorage.getItem(WATCHLIST_KEY); if (wm) { try { setWatchedMedia(JSON.parse(wm)); } catch(e){} } if (wl) { try { setWatchList(JSON.parse(wl)); } catch(e){} } }, []);
     useEffect(() => { localStorage.setItem(WATCHED_KEY, JSON.stringify(watchedMedia)); }, [watchedMedia]);
@@ -119,9 +167,15 @@ const App = () => {
     
     const handleRegionChange = (newRegion) => { setUserRegion(newRegion); resetAllState(); setFilters(initialFilters); setShowRegionSelector(false); };
     const handleMediaTypeChange = (type) => { if (type === mediaType) return; resetAllState(); setFilters(initialFilters); setMediaType(type); };
-    const handleFilterChange = (type, value) => { setFilters(f => ({ ...f, [type]: value })); resetAllState(); };
-    const handleGenreChangeInModal = (genreId, type) => { setFilters(f => { const list = [...(f[type] || [])]; const otherType = type === 'genre' ? 'excludeGenres' : 'genre'; const otherList = [...(f[otherType] || [])]; const index = list.indexOf(genreId); if (index > -1) list.splice(index, 1); else { list.push(genreId); const otherIndex = otherList.indexOf(genreId); if(otherIndex > -1) otherList.splice(otherIndex, 1); } return {...f, [type]: list, [otherType]: otherList }; }); };
+    
+    // --- UPDATED: handleFilterChange no longer resets the whole app ---
+    const handleFilterChange = (type, value) => {
+        setFilters(f => ({ ...f, [type]: value }));
+    };
+
     const handleQuickFilterToggle = (list, id) => { setFilters(f => { const current = [...(f[list] || [])]; const index = current.indexOf(id); if (index > -1) current.splice(index, 1); else current.push(id); return { ...f, [list]: current }; }); resetAllState(); };
+    
+    const handleGenreChangeInModal = (genreId, type) => { setFilters(f => { const list = [...(f[type] || [])]; const otherType = type === 'genre' ? 'excludeGenres' : 'genre'; const otherList = [...(f[otherType] || [])]; const index = list.indexOf(genreId); if (index > -1) list.splice(index, 1); else { list.push(genreId); const otherIndex = otherList.indexOf(genreId); if(otherIndex > -1) otherList.splice(otherIndex, 1); } return {...f, [type]: list, [otherType]: otherList }; }); };
     const handlePlatformChange = (id) => { setFilters(f => { const current = [...(f.platform || [])]; const index = current.indexOf(id); if (index > -1) current.splice(index, 1); else current.push(id); return { ...f, platform: current }; }); };
     const handleSelectPerson = (person, type) => { setFilters(f => ({ ...f, [type]: person })); setPersonSearch({ query: '', type: null }); setPersonSearchResults([]); resetAllState();};
     const handleMarkAsWatched = (media) => { const newWatched = {...watchedMedia}; if (newWatched[media.id]) delete newWatched[media.id]; else newWatched[media.id] = { id: media.id, title: media.title, poster: media.poster, mediaType: media.mediaType, year: media.year }; setWatchedMedia(newWatched); };
@@ -154,7 +208,17 @@ const App = () => {
             <header className="text-center mb-4 pt-16 sm:pt-16">
                 <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)]">{t.title}</h1>
                 <h2 className="text-xl sm:text-2xl text-[var(--color-text-secondary)] mt-2">{t.subtitle}</h2>
-                <div className="mt-6 inline-flex p-1 rounded-full media-type-switcher"><button onClick={() => handleMediaTypeChange('movie')} className={`px-4 py-2 rounded-full text-sm font-semibold w-32 flex items-center justify-center gap-2 media-type-btn ${mediaType === 'movie' ? 'media-type-btn-active' : ''}`}><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" /></svg>{t.movies}</button><button onClick={() => handleMediaTypeChange('tv')} className={`px-4 py-2 rounded-full text-sm font-semibold w-32 flex items-center justify-center gap-2 media-type-btn ${mediaType === 'tv' ? 'media-type-btn-active' : ''}`}><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.5 13a3.5 3.5 0 01-2.475-5.928.5.5 0 01.95.334A2.5 2.5 0 003.5 12.5a.5.5 0 010 1zM16.5 13a3.5 3.5 0 002.475-5.928.5.5 0 00-.95.334A2.5 2.5 0 0116.5 12.5a.5.5 0 000 1z" clipRule="evenodd" /><path d="M10 3a1 1 0 011 1v1h-2V4a1 1 0 011-1zM7 3a1 1 0 011-1h4a1 1 0 011 1v1h-6V3zM3 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5z"/></svg>{t.tvShows}</button></div>
+                {/* --- UPDATED ICONS --- */}
+                <div className="mt-6 inline-flex p-1 rounded-full media-type-switcher">
+                    <button onClick={() => handleMediaTypeChange('movie')} className={`px-4 py-2 rounded-full text-sm font-semibold w-32 flex items-center justify-center gap-2 media-type-btn ${mediaType === 'movie' ? 'media-type-btn-active' : ''}`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>
+                        {t.movies}
+                    </button>
+                    <button onClick={() => handleMediaTypeChange('tv')} className={`px-4 py-2 rounded-full text-sm font-semibold w-32 flex items-center justify-center gap-2 media-type-btn ${mediaType === 'tv' ? 'media-type-btn-active' : ''}`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                        {t.tvShows}
+                    </button>
+                </div>
                 <div className="max-w-xl mx-auto mt-6 flex flex-col items-center gap-4">
                   <div ref={searchRef} className="relative w-full">
                       <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t.searchPlaceholder} className="w-full p-3 pl-10 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-full focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)] shadow-sm"/>
@@ -188,7 +252,10 @@ const App = () => {
                         <div className="sm:col-span-2 p-4 sm:p-6 sm:pl-0">
                             <div className="text-center sm:text-left"><h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{selectedMedia.title}</h2><p className="mt-2 text-[var(--color-text-secondary)] text-base leading-relaxed break-words">{selectedMedia.synopsis}</p></div>
                             <div className="mt-6 flex flex-col sm:flex-row gap-4">
-                                <button onClick={() => handleMarkAsWatched(selectedMedia)} className={`w-full py-3 px-4 text-white font-bold rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 ${isCurrentMediaWatched ? 'bg-green-600/80 hover:bg-green-600' : 'bg-red-600/80 hover:bg-red-600' }`}>{isCurrentMediaWatched ? t.cardIsWatched : t.cardMarkAsWatched}</button>
+                                {/* --- UPDATED Watched Icon --- */}
+                                <button onClick={() => handleMarkAsWatched(selectedMedia)} className={`w-full py-3 px-4 text-white font-bold rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 ${isCurrentMediaWatched ? 'bg-green-600/80 hover:bg-green-600' : 'bg-red-600/80 hover:bg-red-600' }`}>
+                                    {isCurrentMediaWatched ? <><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.522 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.478 0-8.268-2.943-9.542-7z" /></svg><span>{t.cardIsWatched}</span></> : t.cardMarkAsWatched}
+                                </button>
                                 <button onClick={() => handleToggleWatchlist(selectedMedia)} className="w-full py-3 px-4 bg-sky-600/80 hover:bg-sky-600 text-white font-bold rounded-lg shadow-md transition-colors flex items-center justify-center gap-2">{watchList[selectedMedia.id] ? <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-3.13L5 18V4z"/></svg> : <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>}{t.saveForLater}</button>
                                 <button onClick={handleShare} className="w-full py-3 px-4 bg-blue-600/80 hover:bg-blue-600 text-white font-bold rounded-lg shadow-md transition-colors flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"/></svg>{shareStatus === 'success' ? t.shareSuccess : t.shareButton}</button>
                             </div>
