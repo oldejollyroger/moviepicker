@@ -1,5 +1,5 @@
 {
-  "name": "movie-picker-pro",
+  "name": "thepicker",
   "version": "1.0.0",
   "description": "An app to pick movies, tv shows, and games.",
   "dependencies": {
