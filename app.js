@@ -1,4 +1,4 @@
-// app.js (v0.0.5)
+// app.js (v0.0.6)
 
 const App = () => {
     const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -63,7 +63,7 @@ const App = () => {
     const resetAllState = useCallback(() => { setAllMedia([]); setSelectedMedia(null); setHasSearched(false); setMediaHistory([]); }, []);
     const resetAndClearFilters = () => { resetAllState(); setFilters(initialFilters); };
     
-    useEffect(() => { document.documentElement.classList.toggle('dark', mode === 'dark'); document.documentElement.classList.toggle('light-mode', mode === 'light'); document.documentElement.classList.toggle('dark-mode', mode === 'dark');}, [mode]);
+    useEffect(() => { document.documentElement.className = mode; }, [mode]);
     useEffect(() => { const r = document.documentElement; r.style.setProperty('--color-accent', accent.color); r.style.setProperty('--color-accent-text', accent.text); r.style.setProperty('--color-accent-gradient-from', accent.from); r.style.setProperty('--color-accent-gradient-to', accent.to); }, [accent]);
     useEffect(() => { resetAllState(); }, [language, tmdbLanguage]);
     useEffect(() => { if (userRegion) localStorage.setItem('movieRandomizerRegion', userRegion); }, [userRegion]);
@@ -78,12 +78,8 @@ const App = () => {
     useEffect(() => { const fetchLanguageData = async () => { if (!tmdbLanguage) return; try { const d = await fetchApi(`genre/${mediaType}/list`, { language: tmdbLanguage }); setGenresMap(d.genres.reduce((a, g) => ({ ...a, [g.id]: g.name }), {})); } catch (e) { console.error("Error fetching language data:", e); } }; fetchLanguageData(); }, [language, tmdbLanguage, mediaType, fetchApi]);
     useEffect(() => { if (!userRegion) return; const fetchPlatforms = async () => { try { const data = await fetchApi(`watch/providers/${mediaType}`, { watch_region: userRegion }); const sorted = data.results.sort((a, b) => (a.display_priorities?.[userRegion] ?? 100) - (b.display_priorities?.[userRegion] ?? 100)); setQuickPlatformOptions(sorted.slice(0, 6).map(p => ({ id: p.provider_id.toString(), name: p.provider_name }))); setAllPlatformOptions(sorted.map(p => ({ id: p.provider_id.toString(), name: p.provider_name }))); } catch (err) { console.error("Error fetching providers", err); }}; fetchPlatforms();}, [userRegion, mediaType, fetchApi]);
     
-    // --- UPDATED: Universal search for movies, TV, and people ---
     useEffect(() => {
-        if (debouncedSearchQuery.trim() === '') {
-            setSearchResults([]);
-            return;
-        }
+        if (debouncedSearchQuery.trim() === '') { setSearchResults([]); return; }
         setIsSearching(true);
         const search = async () => {
             try {
@@ -92,7 +88,7 @@ const App = () => {
                     .filter(r => r.media_type === 'movie' || r.media_type === 'tv' || (r.media_type === 'person' && r.profile_path))
                     .map(r => {
                         if (r.media_type === 'person') {
-                            return { id: r.id, title: r.name, year: t.person, poster: r.profile_path, resultType: 'person' };
+                            return { id: r.id, title: r.name, year: t.person, poster: r.profile_path, resultType: 'person', department: r.known_for_department };
                         }
                         return { ...normalizeMediaData(r, r.media_type, genresMap), resultType: 'media' };
                     })
@@ -180,10 +176,15 @@ const App = () => {
     const handleSimilarMediaClick = (media) => { setModalMedia(normalizeMediaData(media, mediaType, genresMap)); };
     const handleActorCreditClick = (media) => { setIsActorModalOpen(false); setTimeout(() => { setModalMedia(normalizeMediaData(media, media.media_type, genresMap)); }, 300); };
     
-    // --- UPDATED: Main search result click handler ---
+    // --- UPDATED: Main search click handler now distinguishes between actors and directors ---
     const handleSearchResultClick = (result) => {
         if (result.resultType === 'person') {
-            setFilters(f => ({ ...f, actor: result, creator: null }));
+            const isDirector = result.department === 'Directing';
+            setFilters(f => ({
+                ...f,
+                actor: isDirector ? null : result,
+                creator: isDirector ? result : null
+            }));
             resetAllState();
         } else {
             if(selectedMedia) setMediaHistory(prev=>[...prev,selectedMedia]);
@@ -191,7 +192,7 @@ const App = () => {
         }
         setSearchQuery('');
         setSearchResults([]);
-    }
+    };
 
     const quickFilterGenres = useMemo(() => {
         if(mediaType === 'movie') return [{ id: '28', name: 'Action' }, { id: '35', name: 'Comedy' }, { id: '878', name: 'Sci-Fi' }, { id: '53', name: 'Thriller' }];
@@ -207,7 +208,7 @@ const App = () => {
     if (error) { return ( <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center text-red-500">{error}</div> ); }
     
     return (
-        <div className="min-h-screen p-4 font-sans app-container relative">
+        <div className="min-h-screen p-4 font-sans app-container">
             <div className="absolute top-4 right-4 z-20"><SettingsDropdown mode={mode} setMode={setMode} accent={accent} setAccent={setAccent} language={language} setLanguage={setLanguage} tmdbLanguage={tmdbLanguage} setTmdbLanguage={setTmdbLanguage} tmdbLanguages={tmdbLanguages} t={t} openWatchedModal={()=>setIsWatchedModalOpen(true)} openWatchlistModal={()=>setIsWatchlistModalOpen(true)} openRegionSelector={() => setShowRegionSelector(true)} /></div>
             <header className="text-center mb-4 pt-16 sm:pt-16">
                 <h1 className="text-4xl sm:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)]">{t.title}</h1>
@@ -226,7 +227,9 @@ const App = () => {
                   <div ref={searchRef} className="relative w-full">
                       <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t.searchPlaceholder} className="w-full p-3 pl-10 bg-white/5 dark:bg-white/5 border border-slate-200 dark:border-slate-800 rounded-full focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)] shadow-sm"/>
                       <div className="absolute top-0 left-0 inline-flex items-center p-3">{isSearching ? <div className="small-loader !m-0 !w-5 !h-5"></div> : <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>}</div>
-                      {searchResults.length > 0 && (<ul className="absolute w-full mt-2 modal-content shadow-lg z-20 max-h-80 overflow-y-auto">{searchResults.map(result => (<li key={`${result.resultType}-${result.id}`} onClick={() => handleSearchResultClick(result)} className="p-3 hover:bg-black/10 dark:hover:bg-white/5 cursor-pointer flex items-center gap-4"><img loading="lazy" src={result.poster ? `${TMDB_THUMBNAIL_BASE_URL}${result.poster}` : 'https://placehold.co/92x138/4A5568/FFFFFF?text=?'} alt={result.title} className="w-12 h-auto rounded-md" /><div className="text-left"><p className="font-semibold text-[var(--color-text-primary)]">{result.title}</p><p className="text-sm text-[var(--color-text-secondary)]">{result.year}</p></div></li>))}</ul>)}
+                      {searchResults.length > 0 && (<div className="absolute w-full mt-2 modal-content shadow-lg z-20 max-h-80 overflow-y-auto"><ul className="py-2">{searchResults.map(result => (<li key={`${result.resultType}-${result.id}`} onClick={() => handleSearchResultClick(result)} className="p-3 hover:bg-black/10 dark:hover:bg-white/5 cursor-pointer flex items-center gap-4"><img loading="lazy" src={result.poster ? `${TMDB_THUMBNAIL_BASE_URL}${result.poster}` : 'https://placehold.co/92x138/4A5568/FFFFFF?text=?'} alt={result.title} className="w-12 h-auto rounded-md" /><div className="text-left"><p className="font-semibold text-[var(--color-text-primary)]">{result.title}</p><p className="text-sm text-[var(--color-text-secondary)]">{result.year}</p></div></li>))}</ul>
+                      <button onClick={() => setSearchResults([])} className="search-results-close text-slate-400"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
+                      </div>)}
                   </div>
                 </div>
             </header>
@@ -246,6 +249,7 @@ const App = () => {
             <div className="text-center mb-10 flex justify-center items-center gap-4"><button onClick={handleGoBack} disabled={mediaHistory.length===0} className="p-4 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-bold rounded-lg shadow-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg></button><button onClick={handleSurpriseMe} disabled={isDiscovering || !userRegion} title={!userRegion ? t.selectRegionPrompt : ''} className={`px-8 py-4 bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-150 text-xl disabled:opacity-50 disabled:cursor-not-allowed`}>{isDiscovering ? t.searching : t.surpriseMe}</button></div>
             <div className="max-w-4xl mx-auto mb-8 flex flex-wrap justify-center gap-2">
                 {filters.actor && <div className="filter-pill"><span>{filters.actor.title}</span><button onClick={() => {setFilters(f => ({ ...f, actor: null })); resetAllState();}}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div>}
+                {filters.creator && <div className="filter-pill"><span>{filters.creator.title}</span><button onClick={() => {setFilters(f => ({ ...f, creator: null })); resetAllState();}}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div>}
                 {filters.platform.map(id => (allPlatformOptions.find(p=>p.id===id)?.name) && <div key={`pill-p-${id}`} className="filter-pill"><span>{allPlatformOptions.find(p=>p.id===id).name}</span><button onClick={() => handleQuickFilterToggle('platform', id)}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div>)}
                 {filters.genre.map(id => genresMap[id] && <div key={`pill-g-${id}`} className="filter-pill"><span>{genresMap[id]}</span><button onClick={() => handleQuickFilterToggle('genre', id)}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div>)}
             </div>
