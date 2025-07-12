@@ -7,11 +7,12 @@ const TMDB_PROFILE_IMAGE_BASE_URL = 'https://image.tmdb.org/t/p/w185';
 const TMDB_THUMBNAIL_BASE_URL = 'https://image.tmdb.org/t/p/w92';
 
 const CURATED_COUNTRY_LIST = new Set([ 'AR', 'AU', 'AT', 'BE', 'BR', 'CA', 'CL', 'CO', 'CZ', 'DK', 'EG', 'FI', 'FR', 'DE', 'GR', 'HK', 'HU', 'IN', 'ID', 'IE', 'IL', 'IT', 'JP', 'MY', 'MX', 'NL', 'NZ', 'NG', 'NO', 'PE', 'PH', 'PL', 'PT', 'RO', 'RU', 'SA', 'SG', 'ZA', 'KR', 'ES', 'SE', 'CH', 'TW', 'TH', 'TR', 'AE', 'GB', 'US' ]);
+// --- UPDATED: Crimson theme colors ---
 const ACCENT_COLORS = [ 
     { name: 'Cyberpunk', color: '#a855f7', text: '#d8b4fe', from: '#a855f7', to: '#ec4899' },
     { name: 'Ocean', color: '#22d3ee', text: '#67e8f9', from: '#22d3ee', to: '#3b82f6' },
     { name: 'Forest', color: '#22c55e', text: '#4ade80', from: '#4ade80', to: '#a3e635' },
-    { name: 'Crimson', color: '#dc2626', text: '#f87171', from: '#f97316', to: '#ef4444' }, // NEW THEME
+    { name: 'Crimson', color: '#b91c1c', text: '#fca5a5', from: '#dd1818', to: '#333333' },
     { name: 'Sunset', color: '#f97316', text: '#fbbf24', from: '#fb923c', to: '#f59e0b' }
 ];
 

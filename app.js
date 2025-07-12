@@ -63,7 +63,13 @@ const App = () => {
     const resetAllState = useCallback(() => { setAllMedia([]); setSelectedMedia(null); setHasSearched(false); setMediaHistory([]); }, []);
     const resetAndClearFilters = () => { resetAllState(); setFilters(initialFilters); };
     
-    useEffect(() => { document.documentElement.className = mode; }, [mode]);
+    // --- FIXED: Correctly applies light/dark mode classes ---
+    useEffect(() => {
+        const bodyClass = document.body.classList;
+        bodyClass.remove('light-mode', 'dark-mode');
+        bodyClass.add(`${mode}-mode`);
+    }, [mode]);
+
     useEffect(() => { const r = document.documentElement; r.style.setProperty('--color-accent', accent.color); r.style.setProperty('--color-accent-text', accent.text); r.style.setProperty('--color-accent-gradient-from', accent.from); r.style.setProperty('--color-accent-gradient-to', accent.to); }, [accent]);
     useEffect(() => { resetAllState(); }, [language, tmdbLanguage]);
     useEffect(() => { if (userRegion) localStorage.setItem('movieRandomizerRegion', userRegion); }, [userRegion]);
@@ -78,8 +84,12 @@ const App = () => {
     useEffect(() => { const fetchLanguageData = async () => { if (!tmdbLanguage) return; try { const d = await fetchApi(`genre/${mediaType}/list`, { language: tmdbLanguage }); setGenresMap(d.genres.reduce((a, g) => ({ ...a, [g.id]: g.name }), {})); } catch (e) { console.error("Error fetching language data:", e); } }; fetchLanguageData(); }, [language, tmdbLanguage, mediaType, fetchApi]);
     useEffect(() => { if (!userRegion) return; const fetchPlatforms = async () => { try { const data = await fetchApi(`watch/providers/${mediaType}`, { watch_region: userRegion }); const sorted = data.results.sort((a, b) => (a.display_priorities?.[userRegion] ?? 100) - (b.display_priorities?.[userRegion] ?? 100)); setQuickPlatformOptions(sorted.slice(0, 6).map(p => ({ id: p.provider_id.toString(), name: p.provider_name }))); setAllPlatformOptions(sorted.map(p => ({ id: p.provider_id.toString(), name: p.provider_name }))); } catch (err) { console.error("Error fetching providers", err); }}; fetchPlatforms();}, [userRegion, mediaType, fetchApi]);
     
+    // --- UPDATED: Universal search now clarifies person's role ---
     useEffect(() => {
-        if (debouncedSearchQuery.trim() === '') { setSearchResults([]); return; }
+        if (debouncedSearchQuery.trim() === '') {
+            setSearchResults([]);
+            return;
+        }
         setIsSearching(true);
         const search = async () => {
             try {
@@ -88,7 +98,7 @@ const App = () => {
                     .filter(r => r.media_type === 'movie' || r.media_type === 'tv' || (r.media_type === 'person' && r.profile_path))
                     .map(r => {
                         if (r.media_type === 'person') {
-                            return { id: r.id, title: r.name, year: t.person, poster: r.profile_path, resultType: 'person', department: r.known_for_department };
+                            return { id: r.id, title: r.name, year: r.known_for_department, poster: r.profile_path, resultType: 'person' };
                         }
                         return { ...normalizeMediaData(r, r.media_type, genresMap), resultType: 'media' };
                     })
@@ -99,7 +109,7 @@ const App = () => {
             finally { setIsSearching(false); }
         };
         search();
-    }, [debouncedSearchQuery, tmdbLanguage, mediaType, genresMap, fetchApi, t.person]);
+    }, [debouncedSearchQuery, tmdbLanguage, mediaType, genresMap, fetchApi]);
 
     const fetchFullMediaDetails = useCallback(async (mediaId, type) => {
         if (!mediaId || !type) return null;
@@ -176,10 +186,9 @@ const App = () => {
     const handleSimilarMediaClick = (media) => { setModalMedia(normalizeMediaData(media, mediaType, genresMap)); };
     const handleActorCreditClick = (media) => { setIsActorModalOpen(false); setTimeout(() => { setModalMedia(normalizeMediaData(media, media.media_type, genresMap)); }, 300); };
     
-    // --- UPDATED: Main search click handler now distinguishes between actors and directors ---
     const handleSearchResultClick = (result) => {
         if (result.resultType === 'person') {
-            const isDirector = result.department === 'Directing';
+            const isDirector = result.department === 'Directing' || result.department === 'Writing' || result.department === 'Production';
             setFilters(f => ({
                 ...f,
                 actor: isDirector ? null : result,
