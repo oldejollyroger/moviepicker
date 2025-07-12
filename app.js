@@ -1,4 +1,4 @@
-// app.js (v0.0.3)
+// app.js (v0.0.4)
 
 const App = () => {
     const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -13,6 +13,8 @@ const App = () => {
     
     const initialFilters = { genre: [], excludeGenres: [], decade: 'todos', platform: [], minRating: 0, actor: null, creator: null, duration: 0, ageRating: 0 };
     const [filters, setFilters] = useLocalStorageState('mediaPickerFilters_v4', initialFilters);
+    const [cookieConsent, setCookieConsent] = useLocalStorageState('cookieConsent_v1', false);
+
     const WATCHED_KEY = 'mediaPickerWatched_v2';
     const WATCHLIST_KEY = 'mediaPickerWatchlist_v2';
     const [watchedMedia, setWatchedMedia] = useLocalStorageState(WATCHED_KEY, {});
@@ -45,10 +47,7 @@ const App = () => {
     const [error, setError] = useState(null);
     const [genresMap, setGenresMap] = useState({});
     const [searchQuery, setSearchQuery] = useState('');
-    const [personSearch, setPersonSearch] = useState({ query: '', type: null });
-    const [personSearchResults, setPersonSearchResults] = useState([]);
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
-    const debouncedPersonSearchQuery = useDebounce(personSearch, 300);
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
@@ -78,24 +77,29 @@ const App = () => {
     useEffect(() => { const bootstrapApp = async () => { setIsLoading(true); setError(null); try { const regionsData = await fetchApi('configuration/countries', {}); setAvailableRegions(regionsData.filter(r => CURATED_COUNTRY_LIST.has(r.iso_3166_1)).sort((a,b)=>a.english_name.localeCompare(b.english_name))); } catch (err) { console.error("Error bootstrapping:", err); setError(err.message); } finally { setIsLoading(false); } }; bootstrapApp(); }, [fetchApi]);
     useEffect(() => { const fetchLanguageData = async () => { if (!tmdbLanguage) return; try { const d = await fetchApi(`genre/${mediaType}/list`, { language: tmdbLanguage }); setGenresMap(d.genres.reduce((a, g) => ({ ...a, [g.id]: g.name }), {})); } catch (e) { console.error("Error fetching language data:", e); } }; fetchLanguageData(); }, [language, tmdbLanguage, mediaType, fetchApi]);
     useEffect(() => { if (!userRegion) return; const fetchPlatforms = async () => { try { const data = await fetchApi(`watch/providers/${mediaType}`, { watch_region: userRegion }); const sorted = data.results.sort((a, b) => (a.display_priorities?.[userRegion] ?? 100) - (b.display_priorities?.[userRegion] ?? 100)); setQuickPlatformOptions(sorted.slice(0, 6).map(p => ({ id: p.provider_id.toString(), name: p.provider_name }))); setAllPlatformOptions(sorted.map(p => ({ id: p.provider_id.toString(), name: p.provider_name }))); } catch (err) { console.error("Error fetching providers", err); }}; fetchPlatforms();}, [userRegion, mediaType, fetchApi]);
-    useEffect(() => { if (debouncedSearchQuery.trim() === '') { setSearchResults([]); return; } setIsSearching(true); const search = async () => { try { const data = await fetchApi(`search/${mediaType}`, { query: debouncedSearchQuery, language: tmdbLanguage }); setSearchResults(data.results.map(m => normalizeMediaData(m, mediaType, genresMap)).filter(Boolean).slice(0, 5)); } catch (err) { console.error(err); } finally { setIsSearching(false); }}; search();}, [debouncedSearchQuery, tmdbLanguage, mediaType, genresMap, fetchApi]);
     
-    // --- NEW: Person searching logic ---
     useEffect(() => {
-        if (debouncedPersonSearchQuery.query.trim().length < 2) {
-            setPersonSearchResults([]);
-            return;
-        }
-        const searchPeople = async () => {
+        if (debouncedSearchQuery.trim() === '') { setSearchResults([]); return; }
+        setIsSearching(true);
+        const search = async () => {
             try {
-                const data = await fetchApi('search/person', { query: debouncedPersonSearchQuery.query });
-                setPersonSearchResults(data.results.filter(p => p.profile_path).slice(0, 5));
-            } catch (err) {
-                console.error("Error searching for people:", err);
-            }
+                const data = await fetchApi('search/multi', { query: debouncedSearchQuery, language: tmdbLanguage });
+                const results = data.results
+                    .filter(r => r.media_type === 'movie' || r.media_type === 'tv' || (r.media_type === 'person' && r.profile_path))
+                    .map(r => {
+                        if (r.media_type === 'person') {
+                            return { id: r.id, title: r.name, year: t.person, poster: r.profile_path, resultType: 'person' };
+                        }
+                        return { ...normalizeMediaData(r, r.media_type, genresMap), resultType: 'media' };
+                    })
+                    .filter(Boolean)
+                    .slice(0, 7);
+                setSearchResults(results);
+            } catch (err) { console.error(err); } 
+            finally { setIsSearching(false); }
         };
-        searchPeople();
-    }, [debouncedPersonSearchQuery, fetchApi]);  
+        search();
+    }, [debouncedSearchQuery, tmdbLanguage, mediaType, genresMap, fetchApi, t.person]);
 
     const fetchFullMediaDetails = useCallback(async (mediaId, type) => {
         if (!mediaId || !type) return null;
@@ -123,8 +127,8 @@ const App = () => {
     useEffect(() => { if (!selectedMedia) return; setIsFetchingDetails(true); setMediaDetails({}); fetchFullMediaDetails(selectedMedia.id, selectedMedia.mediaType).then(details => { if (details) setMediaDetails(details); setIsFetchingDetails(false); }); }, [selectedMedia, fetchFullMediaDetails]);
     
     useEffect(() => { const wm = localStorage.getItem(WATCHED_KEY); const wl = localStorage.getItem(WATCHLIST_KEY); if (wm) { try { setWatchedMedia(JSON.parse(wm)); } catch(e){} } if (wl) { try { setWatchList(JSON.parse(wl)); } catch(e){} } }, []);
-    useEffect(() => { localStorage.setItem(WATCHED_KEY, JSON.stringify(watchedMedia)); }, [watchedMedia]);
-    useEffect(() => { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchList)); }, [watchList]);
+    useEffect(() => { if(cookieConsent) localStorage.setItem(WATCHED_KEY, JSON.stringify(watchedMedia)); }, [watchedMedia, cookieConsent]);
+    useEffect(() => { if(cookieConsent) localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchList)); }, [watchList, cookieConsent]);
     
     const handleSurpriseMe = useCallback(async () => {
         if (!userRegion || !Object.keys(genresMap).length) return;
@@ -162,17 +166,25 @@ const App = () => {
     const handleQuickFilterToggle = (list, id) => { setFilters(f => { const current = [...(f[list] || [])]; const index = current.indexOf(id); if (index > -1) current.splice(index, 1); else current.push(id); return { ...f, [list]: current }; }); resetAllState(); };
     const handleGenreChangeInModal = (genreId, type) => { setFilters(f => { const list = [...(f[type] || [])]; const otherType = type === 'genre' ? 'excludeGenres' : 'genre'; const otherList = [...(f[otherType] || [])]; const index = list.indexOf(genreId); if (index > -1) list.splice(index, 1); else { list.push(genreId); const otherIndex = otherList.indexOf(genreId); if(otherIndex > -1) otherList.splice(otherIndex, 1); } return {...f, [type]: list, [otherType]: otherList }; }); };
     const handlePlatformChange = (id) => { setFilters(f => { const current = [...(f.platform || [])]; const index = current.indexOf(id); if (index > -1) current.splice(index, 1); else current.push(id); return { ...f, platform: current }; }); };
-    const handleSelectPerson = (person, type) => { setFilters(f => ({ ...f, [type]: person })); setPersonSearch({ query: '', type: null }); setPersonSearchResults([]); resetAllState();};
     const handleMarkAsWatched = (media) => { const newWatched = {...watchedMedia}; if (newWatched[media.id]) delete newWatched[media.id]; else newWatched[media.id] = { id: media.id, title: media.title, poster: media.poster, mediaType: media.mediaType, year: media.year }; setWatchedMedia(newWatched); };
     const handleUnwatchMedia = (mediaId) => { const newWatched = {...watchedMedia}; delete newWatched[mediaId]; setWatchedMedia(newWatched); };
     const handleToggleWatchlist = (media) => { const newWatchlist = { ...watchList }; if (newWatchlist[media.id]) delete newWatchlist[media.id]; else newWatchlist[media.id] = { id: media.id, title: media.title, poster: media.poster, mediaType: media.mediaType, year: media.year }; setWatchList(newWatchlist); };
     const handleGoBack = () => { if(mediaHistory.length === 0) return; const newHistory = [...mediaHistory]; const prev = newHistory.pop(); setMediaHistory(newHistory); setSelectedMedia(prev); };
     const handleShare = useCallback(() => { if (!selectedMedia) return; const url = `https://www.themoviedb.org/${selectedMedia.mediaType}/${selectedMedia.id}`; if (navigator.share) { navigator.share({ title: selectedMedia.title, url }).catch(err => console.error(err)); } else { navigator.clipboard.writeText(url).then(() => { setShareStatus('success'); setTimeout(() => setShareStatus('idle'), 2000); }); } }, [selectedMedia]);
     const handleInstallClick = async () => { if (!installPrompt) return; await installPrompt.prompt(); setInstallPrompt(null); };
-    const handleActorClick = async (actorId) => { closeModal(); setTimeout(() => {setIsActorModalOpen(true); setIsFetchingActorDetails(true); fetchApi(`person/${actorId}`, { append_to_response: 'movie_credits,tv_credits' }).then(setActorDetails).catch(console.error).finally(()=>setIsFetchingActorDetails(false)); }, 100);};
+    const handleActorClick = async (actorId) => { closeModal(); setIsActorModalOpen(true); setIsFetchingActorDetails(true); fetchApi(`person/${actorId}`, { append_to_response: 'movie_credits,tv_credits' }).then(setActorDetails).catch(console.error).finally(()=>setIsFetchingActorDetails(false)); };
     const handleSimilarMediaClick = (media) => { setModalMedia(normalizeMediaData(media, mediaType, genresMap)); };
-    const handleActorCreditClick = (media) => { closeModal(); setTimeout(() => { setModalMedia(normalizeMediaData(media, media.media_type, genresMap)); }, 300);};
-    const handleSearchResultClick = (media) => { if(selectedMedia) setMediaHistory(prev=>[...prev,selectedMedia]); setSelectedMedia(media); setSearchQuery(''); setSearchResults([]); }
+    const handleActorCreditClick = (media) => { setIsActorModalOpen(false); setTimeout(() => { setModalMedia(normalizeMediaData(media, media.media_type, genresMap)); }, 300); };
+    const handleSearchResultClick = (result) => {
+        if (result.resultType === 'person') {
+            handleActorClick(result.id);
+        } else {
+            if(selectedMedia) setMediaHistory(prev=>[...prev,selectedMedia]);
+            setSelectedMedia(result);
+        }
+        setSearchQuery('');
+        setSearchResults([]);
+    }
 
     const quickFilterGenres = useMemo(() => {
         if(mediaType === 'movie') return [{ id: '28', name: 'Action' }, { id: '35', name: 'Comedy' }, { id: '878', name: 'Sci-Fi' }, { id: '53', name: 'Thriller' }];
@@ -207,7 +219,7 @@ const App = () => {
                   <div ref={searchRef} className="relative w-full">
                       <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t.searchPlaceholder} className="w-full p-3 pl-10 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-full focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)] shadow-sm"/>
                       <div className="absolute top-0 left-0 inline-flex items-center p-3">{isSearching ? <div className="small-loader !m-0 !w-5 !h-5"></div> : <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>}</div>
-                      {searchResults.length > 0 && (<ul className="absolute w-full mt-2 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg shadow-lg z-20 max-h-80 overflow-y-auto">{searchResults.map(media => (<li key={media.id} onClick={() => handleSearchResultClick(media)} className="p-3 hover:bg-[var(--color-bg)] cursor-pointer flex items-center gap-4"><img loading="lazy" src={media.poster ? `${TMDB_THUMBNAIL_BASE_URL}${media.poster}` : 'https://placehold.co/92x138/4A5568/FFFFFF?text=?'} alt={media.title} className="w-12 h-auto rounded-md" /><div className="text-left"><p className="font-semibold text-[var(--color-text-primary)]">{media.title}</p><p className="text-sm text-[var(--color-text-secondary)]">{media.year}</p></div></li>))}</ul>)}
+                      {searchResults.length > 0 && (<ul className="absolute w-full mt-2 bg-[var(--color-card-bg)] border border-[var(--color-border)] rounded-lg shadow-lg z-20 max-h-80 overflow-y-auto">{searchResults.map(result => (<li key={`${result.resultType}-${result.id}`} onClick={() => handleSearchResultClick(result)} className="p-3 hover:bg-[var(--color-bg)] cursor-pointer flex items-center gap-4"><img loading="lazy" src={result.poster ? `${TMDB_THUMBNAIL_BASE_URL}${result.poster}` : 'https://placehold.co/92x138/4A5568/FFFFFF?text=?'} alt={result.title} className="w-12 h-auto rounded-md" /><div className="text-left"><p className="font-semibold text-[var(--color-text-primary)]">{result.title}</p><p className="text-sm text-[var(--color-text-secondary)]">{result.year}</p></div></li>))}</ul>)}
                   </div>
                 </div>
             </header>
@@ -226,8 +238,6 @@ const App = () => {
             </div>
             <div className="text-center mb-10 flex justify-center items-center gap-4"><button onClick={handleGoBack} disabled={mediaHistory.length===0} className="p-4 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg shadow-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg></button><button onClick={handleSurpriseMe} disabled={isDiscovering || !userRegion} title={!userRegion ? t.selectRegionPrompt : ''} className={`px-8 py-4 bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-150 text-xl disabled:opacity-50 disabled:cursor-not-allowed`}>{isDiscovering ? t.searching : t.surpriseMe}</button></div>
             <div className="max-w-4xl mx-auto mb-8 flex flex-wrap justify-center gap-2">
-                {filters.actor && <div className="filter-pill"><span>{filters.actor.name}</span><button onClick={() => handleSelectPerson(null, 'actor')}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div>}
-                {filters.creator && <div className="filter-pill"><span>{filters.creator.name}</span><button onClick={() => handleSelectPerson(null, 'creator')}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div>}
                 {filters.platform.map(id => (allPlatformOptions.find(p=>p.id===id)?.name) && <div key={`pill-p-${id}`} className="filter-pill"><span>{allPlatformOptions.find(p=>p.id===id).name}</span><button onClick={() => handleQuickFilterToggle('platform', id)}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div>)}
                 {filters.genre.map(id => genresMap[id] && <div key={`pill-g-${id}`} className="filter-pill"><span>{genresMap[id]}</span><button onClick={() => handleQuickFilterToggle('genre', id)}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div>)}
             </div>
@@ -252,12 +262,13 @@ const App = () => {
             ) : ( <div className="text-center text-gray-400 mt-10 text-lg">{ hasSearched && allMedia.length === 0 && !isDiscovering ? (<div><p>{t.noMoviesFound}</p><button onClick={resetAndClearFilters} className="mt-4 px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg">{t.clearAllFilters}</button></div>) : !hasSearched && t.welcomeMessage}</div> )}
             
             <TrailerModal isOpen={isTrailerModalOpen} close={() => closeModal()} trailerKey={modalTrailerKey} />
-            <FilterModal isOpen={isFilterModalOpen} close={()=>setIsFilterModalOpen(false)} handleClearFilters={resetAndClearFilters} filters={filters} handleGenreChangeInModal={handleGenreChangeInModal} handlePlatformChange={handlePlatformChange} genresMap={genresMap} allPlatformOptions={allPlatformOptions} platformSearchQuery={platformSearchQuery} setPlatformSearchQuery={setPlatformSearchQuery} t={t} handleSelectPerson={handleSelectPerson} personSearch={personSearch} setPersonSearch={setPersonSearch} personSearchResults={personSearchResults} mediaType={mediaType} handleFilterChange={handleFilterChange} />
+            <FilterModal isOpen={isFilterModalOpen} close={()=>setIsFilterModalOpen(false)} handleClearFilters={resetAndClearFilters} filters={filters} handleGenreChangeInModal={handleGenreChangeInModal} handlePlatformChange={handlePlatformChange} genresMap={genresMap} allPlatformOptions={allPlatformOptions} platformSearchQuery={platformSearchQuery} setPlatformSearchQuery={setPlatformSearchQuery} t={t} />
             <WatchedMediaModal isOpen={isWatchedModalOpen} close={()=>setIsWatchedModalOpen(false)} watchedMedia={watchedMedia} handleUnwatchMedia={handleUnwatchMedia} mediaType={mediaType} t={t}/>
             <WatchlistModal isOpen={isWatchlistModalOpen} close={()=>setIsWatchlistModalOpen(false)} watchlist={watchList} handleToggleWatchlist={handleToggleWatchlist} mediaType={mediaType} t={t} />
             <ActorDetailsModal isOpen={isActorModalOpen} close={()=>closeModal()} actorDetails={actorDetails} isFetching={isFetchingActorDetails} handleActorCreditClick={handleActorCreditClick} t={t}/>
             <SimilarMediaModal media={modalMedia} close={()=>closeModal()} fetchFullMediaDetails={fetchFullMediaDetails} handleActorClick={handleActorClick} handleSimilarMediaClick={handleSimilarMediaClick} t={t} userRegion={userRegion} openTrailerModal={openTrailerModal} />
-
+            <CookieConsentModal isOpen={userRegion && !cookieConsent} onAccept={() => setCookieConsent(true)} t={t} />
+            
             {(showRegionSelector || !userRegion) && ( <div className="fixed inset-0 bg-gray-900 bg-opacity-90 z-40 flex items-center justify-center p-4"><div className="text-center max-w-md bg-[var(--color-card-bg)] p-8 rounded-xl shadow-2xl"><h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-4">{t.selectRegionPrompt}</h1>{availableRegions.length > 0 ? (<select id="initial-region-filter" onChange={(e) => handleRegionChange(e.target.value)} defaultValue="" className="w-full p-3 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"><option value="" disabled>-- {t.region} --</option>{availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}</select>) : (<div className="loader"></div>)}</div></div>)}
             <footer className="text-center mt-auto py-4 text-sm text-[var(--color-text-subtle)]">{showInstallButton && <InstallPwaButton t={t} handleInstallClick={handleInstallClick}/>}{showIosInstallInstructions && <InstallPwaInstructions t={t}/>}<p className="pt-4">{t.footer} <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-text)] hover:underline">TMDb</a>.</p></footer>
         </div>
