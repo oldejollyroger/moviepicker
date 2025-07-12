@@ -11,7 +11,6 @@ const App = () => {
     const [mediaType, setMediaType] = useLocalStorageState('mediaPickerType_v1', 'movie');
     const [showRegionSelector, setShowRegionSelector] = useState(false);
     
-    // --- UPDATED: Add new filters to initial state ---
     const initialFilters = { 
         genre: [], 
         excludeGenres: [], 
@@ -20,8 +19,8 @@ const App = () => {
         minRating: 0, 
         actor: null, 
         creator: null,
-        duration: 0, // 0: Any, 1: <90, 2: 90-120, 3: >120
-        ageRating: 0 // 0: Any, then maps to certification array
+        duration: 0, 
+        ageRating: 0
     };
     const [filters, setFilters] = useLocalStorageState('mediaPickerFilters_v4', initialFilters);
     const WATCHED_KEY = 'mediaPickerWatched_v2';
@@ -29,7 +28,6 @@ const App = () => {
     const [watchedMedia, setWatchedMedia] = useLocalStorageState(WATCHED_KEY, {});
     const [watchList, setWatchList] = useLocalStorageState(WATCHLIST_KEY, {});
     
-    // ... (rest of state is the same)
     const [allMedia, setAllMedia] = useState([]);
     const [selectedMedia, setSelectedMedia] = useState(null);
     const [mediaHistory, setMediaHistory] = useState([]);
@@ -67,7 +65,6 @@ const App = () => {
     const cardRef = useRef(null);
     const searchRef = useRef(null);
     
-    // --- NEW: Definitions for the new filters ---
     const durationOptions = useMemo(() => [
         { label: t.any, gte: 0, lte: 999 },
         { label: "< 90 min", gte: 0, lte: 90 },
@@ -109,7 +106,6 @@ const App = () => {
     useEffect(() => { localStorage.setItem(WATCHED_KEY, JSON.stringify(watchedMedia)); }, [watchedMedia]);
     useEffect(() => { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchList)); }, [watchList]);
     
-    // --- UPDATED "SURPRISE ME" LOGIC ---
     const handleSurpriseMe = useCallback(async () => {
         if (!userRegion || !Object.keys(genresMap).length) return;
         setIsDiscovering(true);
@@ -122,13 +118,20 @@ const App = () => {
             const dateParam = mediaType === 'movie' ? 'primary_release_date' : 'first_air_date';
             const runtimeParam = mediaType === 'movie' ? 'with_runtime' : 'with_episode_runtime';
 
-            // --- Logic for new filters ---
             const selectedDuration = durationOptions[filters.duration];
-            const selectedAgeRating = ageRatingOptions[filters.ageRating];
+            
+            // --- FIXED: Age Rating Logic ---
+            // Build an explicit list of allowed ratings instead of using 'lte'.
+            const ageRatingParams = {};
+            if (filters.ageRating > 0) {
+                const allowedRatings = ageRatingOptions.slice(1, filters.ageRating + 1).join('|');
+                ageRatingParams.certification_country = userRegion;
+                ageRatingParams.certification = allowedRatings;
+            }
 
             const queryParams = {
                 language: tmdbLanguage,
-                'vote_count.gte': mediaType === 'movie' ? 200 : 100, // Increased vote count for better results
+                'vote_count.gte': mediaType === 'movie' ? 200 : 100,
                 watch_region: userRegion,
                 ...(filters.platform.length > 0 && { with_watch_providers: filters.platform.join('|') }),
                 ...(filters.genre.length > 0 && { with_genres: filters.genre.join(',') }),
@@ -138,12 +141,12 @@ const App = () => {
                 ...(filters.actor && { with_cast: filters.actor.id }),
                 ...(filters.creator && { with_crew: filters.creator.id }),
                 ...(filters.duration > 0 && { [`${runtimeParam}.gte`]: selectedDuration.gte, [`${runtimeParam}.lte`]: selectedDuration.lte }),
-                ...(filters.ageRating > 0 && { certification_country: userRegion, 'certification.lte': selectedAgeRating }),
+                ...ageRatingParams, // Add the new, more precise rating parameters
                 sort_by: 'popularity.desc'
             };
     
             const initialData = await fetchApi(`discover/${mediaType}`, { ...queryParams, page: 1 });
-            const totalPages = Math.min(initialData.total_pages, 200); // Limit to first 200 pages for relevance
+            const totalPages = Math.min(initialData.total_pages, 200);
 
             if (totalPages === 0) {
                 setAllMedia([]);
@@ -151,8 +154,6 @@ const App = () => {
                 return;
             }
 
-            // IMPROVEMENT: Bias randomness towards the first few pages for more popular results.
-            // Math.random() is uniform. Squaring it makes smaller numbers (i.e., earlier pages) more likely.
             const randomPage = Math.floor(Math.pow(Math.random(), 2) * (totalPages - 1)) + 1;
 
             const data = randomPage === 1 ? initialData : await fetchApi(`discover/${mediaType}`, { ...queryParams, page: randomPage });
@@ -209,9 +210,11 @@ const App = () => {
     return (
         <div className="min-h-screen p-4 font-sans app-container relative">
             <div className="absolute top-4 right-4 z-20">
+                {/* --- UPDATED: Pass language state to SettingsDropdown --- */}
                 <SettingsDropdown 
                     mode={mode} setMode={setMode} 
                     accent={accent} setAccent={setAccent} 
+                    language={language} setLanguage={setLanguage}
                     tmdbLanguage={tmdbLanguage} setTmdbLanguage={setTmdbLanguage} tmdbLanguages={tmdbLanguages} 
                     t={t} 
                     openWatchedModal={()=>setIsWatchedModalOpen(true)} 
@@ -224,11 +227,7 @@ const App = () => {
                 <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)]">{t.title}</h1>
                 <h2 className="text-xl sm:text-2xl text-[var(--color-text-secondary)] mt-2">{t.subtitle}</h2>
 
-                {/* --- NEW: Language Switcher --- */}
-                <div className="mt-4 flex justify-center gap-2">
-                    <button onClick={() => setLanguage('en')} className={`px-4 py-1.5 rounded-full text-sm font-medium quick-filter-btn ${language === 'en' ? 'quick-filter-btn-active' : ''}`}>English</button>
-                    <button onClick={() => setLanguage('es')} className={`px-4 py-1.5 rounded-full text-sm font-medium quick-filter-btn ${language === 'es' ? 'quick-filter-btn-active' : ''}`}>Español</button>
-                </div>
+                {/* --- Site language switcher removed from here --- */}
 
                 <div className="mt-6 inline-flex p-1 rounded-full media-type-switcher"><button onClick={() => handleMediaTypeChange('movie')} className={`px-4 py-2 rounded-full text-sm font-semibold w-32 flex items-center justify-center gap-2 media-type-btn ${mediaType === 'movie' ? 'media-type-btn-active' : ''}`}><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" /></svg>{t.movies}</button><button onClick={() => handleMediaTypeChange('tv')} className={`px-4 py-2 rounded-full text-sm font-semibold w-32 flex items-center justify-center gap-2 media-type-btn ${mediaType === 'tv' ? 'media-type-btn-active' : ''}`}><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.5 13a3.5 3.5 0 01-2.475-5.928.5.5 0 01.95.334A2.5 2.5 0 003.5 12.5a.5.5 0 010 1zM16.5 13a3.5 3.5 0 002.475-5.928.5.5 0 00-.95.334A2.5 2.5 0 0116.5 12.5a.5.5 0 000 1z" clipRule="evenodd" /><path d="M10 3a1 1 0 011 1v1h-2V4a1 1 0 011-1zM7 3a1 1 0 011-1h4a1 1 0 011 1v1h-6V3zM3 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5z"/></svg>{t.tvShows}</button></div>
                 <div className="max-w-xl mx-auto mt-6 flex flex-col items-center gap-4">
@@ -245,7 +244,6 @@ const App = () => {
               {userRegion && quickPlatformOptions.length > 0 && (<div><div className="flex flex-wrap justify-center gap-2"> {quickPlatformOptions.map(p => (<button key={p.id} onClick={() => handleQuickFilterToggle('platform', p.id)} className={`px-3 py-1 rounded-full text-sm font-medium quick-filter-btn ${filters.platform.includes(p.id) ? 'quick-filter-btn-active' : ''}`}>{p.name}</button>))} </div></div>)}
             </div>
             
-            {/* --- UPDATED: Main filter area with new sliders --- */}
             <div className="max-w-3xl mx-auto mb-8 p-4 bg-[var(--color-card-bg)] rounded-xl shadow-lg border border-[var(--color-border)]">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 items-center">
                     <div className="md:col-span-1"><label htmlFor="decade-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.decade}</label><select id="decade-filter" value={filters.decade} onChange={(e) => handleFilterChange('decade', e.target.value)} className="w-full p-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"><option value="todos">{t.allDecades}</option>{[2020, 2010, 2000, 1990, 1980, 1970].map(d=>(<option key={d} value={d}>{`${d}s`}</option>))}</select></div>
