@@ -69,7 +69,6 @@ const App = () => {
 
     const fetchTMDbApi = useCallback(async (path, query) => { if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY) { throw new Error("API Key is missing."); } const params = new URLSearchParams(query); const url = `${TMDB_BASE_URL}/${path}?api_key=${TMDB_API_KEY}&${params.toString()}`; const response = await fetch(url); if (!response.ok) { const err = await response.json(); throw new Error(err.status_message || `API error: ${response.status}`); } return response.json(); }, []);
     
-    // --- Vercel: Function to call our serverless middleman for IGDB data ---
     const fetchIgdbApi = useCallback(async (endpoint, queryBody) => {
         const response = await fetch('/api/igdb', {
             method: 'POST',
@@ -103,7 +102,10 @@ const App = () => {
     
     useEffect(() => { document.documentElement.classList.toggle('light-mode', mode === 'light'); }, [mode]);
     useEffect(() => { const r = document.documentElement; r.style.setProperty('--color-accent', accent.color); r.style.setProperty('--color-accent-text', accent.text); r.style.setProperty('--color-accent-gradient-from', accent.from); r.style.setProperty('--color-accent-gradient-to', accent.to); }, [accent]);
-    useEffect(() => { resetAllState(); }, [language, tmdbLanguage]);
+    
+    // --- UPDATED: This now only runs when the site language changes to avoid re-fetching on tmdbLanguage change ---
+    useEffect(() => { resetAllState(); }, [language]); 
+    
     useEffect(() => { if (userRegion) localStorage.setItem('movieRandomizerRegion', userRegion); }, [userRegion]);
     useEffect(() => { localStorage.setItem('mediaPickerFilters_v4', JSON.stringify(filters)); }, [filters]);
     useEffect(() => { const i = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream; setIsIos(i); if (window.matchMedia?.('(display-mode: standalone)').matches) setIsStandalone(true); const p = (e) => { e.preventDefault(); setInstallPrompt(e); }; window.addEventListener('beforeinstallprompt', p); return () => window.removeEventListener('beforeinstallprompt', p);}, []);
@@ -113,9 +115,10 @@ const App = () => {
 
     useEffect(() => { const bootstrapApp = async () => { setIsLoading(true); setError(null); try { const regionsData = await fetchTMDbApi('configuration/countries', {}); setAvailableRegions(regionsData.filter(r => CURATED_COUNTRY_LIST.has(r.iso_3166_1)).sort((a,b)=>a.english_name.localeCompare(b.english_name))); } catch (err) { console.error("Error bootstrapping:", err); setError(err.message); } finally { setIsLoading(false); } }; bootstrapApp(); }, [fetchTMDbApi]);
     
+    // --- UPDATED: Genre fetching logic now depends on mediaType and tmdbLanguage (for TMDB only) ---
     useEffect(() => {
-        const fetchLanguageData = async () => {
-            setGenresMap({});
+        const fetchGenres = async () => {
+            setGenresMap({}); // Clear previous genres
             try {
                 if (mediaType === 'game') {
                     const data = await fetchIgdbApi('genres', 'fields name; limit 50;');
@@ -126,12 +129,12 @@ const App = () => {
                     setGenresMap(data.genres.reduce((a, g) => ({ ...a, [g.id]: g.name }), {}));
                 }
             } catch (e) {
-                console.error("Error fetching language data:", e);
+                console.error("Error fetching genres:", e);
                 setError(`Could not fetch genres for ${mediaType}.`);
             }
         };
-        fetchLanguageData();
-    }, [language, tmdbLanguage, mediaType, fetchTMDbApi, fetchIgdbApi]);
+        fetchGenres();
+    }, [mediaType, tmdbLanguage, fetchTMDbApi, fetchIgdbApi]);
     
     useEffect(() => {
         if (mediaType === 'game') {
@@ -171,24 +174,13 @@ const App = () => {
 
     const fetchFullMediaDetails = useCallback(async (mediaId, type) => {
         if (!mediaId || !type) return null;
-
         if (type === 'game') {
             try {
                 const queryBody = `fields name, summary, cover.image_id, first_release_date, genres.name, total_rating, involved_companies.company.name, involved_companies.developer, platforms.name, similar_games.*, similar_games.cover.*, similar_games.genres.*, videos.*, websites.*; where id = ${mediaId};`;
                 const [gameData] = await fetchIgdbApi('games', queryBody);
                 if (!gameData) return null;
-
-                return {
-                    ...gameData,
-                    developer: gameData.involved_companies?.find(c => c.developer)?.company.name,
-                    platforms: gameData.platforms?.map(p => p.name) || [],
-                    similar: gameData.similar_games?.map(normalizeGameData).filter(Boolean).slice(0, 10) || [],
-                    trailerKey: gameData.videos?.find(v => v.name === "Trailer")?.video_id,
-                };
-            } catch (err) {
-                console.error(`Error fetching details for game ${mediaId}`, err);
-                return null;
-            }
+                return { ...gameData, developer: gameData.involved_companies?.find(c => c.developer)?.company.name, platforms: gameData.platforms?.map(p => p.name) || [], similar: gameData.similar_games?.map(normalizeGameData).filter(Boolean).slice(0, 10) || [], trailerKey: gameData.videos?.find(v => v.name === "Trailer")?.video_id };
+            } catch (err) { console.error(`Error fetching details for game ${mediaId}`, err); return null; }
         } else {
              try { const data = await fetchTMDbApi(`${type}/${mediaId}`, { language: tmdbLanguage, append_to_response: 'credits,videos,watch/providers,similar,recommendations'}); const director = data.credits?.crew?.find(p => p.job === 'Director'); const similarMedia = [...(data.recommendations?.results || []), ...(data.similar?.results || [])].filter((v,i,a) => v.poster_path && a.findIndex(t=>(t.id === v.id))===i).map(r => normalizeMediaData(r, type, genresMap)).filter(Boolean).slice(0, 10); const regionData = data['watch/providers']?.results?.[userRegion]; const watchLink = regionData?.link || `https://www.themoviedb.org/${type}/${mediaId}/watch`; const providers = (regionData?.flatrate || []).map(p => ({ ...p, link: watchLink })); const rentProviders = (regionData?.rent || []).map(p => ({ ...p, link: watchLink })); const buyProviders = (regionData?.buy || []).map(p => ({ ...p, link: watchLink })); const combinedPayProviders = [...rentProviders, ...buyProviders]; const uniquePayProviderIds = new Set(); const uniquePayProviders = combinedPayProviders.filter(p => { if (uniquePayProviderIds.has(p.provider_id)) return false; uniquePayProviderIds.add(p.provider_id); return true; }); return { ...data, duration: data.runtime || (data.episode_run_time ? data.episode_run_time[0] : null), providers, rentalProviders: uniquePayProviders, cast: data.credits?.cast?.slice(0, 10) || [], director, seasons: data.number_of_seasons, trailerKey: (data.videos?.results?.filter(v => v.type === 'Trailer' && v.site === 'YouTube') || [])[0]?.key || null, similar: similarMedia, }; } catch (err) { console.error(`Error fetching details for ${type} ${mediaId}`, err); return null; }
         }
@@ -211,22 +203,11 @@ const App = () => {
         try {
             let fetchedMedia = [];
             if (mediaType === 'game') {
-                const whereClauses = [
-                    'total_rating_count > 20',
-                    'first_release_date != null'
-                ];
+                const whereClauses = [ 'total_rating_count > 20', 'first_release_date != null', 'cover != null' ];
                 if (filters.minRating > 0) whereClauses.push(`total_rating >= ${filters.minRating}`);
-                if (filters.decade !== 'todos') {
-                    const start = Math.floor(new Date(`${filters.decade}-01-01`).getTime() / 1000);
-                    const end = Math.floor(new Date(`${parseInt(filters.decade) + 9}-12-31`).getTime() / 1000);
-                    whereClauses.push(`first_release_date >= ${start} & first_release_date <= ${end}`);
-                }
+                if (filters.decade !== 'todos') { const start = Math.floor(new Date(`${filters.decade}-01-01`).getTime() / 1000); const end = Math.floor(new Date(`${parseInt(filters.decade) + 9}-12-31`).getTime() / 1000); whereClauses.push(`first_release_date >= ${start} & first_release_date <= ${end}`); }
                 if (filters.genre.length > 0) whereClauses.push(`genres = (${filters.genre.join(',')})`);
-                
-                const queryBody = `fields name, cover.image_id, first_release_date, genres.name, total_rating, summary; 
-                                   where ${whereClauses.join(' & ')}; 
-                                   sort popularity desc; 
-                                   limit 100;`;
+                const queryBody = `fields name, cover.image_id, first_release_date, genres.name, total_rating, summary; where ${whereClauses.join(' & ')}; sort popularity desc; limit 100;`;
                 const data = await fetchIgdbApi('games', queryBody);
                 fetchedMedia = data.map(normalizeGameData);
             } else {
@@ -234,11 +215,7 @@ const App = () => {
                 const runtimeParam = mediaType === 'movie' ? 'with_runtime' : 'with_episode_runtime';
                 const selectedDuration = durationOptions[filters.duration];
                 const ageRatingParams = {};
-                if (filters.ageRating > 0) {
-                    const allowedRatings = ageRatingOptions.slice(1, filters.ageRating + 1).join('|');
-                    ageRatingParams.certification_country = userRegion;
-                    ageRatingParams.certification = allowedRatings;
-                }
+                if (filters.ageRating > 0) { const allowedRatings = ageRatingOptions.slice(1, filters.ageRating + 1).join('|'); ageRatingParams.certification_country = userRegion; ageRatingParams.certification = allowedRatings; }
                 const queryParams = { language: tmdbLanguage, 'vote_count.gte': mediaType === 'movie' ? 200 : 100, watch_region: userRegion, ...filters.platform.length > 0 && { with_watch_providers: filters.platform.join('|') }, ...filters.genre.length > 0 && { with_genres: filters.genre.join(',') }, ...filters.excludeGenres.length > 0 && { without_genres: filters.excludeGenres.join(',') }, ...filters.minRating > 0 && { 'vote_average.gte': filters.minRating }, ...filters.decade !== 'todos' && { [`${dateParam}.gte`]: `${parseInt(filters.decade)}-01-01`, [`${dateParam}.lte`]: `${parseInt(filters.decade) + 9}-12-31` }, ...(filters.actor && { with_cast: filters.actor.id }), ...(filters.creator && { with_crew: filters.creator.id }), ...(filters.duration > 0 && { [`${runtimeParam}.gte`]: selectedDuration.gte, [`${runtimeParam}.lte`]: selectedDuration.lte }), ...ageRatingParams, sort_by: 'popularity.desc' };
                 const initialData = await fetchTMDbApi(`discover/${mediaType}`, { ...queryParams, page: 1 });
                 const totalPages = Math.min(initialData.total_pages, 200);
@@ -250,19 +227,11 @@ const App = () => {
             
             const unwatchedMedia = fetchedMedia.filter(m => !watchedMedia[m.id]);
             setAllMedia(unwatchedMedia);
-            if (unwatchedMedia.length > 0) {
-                const newMedia = unwatchedMedia[Math.floor(Math.random() * unwatchedMedia.length)];
-                setSelectedMedia(newMedia);
-            } else {
-                setSelectedMedia(null);
-            }
+            if (unwatchedMedia.length > 0) { const newMedia = unwatchedMedia[Math.floor(Math.random() * unwatchedMedia.length)]; setSelectedMedia(newMedia); } 
+            else { setSelectedMedia(null); }
 
-        } catch (err) {
-            console.error("Error discovering media:", err);
-            setError(err.message);
-        } finally {
-            setIsDiscovering(false);
-        }
+        } catch (err) { console.error("Error discovering media:", err); setError(err.message); } 
+        finally { setIsDiscovering(false); }
     }, [filters, language, tmdbLanguage, mediaType, userRegion, genresMap, watchedMedia, selectedMedia, fetchTMDbApi, fetchIgdbApi, durationOptions, ageRatingOptions]);
     
     const handleRegionChange = (newRegion) => { setUserRegion(newRegion); resetAllState(); setFilters(initialFilters); setShowRegionSelector(false); };
@@ -284,9 +253,9 @@ const App = () => {
     const handleSearchResultClick = (media) => { if(selectedMedia) setMediaHistory(prev=>[...prev,selectedMedia]); setSelectedMedia(media); setSearchQuery(''); setSearchResults([]); }
 
     const quickFilterGenres = useMemo(() => {
-        if (mediaType === 'game') return [{ id: '12', name: 'RPG' }, { id: '32', name: 'Indie' }, { id: '31', name: 'Adventure' }, { id: '4', name: 'Fighting' }];
-        if (mediaType === 'movie') return [{ id: '28', name: 'Action' }, { id: '35', name: 'Comedy' }, { id: '878', name: 'Sci-Fi' }, { id: '53', name: 'Thriller' }];
-        return [{ id: '10759', name: 'Action & Adventure' }, { id: '35', name: 'Comedy' }, { id: '10765', name: 'Sci-Fi & Fantasy' }, { id: '80', name: 'Crime' }];
+        if (mediaType === 'game') return [{ id: 12, name: 'RPG' }, { id: 32, name: 'Indie' }, { id: 31, name: 'Adventure' }, { id: 4, name: 'Fighting' }];
+        if (mediaType === 'movie') return [{ id: 28, name: 'Action' }, { id: 35, name: 'Comedy' }, { id: 878, name: 'Sci-Fi' }, { id: 53, name: 'Thriller' }];
+        return [{ id: 10759, name: 'Action & Adventure' }, { id: 35, name: 'Comedy' }, { id: 10765, name: 'Sci-Fi & Fantasy' }, { id: 80, name: 'Crime' }];
     }, [mediaType]);
     
     const tmdbLanguages = [{code:'en-US',name:'English'},{code:'es-ES',name:'Español'},{code:'fr-FR',name:'Français'},{code:'de-DE',name:'Deutsch'},{code:'it-IT',name:'Italiano'},{code:'pt-PT',name:'Português'},{code:'ru-RU',name:'Русский'},{code:'ja-JP',name:'日本語'},{code:'ko-KR',name:'한국어/조선말'},{code:'zh-CN',name:'中文'}];
@@ -339,7 +308,7 @@ const App = () => {
             {isDiscovering ? <SkeletonMediaCard /> : selectedMedia ? (
                  <div ref={cardRef} className="w-full max-w-4xl mx-auto bg-[var(--color-card-bg)] rounded-xl shadow-2xl overflow-hidden mb-10 border border-[var(--color-border)] movie-card-enter">
                     <div className="sm:grid sm:grid-cols-3 sm:gap-x-8">
-                        <div className="sm:col-span-1 p-4 sm:p-6"><img loading="lazy" className="h-auto w-3/4 sm:w-full mx-auto object-cover rounded-lg shadow-lg" src={selectedMedia.poster ? selectedMedia.poster : 'https://placehold.co/500x750/1f2937/FFFFFF?text=No+Image'} alt={`Poster for ${selectedMedia.title}`}/>{!isFetchingDetails && mediaDetails.trailerKey && (<div className="mt-4 flex justify-center"><button onClick={()=>setIsTrailerModalOpen(true)} className="w-full max-w-[300px] flex items-center justify-center gap-2 py-3 px-4 bg-[var(--color-accent)]/20 text-[var(--color-accent-text)] font-bold rounded-lg shadow-md transition-colors hover:bg-[var(--color-accent)]/30"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>{t.cardTrailer}</button></div>)}</div>
+                        <div className="sm:col-span-1 p-4 sm:p-6"><img loading="lazy" className="h-auto w-3/4 sm:w-full mx-auto object-cover rounded-lg shadow-lg" src={selectedMedia.poster ? selectedMedia.poster.startsWith('https') ? selectedMedia.poster : `${TMDB_IMAGE_BASE_URL}${selectedMedia.poster}` : 'https://placehold.co/500x750/1f2937/FFFFFF?text=No+Image'} alt={`Poster for ${selectedMedia.title}`}/>{!isFetchingDetails && mediaDetails.trailerKey && (<div className="mt-4 flex justify-center"><button onClick={()=>setIsTrailerModalOpen(true)} className="w-full max-w-[300px] flex items-center justify-center gap-2 py-3 px-4 bg-[var(--color-accent)]/20 text-[var(--color-accent-text)] font-bold rounded-lg shadow-md transition-colors hover:bg-[var(--color-accent)]/30"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>{t.cardTrailer}</button></div>)}</div>
                         <div className="sm:col-span-2 p-4 sm:p-6 sm:pl-0">
                             <div className="text-center sm:text-left"><h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{selectedMedia.title}</h2><p className="mt-2 text-[var(--color-text-secondary)] text-base leading-relaxed break-words">{selectedMedia.synopsis}</p></div>
                             <div className="mt-6 flex flex-col sm:flex-row gap-4">
@@ -354,6 +323,7 @@ const App = () => {
                 </div>
             ) : ( <div className="text-center text-gray-400 mt-10 text-lg">{ hasSearched && allMedia.length === 0 && !isDiscovering ? (<div><p>{t.noMoviesFound}</p><button onClick={resetAndClearFilters} className="mt-4 px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg">{t.clearAllFilters}</button></div>) : !hasSearched && t.welcomeMessage}</div> )}
             
+            <TrailerModal isOpen={isTrailerModalOpen} close={() => setIsTrailerModalOpen(false)} trailerKey={mediaDetails.trailerKey} mediaType={selectedMedia?.mediaType} />
             <FilterModal isOpen={isFilterModalOpen} close={()=>setIsFilterModalOpen(false)} handleClearFilters={resetAndClearFilters} filters={filters} handleGenreChangeInModal={handleGenreChangeInModal} handlePlatformChange={handlePlatformChange} genresMap={genresMap} allPlatformOptions={allPlatformOptions} platformSearchQuery={platformSearchQuery} setPlatformSearchQuery={setPlatformSearchQuery} t={t} handleSelectPerson={handleSelectPerson} personSearch={personSearch} setPersonSearch={setPersonSearch} personSearchResults={personSearchResults} mediaType={mediaType} handleFilterChange={handleFilterChange} />
             <WatchedMediaModal isOpen={isWatchedModalOpen} close={()=>setIsWatchedModalOpen(false)} watchedMedia={watchedMedia} handleUnwatchMedia={handleUnwatchMedia} mediaType={mediaType} t={t}/>
             <WatchlistModal isOpen={isWatchlistModalOpen} close={()=>setIsWatchlistModalOpen(false)} watchlist={watchList} handleToggleWatchlist={handleToggleWatchlist} mediaType={mediaType} t={t} />
