@@ -1,4 +1,4 @@
-// app.js (v0.0.2)
+// app.js (v0.0.3)
 
 const App = () => {
     const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -29,6 +29,7 @@ const App = () => {
     const [platformSearchQuery, setPlatformSearchQuery] = useState('');
     const [isFetchingDetails, setIsFetchingDetails] = useState(false);
     const [modalMedia, setModalMedia] = useState(null);
+    const [modalTrailerKey, setModalTrailerKey] = useState(null);
     const [isTrailerModalOpen, setIsTrailerModalOpen] = useState(false);
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     const [isWatchedModalOpen, setIsWatchedModalOpen] = useState(false);
@@ -47,7 +48,7 @@ const App = () => {
     const [personSearch, setPersonSearch] = useState({ query: '', type: null });
     const [personSearchResults, setPersonSearchResults] = useState([]);
     const debouncedSearchQuery = useDebounce(searchQuery, 300);
-    const debouncedPersonSearchQuery = useDebounce(personSearch.query, 300);
+    const debouncedPersonSearchQuery = useDebounce(personSearch, 300);
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
@@ -70,35 +71,41 @@ const App = () => {
     useEffect(() => { localStorage.setItem('mediaPickerFilters_v4', JSON.stringify(filters)); }, [filters]);
     useEffect(() => { const i = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream; setIsIos(i); if (window.matchMedia?.('(display-mode: standalone)').matches) setIsStandalone(true); const p = (e) => { e.preventDefault(); setInstallPrompt(e); }; window.addEventListener('beforeinstallprompt', p); return () => window.removeEventListener('beforeinstallprompt', p);}, []);
 
-    const closeModal = () => { setIsTrailerModalOpen(false); setIsActorModalOpen(false); setModalMedia(null); setIsWatchedModalOpen(false); setIsWatchlistModalOpen(false); setIsFilterModalOpen(false); };
+    const openTrailerModal = (key) => { setModalTrailerKey(key); setIsTrailerModalOpen(true); };
+    const closeModal = () => { setIsTrailerModalOpen(false); setModalTrailerKey(null); setIsActorModalOpen(false); setModalMedia(null); setIsWatchedModalOpen(false); setIsWatchlistModalOpen(false); setIsFilterModalOpen(false); };
     useEffect(() => { const handleKeyDown = (event) => { if (event.key === 'Escape') closeModal(); }; window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, []);
 
     useEffect(() => { const bootstrapApp = async () => { setIsLoading(true); setError(null); try { const regionsData = await fetchApi('configuration/countries', {}); setAvailableRegions(regionsData.filter(r => CURATED_COUNTRY_LIST.has(r.iso_3166_1)).sort((a,b)=>a.english_name.localeCompare(b.english_name))); } catch (err) { console.error("Error bootstrapping:", err); setError(err.message); } finally { setIsLoading(false); } }; bootstrapApp(); }, [fetchApi]);
     useEffect(() => { const fetchLanguageData = async () => { if (!tmdbLanguage) return; try { const d = await fetchApi(`genre/${mediaType}/list`, { language: tmdbLanguage }); setGenresMap(d.genres.reduce((a, g) => ({ ...a, [g.id]: g.name }), {})); } catch (e) { console.error("Error fetching language data:", e); } }; fetchLanguageData(); }, [language, tmdbLanguage, mediaType, fetchApi]);
     useEffect(() => { if (!userRegion) return; const fetchPlatforms = async () => { try { const data = await fetchApi(`watch/providers/${mediaType}`, { watch_region: userRegion }); const sorted = data.results.sort((a, b) => (a.display_priorities?.[userRegion] ?? 100) - (b.display_priorities?.[userRegion] ?? 100)); setQuickPlatformOptions(sorted.slice(0, 6).map(p => ({ id: p.provider_id.toString(), name: p.provider_name }))); setAllPlatformOptions(sorted.map(p => ({ id: p.provider_id.toString(), name: p.provider_name }))); } catch (err) { console.error("Error fetching providers", err); }}; fetchPlatforms();}, [userRegion, mediaType, fetchApi]);
     useEffect(() => { if (debouncedSearchQuery.trim() === '') { setSearchResults([]); return; } setIsSearching(true); const search = async () => { try { const data = await fetchApi(`search/${mediaType}`, { query: debouncedSearchQuery, language: tmdbLanguage }); setSearchResults(data.results.map(m => normalizeMediaData(m, mediaType, genresMap)).filter(Boolean).slice(0, 5)); } catch (err) { console.error(err); } finally { setIsSearching(false); }}; search();}, [debouncedSearchQuery, tmdbLanguage, mediaType, genresMap, fetchApi]);
-    useEffect(() => { if (debouncedPersonSearchQuery.trim().length < 2) { setPersonSearchResults([]); return; } const searchPeople = async () => { try { const data = await fetchApi('search/person', { query: debouncedPersonSearchQuery }); setPersonSearchResults(data.results.filter(p => p.profile_path).slice(0, 5)); } catch (err) { console.error("Error searching for people:", err); }}; searchPeople(); }, [debouncedPersonSearchQuery, fetchApi]);  
+    
+    // --- NEW: Person searching logic ---
+    useEffect(() => {
+        if (debouncedPersonSearchQuery.query.trim().length < 2) {
+            setPersonSearchResults([]);
+            return;
+        }
+        const searchPeople = async () => {
+            try {
+                const data = await fetchApi('search/person', { query: debouncedPersonSearchQuery.query });
+                setPersonSearchResults(data.results.filter(p => p.profile_path).slice(0, 5));
+            } catch (err) {
+                console.error("Error searching for people:", err);
+            }
+        };
+        searchPeople();
+    }, [debouncedPersonSearchQuery, fetchApi]);  
 
-    // --- UPDATED: Fetching now includes release_dates for certifications ---
     const fetchFullMediaDetails = useCallback(async (mediaId, type) => {
         if (!mediaId || !type) return null;
         try {
             const endpoint = type === 'movie' ? `${type}/${mediaId}` : `${type}/${mediaId}`;
             const append_to_response = type === 'movie' ? 'credits,videos,watch/providers,similar,recommendations,release_dates' : 'credits,videos,watch/providers,similar,recommendations,content_ratings';
-            
             const data = await fetchApi(endpoint, { language: tmdbLanguage, append_to_response });
-
             let certification = '';
-            if (type === 'movie') {
-                const releaseDates = data.release_dates?.results || [];
-                const usRelease = releaseDates.find(r => r.iso_3166_1 === userRegion);
-                certification = usRelease?.release_dates.find(rd => rd.certification)?.certification || '';
-            } else { // type === 'tv'
-                const contentRatings = data.content_ratings?.results || [];
-                const usRating = contentRatings.find(r => r.iso_3166_1 === userRegion);
-                certification = usRating?.rating || '';
-            }
-
+            if (type === 'movie') { const releaseDates = data.release_dates?.results || []; const usRelease = releaseDates.find(r => r.iso_3166_1 === userRegion); certification = usRelease?.release_dates.find(rd => rd.certification)?.certification || '';
+            } else { const contentRatings = data.content_ratings?.results || []; const usRating = contentRatings.find(r => r.iso_3166_1 === userRegion); certification = usRating?.rating || ''; }
             const director = data.credits?.crew?.find(p => p.job === 'Director');
             const similarMedia = [...(data.recommendations?.results || []), ...(data.similar?.results || [])].filter((v,i,a) => v.poster_path && a.findIndex(t=>(t.id === v.id))===i).map(r => normalizeMediaData(r, type, genresMap)).filter(Boolean).slice(0, 10);
             const regionData = data['watch/providers']?.results?.[userRegion];
@@ -109,23 +116,8 @@ const App = () => {
             const combinedPayProviders = [...rentProviders, ...buyProviders];
             const uniquePayProviderIds = new Set();
             const uniquePayProviders = combinedPayProviders.filter(p => { if (uniquePayProviderIds.has(p.provider_id)) return false; uniquePayProviderIds.add(p.provider_id); return true; });
-            
-            return {
-                ...data,
-                duration: data.runtime || (data.episode_run_time ? data.episode_run_time[0] : null),
-                providers,
-                rentalProviders: uniquePayProviders,
-                cast: data.credits?.cast?.slice(0, 10) || [],
-                director,
-                seasons: data.number_of_seasons,
-                trailerKey: (data.videos?.results?.filter(v => v.type === 'Trailer' && v.site === 'YouTube') || [])[0]?.key || null,
-                similar: similarMedia,
-                certification: certification
-            };
-        } catch (err) {
-            console.error(`Error fetching details for ${type} ${mediaId}`, err);
-            return null;
-        }
+            return { ...data, duration: data.runtime || (data.episode_run_time ? data.episode_run_time[0] : null), providers, rentalProviders: uniquePayProviders, cast: data.credits?.cast?.slice(0, 10) || [], director, seasons: data.number_of_seasons, trailerKey: (data.videos?.results?.filter(v => v.type === 'Trailer' && v.site === 'YouTube') || [])[0]?.key || null, similar: similarMedia, certification: certification };
+        } catch (err) { console.error(`Error fetching details for ${type} ${mediaId}`, err); return null; }
     }, [userRegion, tmdbLanguage, genresMap, fetchApi]);
 
     useEffect(() => { if (!selectedMedia) return; setIsFetchingDetails(true); setMediaDetails({}); fetchFullMediaDetails(selectedMedia.id, selectedMedia.mediaType).then(details => { if (details) setMediaDetails(details); setIsFetchingDetails(false); }); }, [selectedMedia, fetchFullMediaDetails]);
@@ -141,7 +133,6 @@ const App = () => {
         if (selectedMedia) setMediaHistory(prev => [...prev, selectedMedia]);
         setSelectedMedia(null);
         setHasSearched(true);
-        
         try {
             const dateParam = mediaType === 'movie' ? 'primary_release_date' : 'first_air_date';
             const runtimeParam = mediaType === 'movie' ? 'with_runtime' : 'with_episode_runtime';
@@ -167,14 +158,8 @@ const App = () => {
     
     const handleRegionChange = (newRegion) => { setUserRegion(newRegion); resetAllState(); setFilters(initialFilters); setShowRegionSelector(false); };
     const handleMediaTypeChange = (type) => { if (type === mediaType) return; resetAllState(); setFilters(initialFilters); setMediaType(type); };
-    
-    // --- UPDATED: handleFilterChange no longer resets the whole app ---
-    const handleFilterChange = (type, value) => {
-        setFilters(f => ({ ...f, [type]: value }));
-    };
-
+    const handleFilterChange = (type, value) => { setFilters(f => ({ ...f, [type]: value })); };
     const handleQuickFilterToggle = (list, id) => { setFilters(f => { const current = [...(f[list] || [])]; const index = current.indexOf(id); if (index > -1) current.splice(index, 1); else current.push(id); return { ...f, [list]: current }; }); resetAllState(); };
-    
     const handleGenreChangeInModal = (genreId, type) => { setFilters(f => { const list = [...(f[type] || [])]; const otherType = type === 'genre' ? 'excludeGenres' : 'genre'; const otherList = [...(f[otherType] || [])]; const index = list.indexOf(genreId); if (index > -1) list.splice(index, 1); else { list.push(genreId); const otherIndex = otherList.indexOf(genreId); if(otherIndex > -1) otherList.splice(otherIndex, 1); } return {...f, [type]: list, [otherType]: otherList }; }); };
     const handlePlatformChange = (id) => { setFilters(f => { const current = [...(f.platform || [])]; const index = current.indexOf(id); if (index > -1) current.splice(index, 1); else current.push(id); return { ...f, platform: current }; }); };
     const handleSelectPerson = (person, type) => { setFilters(f => ({ ...f, [type]: person })); setPersonSearch({ query: '', type: null }); setPersonSearchResults([]); resetAllState();};
@@ -208,7 +193,6 @@ const App = () => {
             <header className="text-center mb-4 pt-16 sm:pt-16">
                 <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)]">{t.title}</h1>
                 <h2 className="text-xl sm:text-2xl text-[var(--color-text-secondary)] mt-2">{t.subtitle}</h2>
-                {/* --- UPDATED ICONS --- */}
                 <div className="mt-6 inline-flex p-1 rounded-full media-type-switcher">
                     <button onClick={() => handleMediaTypeChange('movie')} className={`px-4 py-2 rounded-full text-sm font-semibold w-32 flex items-center justify-center gap-2 media-type-btn ${mediaType === 'movie' ? 'media-type-btn-active' : ''}`}>
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" /></svg>
@@ -242,17 +226,18 @@ const App = () => {
             </div>
             <div className="text-center mb-10 flex justify-center items-center gap-4"><button onClick={handleGoBack} disabled={mediaHistory.length===0} className="p-4 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded-lg shadow-lg transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg></button><button onClick={handleSurpriseMe} disabled={isDiscovering || !userRegion} title={!userRegion ? t.selectRegionPrompt : ''} className={`px-8 py-4 bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] text-white font-bold rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-150 text-xl disabled:opacity-50 disabled:cursor-not-allowed`}>{isDiscovering ? t.searching : t.surpriseMe}</button></div>
             <div className="max-w-4xl mx-auto mb-8 flex flex-wrap justify-center gap-2">
+                {filters.actor && <div className="filter-pill"><span>{filters.actor.name}</span><button onClick={() => handleSelectPerson(null, 'actor')}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div>}
+                {filters.creator && <div className="filter-pill"><span>{filters.creator.name}</span><button onClick={() => handleSelectPerson(null, 'creator')}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div>}
                 {filters.platform.map(id => (allPlatformOptions.find(p=>p.id===id)?.name) && <div key={`pill-p-${id}`} className="filter-pill"><span>{allPlatformOptions.find(p=>p.id===id).name}</span><button onClick={() => handleQuickFilterToggle('platform', id)}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div>)}
                 {filters.genre.map(id => genresMap[id] && <div key={`pill-g-${id}`} className="filter-pill"><span>{genresMap[id]}</span><button onClick={() => handleQuickFilterToggle('genre', id)}><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button></div>)}
             </div>
             {isDiscovering ? <SkeletonMediaCard /> : selectedMedia ? (
                  <div ref={cardRef} className="w-full max-w-4xl mx-auto bg-[var(--color-card-bg)] rounded-xl shadow-2xl overflow-hidden mb-10 border border-[var(--color-border)] movie-card-enter">
                     <div className="sm:grid sm:grid-cols-3 sm:gap-x-8">
-                        <div className="sm:col-span-1 p-4 sm:p-6"><img loading="lazy" className="h-auto w-3/4 sm:w-full mx-auto object-cover rounded-lg shadow-lg" src={selectedMedia.poster ? `${TMDB_IMAGE_BASE_URL}${selectedMedia.poster}` : 'https://placehold.co/500x750/1f2937/FFFFFF?text=No+Image'} alt={`Poster for ${selectedMedia.title}`}/>{!isFetchingDetails && mediaDetails.trailerKey && (<div className="mt-4 flex justify-center"><button onClick={()=>setIsTrailerModalOpen(true)} className="w-full max-w-[300px] flex items-center justify-center gap-2 py-3 px-4 bg-[var(--color-accent)]/20 text-[var(--color-accent-text)] font-bold rounded-lg shadow-md transition-colors hover:bg-[var(--color-accent)]/30"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>{t.cardTrailer}</button></div>)}</div>
+                        <div className="sm:col-span-1 p-4 sm:p-6"><img loading="lazy" className="h-auto w-3/4 sm:w-full mx-auto object-cover rounded-lg shadow-lg" src={selectedMedia.poster ? `${TMDB_IMAGE_BASE_URL}${selectedMedia.poster}` : 'https://placehold.co/500x750/1f2937/FFFFFF?text=No+Image'} alt={`Poster for ${selectedMedia.title}`}/>{!isFetchingDetails && mediaDetails.trailerKey && (<div className="mt-4 flex justify-center"><button onClick={()=>openTrailerModal(mediaDetails.trailerKey)} className="w-full max-w-[300px] flex items-center justify-center gap-2 py-3 px-4 bg-[var(--color-accent)]/20 text-[var(--color-accent-text)] font-bold rounded-lg shadow-md transition-colors hover:bg-[var(--color-accent)]/30"><svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" /></svg>{t.cardTrailer}</button></div>)}</div>
                         <div className="sm:col-span-2 p-4 sm:p-6 sm:pl-0">
                             <div className="text-center sm:text-left"><h2 className="text-3xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-3 break-words">{selectedMedia.title}</h2><p className="mt-2 text-[var(--color-text-secondary)] text-base leading-relaxed break-words">{selectedMedia.synopsis}</p></div>
                             <div className="mt-6 flex flex-col sm:flex-row gap-4">
-                                {/* --- UPDATED Watched Icon --- */}
                                 <button onClick={() => handleMarkAsWatched(selectedMedia)} className={`w-full py-3 px-4 text-white font-bold rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 ${isCurrentMediaWatched ? 'bg-green-600/80 hover:bg-green-600' : 'bg-red-600/80 hover:bg-red-600' }`}>
                                     {isCurrentMediaWatched ? <><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.522 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.478 0-8.268-2.943-9.542-7z" /></svg><span>{t.cardIsWatched}</span></> : t.cardMarkAsWatched}
                                 </button>
@@ -266,12 +251,12 @@ const App = () => {
                 </div>
             ) : ( <div className="text-center text-gray-400 mt-10 text-lg">{ hasSearched && allMedia.length === 0 && !isDiscovering ? (<div><p>{t.noMoviesFound}</p><button onClick={resetAndClearFilters} className="mt-4 px-4 py-2 bg-[var(--color-accent)] text-white rounded-lg">{t.clearAllFilters}</button></div>) : !hasSearched && t.welcomeMessage}</div> )}
             
-            <TrailerModal isOpen={isTrailerModalOpen} close={() => setIsTrailerModalOpen(false)} trailerKey={mediaDetails.trailerKey} />
+            <TrailerModal isOpen={isTrailerModalOpen} close={() => closeModal()} trailerKey={modalTrailerKey} />
             <FilterModal isOpen={isFilterModalOpen} close={()=>setIsFilterModalOpen(false)} handleClearFilters={resetAndClearFilters} filters={filters} handleGenreChangeInModal={handleGenreChangeInModal} handlePlatformChange={handlePlatformChange} genresMap={genresMap} allPlatformOptions={allPlatformOptions} platformSearchQuery={platformSearchQuery} setPlatformSearchQuery={setPlatformSearchQuery} t={t} handleSelectPerson={handleSelectPerson} personSearch={personSearch} setPersonSearch={setPersonSearch} personSearchResults={personSearchResults} mediaType={mediaType} handleFilterChange={handleFilterChange} />
             <WatchedMediaModal isOpen={isWatchedModalOpen} close={()=>setIsWatchedModalOpen(false)} watchedMedia={watchedMedia} handleUnwatchMedia={handleUnwatchMedia} mediaType={mediaType} t={t}/>
             <WatchlistModal isOpen={isWatchlistModalOpen} close={()=>setIsWatchlistModalOpen(false)} watchlist={watchList} handleToggleWatchlist={handleToggleWatchlist} mediaType={mediaType} t={t} />
-            <ActorDetailsModal isOpen={isActorModalOpen} close={()=>setIsActorModalOpen(false)} actorDetails={actorDetails} isFetching={isFetchingActorDetails} handleActorCreditClick={handleActorCreditClick} t={t}/>
-            <SimilarMediaModal media={modalMedia} close={()=>setModalMedia(null)} fetchFullMediaDetails={fetchFullMediaDetails} handleActorClick={handleActorClick} handleSimilarMediaClick={handleSimilarMediaClick} t={t} userRegion={userRegion} />
+            <ActorDetailsModal isOpen={isActorModalOpen} close={()=>closeModal()} actorDetails={actorDetails} isFetching={isFetchingActorDetails} handleActorCreditClick={handleActorCreditClick} t={t}/>
+            <SimilarMediaModal media={modalMedia} close={()=>closeModal()} fetchFullMediaDetails={fetchFullMediaDetails} handleActorClick={handleActorClick} handleSimilarMediaClick={handleSimilarMediaClick} t={t} userRegion={userRegion} openTrailerModal={openTrailerModal} />
 
             {(showRegionSelector || !userRegion) && ( <div className="fixed inset-0 bg-gray-900 bg-opacity-90 z-40 flex items-center justify-center p-4"><div className="text-center max-w-md bg-[var(--color-card-bg)] p-8 rounded-xl shadow-2xl"><h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-4">{t.selectRegionPrompt}</h1>{availableRegions.length > 0 ? (<select id="initial-region-filter" onChange={(e) => handleRegionChange(e.target.value)} defaultValue="" className="w-full p-3 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"><option value="" disabled>-- {t.region} --</option>{availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}</select>) : (<div className="loader"></div>)}</div></div>)}
             <footer className="text-center mt-auto py-4 text-sm text-[var(--color-text-subtle)]">{showInstallButton && <InstallPwaButton t={t} handleInstallClick={handleInstallClick}/>}{showIosInstallInstructions && <InstallPwaInstructions t={t}/>}<p className="pt-4">{t.footer} <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-text)] hover:underline">TMDb</a>.</p></footer>
