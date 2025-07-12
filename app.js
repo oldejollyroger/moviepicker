@@ -1,7 +1,8 @@
 // app.js
 
 const App = () => {
-    // Note: React hooks are available because we defined them in components.js
+    const { useState, useEffect, useCallback, useMemo, useRef } = React;
+
     const [mode, setMode] = useLocalStorageState('movieRandomizerMode', 'dark');
     const [accent, setAccent] = useLocalStorageState('movieRandomizerAccent', ACCENT_COLORS[0]);
     const [language, setLanguage] = useLocalStorageState('movieRandomizerLang', 'en');
@@ -10,18 +11,29 @@ const App = () => {
     const [mediaType, setMediaType] = useLocalStorageState('mediaPickerType_v1', 'movie');
     const [showRegionSelector, setShowRegionSelector] = useState(false);
     
-    const initialFilters = { genre: [], excludeGenres: [], decade: 'todos', platform: [], minRating: 0, actor: null, creator: null, runtime: { gte: 0, lte: 240 }};
-    const [filters, setFilters] = useLocalStorageState('mediaPickerFilters_v3', initialFilters);
+    // --- UPDATED: Add new filters to initial state ---
+    const initialFilters = { 
+        genre: [], 
+        excludeGenres: [], 
+        decade: 'todos', 
+        platform: [], 
+        minRating: 0, 
+        actor: null, 
+        creator: null,
+        duration: 0, // 0: Any, 1: <90, 2: 90-120, 3: >120
+        ageRating: 0 // 0: Any, then maps to certification array
+    };
+    const [filters, setFilters] = useLocalStorageState('mediaPickerFilters_v4', initialFilters);
     const WATCHED_KEY = 'mediaPickerWatched_v2';
     const WATCHLIST_KEY = 'mediaPickerWatchlist_v2';
     const [watchedMedia, setWatchedMedia] = useLocalStorageState(WATCHED_KEY, {});
     const [watchList, setWatchList] = useLocalStorageState(WATCHLIST_KEY, {});
     
+    // ... (rest of state is the same)
     const [allMedia, setAllMedia] = useState([]);
     const [selectedMedia, setSelectedMedia] = useState(null);
     const [mediaHistory, setMediaHistory] = useState([]);
     const [mediaDetails, setMediaDetails] = useState({});
-    
     const [shareStatus, setShareStatus] = useState('idle'); 
     const [availableRegions, setAvailableRegions] = useState([]);
     const [quickPlatformOptions, setQuickPlatformOptions] = useState([]);
@@ -51,21 +63,34 @@ const App = () => {
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
-    const [sessionShownMedia, setSessionShownMedia] = useState(new Set());
+    const t = translations[language];
     const cardRef = useRef(null);
     const searchRef = useRef(null);
-    const t = translations[language];
+    
+    // --- NEW: Definitions for the new filters ---
+    const durationOptions = useMemo(() => [
+        { label: t.any, gte: 0, lte: 999 },
+        { label: "< 90 min", gte: 0, lte: 90 },
+        { label: "90-120 min", gte: 90, lte: 120 },
+        { label: "> 120 min", gte: 120, lte: 999 }
+    ], [t]);
+
+    const ageRatingOptions = useMemo(() => {
+        const ratings = userRegion === 'US' ? ['G', 'PG', 'PG-13', 'R', 'NC-17'] : ['U', 'PG', '12', '15', '18'];
+        return [t.any, ...ratings];
+    }, [userRegion, t]);
+
 
     const fetchApi = useCallback(async (path, query) => { if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY) { throw new Error("API Key is missing."); } const params = new URLSearchParams(query); const url = `${TMDB_BASE_URL}/${path}?api_key=${TMDB_API_KEY}&${params.toString()}`; const response = await fetch(url); if (!response.ok) { const err = await response.json(); throw new Error(err.status_message || `API error: ${response.status}`); } return response.json(); }, []);
     
-    const resetAllState = useCallback(() => { setAllMedia([]); setSelectedMedia(null); setHasSearched(false); setMediaHistory([]); setSessionShownMedia(new Set()); }, []);
+    const resetAllState = useCallback(() => { setAllMedia([]); setSelectedMedia(null); setHasSearched(false); setMediaHistory([]); }, []);
     const resetAndClearFilters = () => { resetAllState(); setFilters(initialFilters); };
     
     useEffect(() => { document.documentElement.classList.toggle('light-mode', mode === 'light'); }, [mode]);
     useEffect(() => { const r = document.documentElement; r.style.setProperty('--color-accent', accent.color); r.style.setProperty('--color-accent-text', accent.text); r.style.setProperty('--color-accent-gradient-from', accent.from); r.style.setProperty('--color-accent-gradient-to', accent.to); }, [accent]);
     useEffect(() => { resetAllState(); }, [language, tmdbLanguage]);
     useEffect(() => { if (userRegion) localStorage.setItem('movieRandomizerRegion', userRegion); }, [userRegion]);
-    useEffect(() => { localStorage.setItem('mediaPickerFilters_v3', JSON.stringify(filters)); }, [filters]);
+    useEffect(() => { localStorage.setItem('mediaPickerFilters_v4', JSON.stringify(filters)); }, [filters]);
     useEffect(() => { const i = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream; setIsIos(i); if (window.matchMedia?.('(display-mode: standalone)').matches) setIsStandalone(true); const p = (e) => { e.preventDefault(); setInstallPrompt(e); }; window.addEventListener('beforeinstallprompt', p); return () => window.removeEventListener('beforeinstallprompt', p);}, []);
 
     const closeModal = () => { setIsTrailerModalOpen(false); setIsActorModalOpen(false); setModalMedia(null); setIsWatchedModalOpen(false); setIsWatchlistModalOpen(false); setIsFilterModalOpen(false); };
@@ -84,7 +109,7 @@ const App = () => {
     useEffect(() => { localStorage.setItem(WATCHED_KEY, JSON.stringify(watchedMedia)); }, [watchedMedia]);
     useEffect(() => { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchList)); }, [watchList]);
     
-    // --- IMPROVED "SURPRISE ME" FUNCTION ---
+    // --- UPDATED "SURPRISE ME" LOGIC ---
     const handleSurpriseMe = useCallback(async () => {
         if (!userRegion || !Object.keys(genresMap).length) return;
         setIsDiscovering(true);
@@ -96,9 +121,14 @@ const App = () => {
         try {
             const dateParam = mediaType === 'movie' ? 'primary_release_date' : 'first_air_date';
             const runtimeParam = mediaType === 'movie' ? 'with_runtime' : 'with_episode_runtime';
+
+            // --- Logic for new filters ---
+            const selectedDuration = durationOptions[filters.duration];
+            const selectedAgeRating = ageRatingOptions[filters.ageRating];
+
             const queryParams = {
                 language: tmdbLanguage,
-                'vote_count.gte': mediaType === 'movie' ? 100 : 50,
+                'vote_count.gte': mediaType === 'movie' ? 200 : 100, // Increased vote count for better results
                 watch_region: userRegion,
                 ...(filters.platform.length > 0 && { with_watch_providers: filters.platform.join('|') }),
                 ...(filters.genre.length > 0 && { with_genres: filters.genre.join(',') }),
@@ -107,26 +137,24 @@ const App = () => {
                 ...(filters.decade !== 'todos' && { [`${dateParam}.gte`]: `${parseInt(filters.decade)}-01-01`, [`${dateParam}.lte`]: `${parseInt(filters.decade) + 9}-12-31` }),
                 ...(filters.actor && { with_cast: filters.actor.id }),
                 ...(filters.creator && { with_crew: filters.creator.id }),
-                ...(filters.runtime?.gte > 0 && { [`${runtimeParam}.gte`]: filters.runtime.gte }),
-                ...(filters.runtime?.lte < 240 && { [`${runtimeParam}.lte`]: filters.runtime.lte }),
+                ...(filters.duration > 0 && { [`${runtimeParam}.gte`]: selectedDuration.gte, [`${runtimeParam}.lte`]: selectedDuration.lte }),
+                ...(filters.ageRating > 0 && { certification_country: userRegion, 'certification.lte': selectedAgeRating }),
                 sort_by: 'popularity.desc'
             };
     
-            // Step 1: Fetch the first page to see how many total pages there are.
             const initialData = await fetchApi(`discover/${mediaType}`, { ...queryParams, page: 1 });
-            const totalPages = Math.min(initialData.total_pages, 500); // TMDB has a limit of 500 pages
+            const totalPages = Math.min(initialData.total_pages, 200); // Limit to first 200 pages for relevance
 
             if (totalPages === 0) {
                 setAllMedia([]);
-                setSelectedMedia(null); // No results found
+                setSelectedMedia(null);
                 return;
             }
 
-            // Step 2: Pick a random page from the available pages.
-            const randomPage = Math.floor(Math.random() * totalPages) + 1;
+            // IMPROVEMENT: Bias randomness towards the first few pages for more popular results.
+            // Math.random() is uniform. Squaring it makes smaller numbers (i.e., earlier pages) more likely.
+            const randomPage = Math.floor(Math.pow(Math.random(), 2) * (totalPages - 1)) + 1;
 
-            // Step 3: Fetch the data from that random page.
-            // (If we randomly picked page 1, we can reuse the data we already fetched!)
             const data = randomPage === 1 ? initialData : await fetchApi(`discover/${mediaType}`, { ...queryParams, page: randomPage });
 
             const transformedMedia = data.results.map(m => normalizeMediaData(m, mediaType, genresMap)).filter(Boolean);
@@ -145,7 +173,7 @@ const App = () => {
         } finally {
             setIsDiscovering(false);
         }
-    }, [filters, tmdbLanguage, mediaType, userRegion, genresMap, watchedMedia, selectedMedia, fetchApi]);
+    }, [filters, tmdbLanguage, mediaType, userRegion, genresMap, watchedMedia, selectedMedia, fetchApi, durationOptions, ageRatingOptions]);
     
     const handleRegionChange = (newRegion) => { setUserRegion(newRegion); resetAllState(); setFilters(initialFilters); setShowRegionSelector(false); };
     const handleMediaTypeChange = (type) => { if (type === mediaType) return; resetAllState(); setFilters(initialFilters); setMediaType(type); };
@@ -178,14 +206,30 @@ const App = () => {
     if (isLoading) { return ( <div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center"><div className="loader"></div></div> ); }
     if (error) { return ( <div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center text-red-500">{error}</div> ); }
     
-    // The entire JSX part of your App component goes here
     return (
         <div className="min-h-screen p-4 font-sans app-container relative">
-            <div className="absolute top-4 right-4 z-20"><SettingsDropdown mode={mode} setMode={setMode} accent={accent} setAccent={setAccent} language={language} setLanguage={setLanguage} tmdbLanguage={tmdbLanguage} setTmdbLanguage={setTmdbLanguage} tmdbLanguages={tmdbLanguages} t={t} openWatchedModal={()=>setIsWatchedModalOpen(true)} openWatchlistModal={()=>setIsWatchlistModalOpen(true)} openRegionSelector={() => setShowRegionSelector(true)}/></div>
+            <div className="absolute top-4 right-4 z-20">
+                <SettingsDropdown 
+                    mode={mode} setMode={setMode} 
+                    accent={accent} setAccent={setAccent} 
+                    tmdbLanguage={tmdbLanguage} setTmdbLanguage={setTmdbLanguage} tmdbLanguages={tmdbLanguages} 
+                    t={t} 
+                    openWatchedModal={()=>setIsWatchedModalOpen(true)} 
+                    openWatchlistModal={()=>setIsWatchlistModalOpen(true)} 
+                    openRegionSelector={() => setShowRegionSelector(true)}
+                />
+            </div>
             
             <header className="text-center mb-4 pt-16 sm:pt-16">
                 <h1 className="text-4xl sm:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)]">{t.title}</h1>
                 <h2 className="text-xl sm:text-2xl text-[var(--color-text-secondary)] mt-2">{t.subtitle}</h2>
+
+                {/* --- NEW: Language Switcher --- */}
+                <div className="mt-4 flex justify-center gap-2">
+                    <button onClick={() => setLanguage('en')} className={`px-4 py-1.5 rounded-full text-sm font-medium quick-filter-btn ${language === 'en' ? 'quick-filter-btn-active' : ''}`}>English</button>
+                    <button onClick={() => setLanguage('es')} className={`px-4 py-1.5 rounded-full text-sm font-medium quick-filter-btn ${language === 'es' ? 'quick-filter-btn-active' : ''}`}>Español</button>
+                </div>
+
                 <div className="mt-6 inline-flex p-1 rounded-full media-type-switcher"><button onClick={() => handleMediaTypeChange('movie')} className={`px-4 py-2 rounded-full text-sm font-semibold w-32 flex items-center justify-center gap-2 media-type-btn ${mediaType === 'movie' ? 'media-type-btn-active' : ''}`}><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" /></svg>{t.movies}</button><button onClick={() => handleMediaTypeChange('tv')} className={`px-4 py-2 rounded-full text-sm font-semibold w-32 flex items-center justify-center gap-2 media-type-btn ${mediaType === 'tv' ? 'media-type-btn-active' : ''}`}><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3.5 13a3.5 3.5 0 01-2.475-5.928.5.5 0 01.95.334A2.5 2.5 0 003.5 12.5a.5.5 0 010 1zM16.5 13a3.5 3.5 0 002.475-5.928.5.5 0 00-.95.334A2.5 2.5 0 0116.5 12.5a.5.5 0 000 1z" clipRule="evenodd" /><path d="M10 3a1 1 0 011 1v1h-2V4a1 1 0 011-1zM7 3a1 1 0 011-1h4a1 1 0 011 1v1h-6V3zM3 5a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V5z"/></svg>{t.tvShows}</button></div>
                 <div className="max-w-xl mx-auto mt-6 flex flex-col items-center gap-4">
                   <div ref={searchRef} className="relative w-full">
@@ -201,11 +245,14 @@ const App = () => {
               {userRegion && quickPlatformOptions.length > 0 && (<div><div className="flex flex-wrap justify-center gap-2"> {quickPlatformOptions.map(p => (<button key={p.id} onClick={() => handleQuickFilterToggle('platform', p.id)} className={`px-3 py-1 rounded-full text-sm font-medium quick-filter-btn ${filters.platform.includes(p.id) ? 'quick-filter-btn-active' : ''}`}>{p.name}</button>))} </div></div>)}
             </div>
             
+            {/* --- UPDATED: Main filter area with new sliders --- */}
             <div className="max-w-3xl mx-auto mb-8 p-4 bg-[var(--color-card-bg)] rounded-xl shadow-lg border border-[var(--color-border)]">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-center">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4 items-center">
                     <div className="md:col-span-1"><label htmlFor="decade-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.decade}</label><select id="decade-filter" value={filters.decade} onChange={(e) => handleFilterChange('decade', e.target.value)} className="w-full p-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"><option value="todos">{t.allDecades}</option>{[2020, 2010, 2000, 1990, 1980, 1970].map(d=>(<option key={d} value={d}>{`${d}s`}</option>))}</select></div>
                     <div className="md:col-span-1"><label htmlFor="rating-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">{t.minRating} {Number(filters.minRating).toFixed(1)}</label><input type="range" id="rating-filter" min="0" max="9.5" step="0.5" value={filters.minRating} onChange={(e) => handleFilterChange('minRating', e.target.value)} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]"/></div>
-                    <button onClick={() => setIsFilterModalOpen(true)} className="w-full sm:col-span-2 md:col-span-1 p-2 bg-[var(--color-bg)] hover:bg-[var(--color-border)] border border-[var(--color-border)] hover:border-[var(--color-accent-text)] text-[var(--color-text-primary)] font-semibold rounded-full transition-colors flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd"/></svg>{t.showFilters}</button>
+                    <div className="md:col-span-1"><label htmlFor="duration-filter" className="filter-label"><span className="text-sm font-medium text-[var(--color-text-secondary)]">{t.duration}</span><span className="text-sm font-semibold text-[var(--color-accent-text)]">{durationOptions[filters.duration].label}</span></label><input type="range" id="duration-filter" min="0" max={durationOptions.length - 1} step="1" value={filters.duration} onChange={(e) => handleFilterChange('duration', e.target.value)} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]"/></div>
+                    <div className="md:col-span-1"><label htmlFor="age-rating-filter" className="filter-label"><span className="text-sm font-medium text-[var(--color-text-secondary)]">{t.ageRating}</span><span className="text-sm font-semibold text-[var(--color-accent-text)]">{ageRatingOptions[filters.ageRating]}</span></label><input type="range" id="age-rating-filter" min="0" max={ageRatingOptions.length - 1} step="1" value={filters.ageRating} onChange={(e) => handleFilterChange('ageRating', e.target.value)} className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]"/></div>
+                    <button onClick={() => setIsFilterModalOpen(true)} className="w-full sm:col-span-2 md:col-span-2 lg:col-span-1 p-2 bg-[var(--color-bg)] hover:bg-[var(--color-border)] border border-[var(--color-border)] hover:border-[var(--color-accent-text)] text-[var(--color-text-primary)] font-semibold rounded-full transition-colors flex items-center justify-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd"/></svg>{t.showFilters}</button>
                 </div>
             </div>
 
