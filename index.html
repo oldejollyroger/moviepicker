@@ -23,11 +23,15 @@
     
     <div id="root"></div>
 
-    <!-- Your API key is loaded first, which is correct -->
-    <script src="config.js" defer></script>
+<!-- Your API key is loaded first, which is correct -->
+<script src="config.js" defer></script>
     
-    <!-- Your main app script, deferred to not block rendering -->
-    <script type="text/babel" src="script.js" defer></script>
+<!-- Your new, organized scripts. The order is CRITICAL. -->
+<script src="helpers.js" defer></script>
+<script src="hooks.js" defer></script>
+<script type="text/babel" src="components.js" defer></script>
+<script type="text/babel" src="app.js" defer></script>
+<script type="text/babel" src="script.js" defer></script>
 
     <script>
       // Service worker registration is fine as is.
