@@ -1,4 +1,4 @@
-// app.js (v0.0.6)
+// app.js (v0.0.7)
 
 const App = () => {
     const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -63,13 +63,7 @@ const App = () => {
     const resetAllState = useCallback(() => { setAllMedia([]); setSelectedMedia(null); setHasSearched(false); setMediaHistory([]); }, []);
     const resetAndClearFilters = () => { resetAllState(); setFilters(initialFilters); };
     
-    // --- FIXED: Correctly applies light/dark mode classes ---
-    useEffect(() => {
-        const bodyClass = document.body.classList;
-        bodyClass.remove('light-mode', 'dark-mode');
-        bodyClass.add(`${mode}-mode`);
-    }, [mode]);
-
+    useEffect(() => { document.documentElement.className = mode; }, [mode]);
     useEffect(() => { const r = document.documentElement; r.style.setProperty('--color-accent', accent.color); r.style.setProperty('--color-accent-text', accent.text); r.style.setProperty('--color-accent-gradient-from', accent.from); r.style.setProperty('--color-accent-gradient-to', accent.to); }, [accent]);
     useEffect(() => { resetAllState(); }, [language, tmdbLanguage]);
     useEffect(() => { if (userRegion) localStorage.setItem('movieRandomizerRegion', userRegion); }, [userRegion]);
@@ -84,12 +78,8 @@ const App = () => {
     useEffect(() => { const fetchLanguageData = async () => { if (!tmdbLanguage) return; try { const d = await fetchApi(`genre/${mediaType}/list`, { language: tmdbLanguage }); setGenresMap(d.genres.reduce((a, g) => ({ ...a, [g.id]: g.name }), {})); } catch (e) { console.error("Error fetching language data:", e); } }; fetchLanguageData(); }, [language, tmdbLanguage, mediaType, fetchApi]);
     useEffect(() => { if (!userRegion) return; const fetchPlatforms = async () => { try { const data = await fetchApi(`watch/providers/${mediaType}`, { watch_region: userRegion }); const sorted = data.results.sort((a, b) => (a.display_priorities?.[userRegion] ?? 100) - (b.display_priorities?.[userRegion] ?? 100)); setQuickPlatformOptions(sorted.slice(0, 6).map(p => ({ id: p.provider_id.toString(), name: p.provider_name }))); setAllPlatformOptions(sorted.map(p => ({ id: p.provider_id.toString(), name: p.provider_name }))); } catch (err) { console.error("Error fetching providers", err); }}; fetchPlatforms();}, [userRegion, mediaType, fetchApi]);
     
-    // --- UPDATED: Universal search now clarifies person's role ---
     useEffect(() => {
-        if (debouncedSearchQuery.trim() === '') {
-            setSearchResults([]);
-            return;
-        }
+        if (debouncedSearchQuery.trim() === '') { setSearchResults([]); return; }
         setIsSearching(true);
         const search = async () => {
             try {
@@ -109,7 +99,7 @@ const App = () => {
             finally { setIsSearching(false); }
         };
         search();
-    }, [debouncedSearchQuery, tmdbLanguage, mediaType, genresMap, fetchApi]);
+    }, [debouncedSearchQuery, tmdbLanguage, mediaType, genresMap, fetchApi, t.person]);
 
     const fetchFullMediaDetails = useCallback(async (mediaId, type) => {
         if (!mediaId || !type) return null;
@@ -140,6 +130,7 @@ const App = () => {
     useEffect(() => { if(cookieConsent) localStorage.setItem(WATCHED_KEY, JSON.stringify(watchedMedia)); }, [watchedMedia, cookieConsent]);
     useEffect(() => { if(cookieConsent) localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchList)); }, [watchList, cookieConsent]);
     
+    // --- UPDATED: Surprise Me logic to correctly filter by crew ---
     const handleSurpriseMe = useCallback(async () => {
         if (!userRegion || !Object.keys(genresMap).length) return;
         setIsDiscovering(true);
@@ -153,9 +144,24 @@ const App = () => {
             const selectedDuration = durationOptions[filters.duration];
             const ageRatingParams = {};
             if (filters.ageRating > 0) { const allowedRatings = ageRatingOptions.slice(1, filters.ageRating + 1).join('|'); ageRatingParams.certification_country = userRegion; ageRatingParams.certification = allowedRatings; }
-            const queryParams = { language: tmdbLanguage, 'vote_count.gte': mediaType === 'movie' ? 200 : 100, watch_region: userRegion, ...filters.platform.length > 0 && { with_watch_providers: filters.platform.join('|') }, ...filters.genre.length > 0 && { with_genres: filters.genre.join(',') }, ...filters.excludeGenres.length > 0 && { without_genres: filters.excludeGenres.join(',') }, ...filters.minRating > 0 && { 'vote_average.gte': filters.minRating }, ...filters.decade !== 'todos' && { [`${dateParam}.gte`]: `${parseInt(filters.decade)}-01-01`, [`${dateParam}.lte`]: `${parseInt(filters.decade) + 9}-12-31` }, ...(filters.actor && { with_cast: filters.actor.id }), ...(filters.creator && { with_crew: filters.creator.id }), ...(filters.duration > 0 && { [`${runtimeParam}.gte`]: selectedDuration.gte, [`${runtimeParam}.lte`]: selectedDuration.lte }), ...ageRatingParams, sort_by: 'popularity.desc' };
+            
+            const queryParams = { 
+                language: tmdbLanguage, 
+                'vote_count.gte': mediaType === 'movie' ? 200 : 100, 
+                watch_region: userRegion, 
+                ...(filters.platform.length > 0 && { with_watch_providers: filters.platform.join('|') }), 
+                ...(filters.genre.length > 0 && { with_genres: filters.genre.join(',') }), 
+                ...(filters.excludeGenres.length > 0 && { without_genres: filters.excludeGenres.join(',') }), 
+                ...(filters.minRating > 0 && { 'vote_average.gte': filters.minRating }), 
+                ...(filters.decade !== 'todos' && { [`${dateParam}.gte`]: `${parseInt(filters.decade)}-01-01`, [`${dateParam}.lte`]: `${parseInt(filters.decade) + 9}-12-31` }), 
+                ...(filters.actor && { with_cast: filters.actor.id }), 
+                ...(filters.creator && { with_crew: filters.creator.id }), // <-- THIS IS THE KEY
+                ...(filters.duration > 0 && { [`${runtimeParam}.gte`]: selectedDuration.gte, [`${runtimeParam}.lte`]: selectedDuration.lte }), 
+                ...ageRatingParams, 
+                sort_by: 'popularity.desc' 
+            };
     
-            const initialData = await fetchApi(`discover/${mediaType}`, { ...queryParams, page: 1 });
+            const initialData = await fetchApi(`discover/${mediaType}`, queryParams);
             const totalPages = Math.min(initialData.total_pages, 200);
             if (totalPages === 0) { setAllMedia([]); setSelectedMedia(null); setIsDiscovering(false); return; }
             const randomPage = Math.floor(Math.pow(Math.random(), 2) * (totalPages - 1)) + 1;
@@ -188,7 +194,7 @@ const App = () => {
     
     const handleSearchResultClick = (result) => {
         if (result.resultType === 'person') {
-            const isDirector = result.department === 'Directing' || result.department === 'Writing' || result.department === 'Production';
+            const isDirector = result.year === 'Directing' || result.year === 'Writing' || result.year === 'Production';
             setFilters(f => ({
                 ...f,
                 actor: isDirector ? null : result,
