@@ -55,46 +55,16 @@ const App = () => {
     const cardRef = useRef(null);
     const searchRef = useRef(null);
     
-    const durationOptions = useMemo(() => [
-        { label: t.any, gte: 0, lte: 999 },
-        { label: "< 90 min", gte: 0, lte: 90 },
-        { label: "90-120 min", gte: 90, lte: 120 },
-        { label: "> 120 min", gte: 120, lte: 999 }
-    ], [t]);
-
-    const ageRatingOptions = useMemo(() => {
-        const ratings = userRegion === 'US' ? ['G', 'PG', 'PG-13', 'R', 'NC-17'] : ['U', 'PG', '12', '15', '18'];
-        return [t.any, ...ratings];
-    }, [userRegion, t]);
+    const durationOptions = useMemo(() => [ { label: t.any, gte: 0, lte: 999 }, { label: "< 90 min", gte: 0, lte: 90 }, { label: "90-120 min", gte: 90, lte: 120 }, { label: "> 120 min", gte: 120, lte: 999 } ], [t]);
+    const ageRatingOptions = useMemo(() => { const ratings = userRegion === 'US' ? ['G', 'PG', 'PG-13', 'R', 'NC-17'] : ['U', 'PG', '12', '15', '18']; return [t.any, ...ratings]; }, [userRegion, t]);
 
     const fetchTMDbApi = useCallback(async (path, query) => { if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY) { throw new Error("API Key is missing."); } const params = new URLSearchParams(query); const url = `${TMDB_BASE_URL}/${path}?api_key=${TMDB_API_KEY}&${params.toString()}`; const response = await fetch(url); if (!response.ok) { const err = await response.json(); throw new Error(err.status_message || `API error: ${response.status}`); } return response.json(); }, []);
-    
-    const fetchIgdbApi = useCallback(async (endpoint, queryBody) => {
-        const response = await fetch('/api/igdb', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ endpoint, queryBody })
-        });
-        if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || 'IGDB proxy error');
-        }
-        return response.json();
-    }, []);
+    const fetchIgdbApi = useCallback(async (endpoint, queryBody) => { const response = await fetch('/api/igdb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint, queryBody }) }); if (!response.ok) { const err = await response.json(); throw new Error(err.error || 'IGDB proxy error'); } return response.json(); }, []);
     
     const normalizeGameData = (game) => {
         if (!game || !game.id) return null;
         const posterUrl = game.cover ? `https://images.igdb.com/igdb/image/upload/t_cover_big/${game.cover.image_id}.jpg` : null;
-        return {
-            id: game.id.toString(),
-            title: game.name,
-            synopsis: game.summary || "No summary available.",
-            year: game.first_release_date ? new Date(game.first_release_date * 1000).getFullYear() : null,
-            imdbRating: game.total_rating ? Math.round(game.total_rating) : 'N/A',
-            genres: game.genres?.map(g => g.name) || [],
-            poster: posterUrl,
-            mediaType: 'game'
-        };
+        return { id: game.id.toString(), title: game.name, synopsis: game.summary || "No summary available.", year: game.first_release_date ? new Date(game.first_release_date * 1000).getFullYear() : null, imdbRating: game.total_rating ? Math.round(game.total_rating) : 'N/A', genres: game.genres?.map(g => g.name) || [], poster: posterUrl, mediaType: 'game' };
     };
 
     const resetAllState = useCallback(() => { setAllMedia([]); setSelectedMedia(null); setHasSearched(false); setMediaHistory([]); }, []);
@@ -102,10 +72,7 @@ const App = () => {
     
     useEffect(() => { document.documentElement.classList.toggle('light-mode', mode === 'light'); }, [mode]);
     useEffect(() => { const r = document.documentElement; r.style.setProperty('--color-accent', accent.color); r.style.setProperty('--color-accent-text', accent.text); r.style.setProperty('--color-accent-gradient-from', accent.from); r.style.setProperty('--color-accent-gradient-to', accent.to); }, [accent]);
-    
-    // --- UPDATED: This now only runs when the site language changes to avoid re-fetching on tmdbLanguage change ---
     useEffect(() => { resetAllState(); }, [language]); 
-    
     useEffect(() => { if (userRegion) localStorage.setItem('movieRandomizerRegion', userRegion); }, [userRegion]);
     useEffect(() => { localStorage.setItem('mediaPickerFilters_v4', JSON.stringify(filters)); }, [filters]);
     useEffect(() => { const i = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream; setIsIos(i); if (window.matchMedia?.('(display-mode: standalone)').matches) setIsStandalone(true); const p = (e) => { e.preventDefault(); setInstallPrompt(e); }; window.addEventListener('beforeinstallprompt', p); return () => window.removeEventListener('beforeinstallprompt', p);}, []);
@@ -115,36 +82,35 @@ const App = () => {
 
     useEffect(() => { const bootstrapApp = async () => { setIsLoading(true); setError(null); try { const regionsData = await fetchTMDbApi('configuration/countries', {}); setAvailableRegions(regionsData.filter(r => CURATED_COUNTRY_LIST.has(r.iso_3166_1)).sort((a,b)=>a.english_name.localeCompare(b.english_name))); } catch (err) { console.error("Error bootstrapping:", err); setError(err.message); } finally { setIsLoading(false); } }; bootstrapApp(); }, [fetchTMDbApi]);
     
-    // --- UPDATED: Genre fetching logic now depends on mediaType and tmdbLanguage (for TMDB only) ---
+    // --- UPDATED AND FIXED: This now runs correctly when mediaType or tmdbLanguage changes ---
     useEffect(() => {
-        const fetchGenres = async () => {
-            setGenresMap({}); // Clear previous genres
-            try {
-                if (mediaType === 'game') {
+        const fetchResourceData = async () => {
+            setError(null);
+            if (mediaType === 'game') {
+                setGenresMap({});
+                try {
                     const data = await fetchIgdbApi('genres', 'fields name; limit 50;');
                     setGenresMap(data.reduce((a, g) => ({ ...a, [g.id]: g.name }), {}));
-                } else {
-                    if (!tmdbLanguage) return;
-                    const data = await fetchTMDbApi(`genre/${mediaType}/list`, { language: tmdbLanguage });
-                    setGenresMap(data.genres.reduce((a, g) => ({ ...a, [g.id]: g.name }), {}));
-                }
-            } catch (e) {
-                console.error("Error fetching genres:", e);
-                setError(`Could not fetch genres for ${mediaType}.`);
+                } catch (e) { console.error("Error fetching game genres:", e); setError(`Could not fetch genres for game.`); }
+            } else {
+                setQuickPlatformOptions([]);
+                setAllPlatformOptions([]);
+                setGenresMap({});
+                if (!userRegion) return;
+                try {
+                    const [genresData, platformsData] = await Promise.all([
+                        fetchTMDbApi(`genre/${mediaType}/list`, { language: tmdbLanguage }),
+                        fetchTMDbApi(`watch/providers/${mediaType}`, { watch_region: userRegion })
+                    ]);
+                    setGenresMap(genresData.genres.reduce((a, g) => ({ ...a, [g.id]: g.name }), {}));
+                    const sorted = platformsData.results.sort((a, b) => (a.display_priorities?.[userRegion] ?? 100) - (b.display_priorities?.[userRegion] ?? 100));
+                    setQuickPlatformOptions(sorted.slice(0, 6).map(p => ({ id: p.provider_id.toString(), name: p.provider_name })));
+                    setAllPlatformOptions(sorted.map(p => ({ id: p.provider_id.toString(), name: p.provider_name })));
+                } catch (e) { console.error("Error fetching TMDB resources:", e); setError(`Could not fetch data for ${mediaType}.`); }
             }
         };
-        fetchGenres();
-    }, [mediaType, tmdbLanguage, fetchTMDbApi, fetchIgdbApi]);
-    
-    useEffect(() => {
-        if (mediaType === 'game') {
-            setQuickPlatformOptions([]);
-            return;
-        }
-        if (!userRegion) return; 
-        const fetchPlatforms = async () => { try { const data = await fetchTMDbApi(`watch/providers/${mediaType}`, { watch_region: userRegion }); const sorted = data.results.sort((a, b) => (a.display_priorities?.[userRegion] ?? 100) - (b.display_priorities?.[userRegion] ?? 100)); setQuickPlatformOptions(sorted.slice(0, 6).map(p => ({ id: p.provider_id.toString(), name: p.provider_name }))); setAllPlatformOptions(sorted.map(p => ({ id: p.provider_id.toString(), name: p.provider_name }))); } catch (err) { console.error("Error fetching providers", err); }};
-        fetchPlatforms();
-    }, [userRegion, mediaType, fetchTMDbApi]);
+        fetchResourceData();
+    }, [mediaType, tmdbLanguage, userRegion, fetchTMDbApi, fetchIgdbApi]);
 
     useEffect(() => {
         if (debouncedSearchQuery.trim() === '') { setSearchResults([]); return; }
@@ -161,25 +127,27 @@ const App = () => {
                     results = data.results.map(m => normalizeMediaData(m, mediaType, genresMap)).filter(Boolean).slice(0, 5);
                 }
                 setSearchResults(results);
-            } catch (err) {
-                console.error(err);
-            } finally {
-                setIsSearching(false);
-            }
+            } catch (err) { console.error(err); } finally { setIsSearching(false); }
         };
         search();
     }, [debouncedSearchQuery, tmdbLanguage, mediaType, genresMap, fetchTMDbApi, fetchIgdbApi]);
 
     useEffect(() => { if (debouncedPersonSearchQuery.trim().length < 2) { setPersonSearchResults([]); return; } const searchPeople = async () => { try { const data = await fetchTMDbApi('search/person', { query: debouncedPersonSearchQuery }); setPersonSearchResults(data.results.filter(p => p.profile_path).slice(0, 5)); } catch (err) { console.error("Error searching for people:", err); }}; searchPeople(); }, [debouncedPersonSearchQuery, fetchTMDbApi]);  
 
+    // --- UPDATED AND FIXED: Fetch full details for all media types, including game stores ---
     const fetchFullMediaDetails = useCallback(async (mediaId, type) => {
         if (!mediaId || !type) return null;
         if (type === 'game') {
             try {
-                const queryBody = `fields name, summary, cover.image_id, first_release_date, genres.name, total_rating, involved_companies.company.name, involved_companies.developer, platforms.name, similar_games.*, similar_games.cover.*, similar_games.genres.*, videos.*, websites.*; where id = ${mediaId};`;
+                const queryBody = `fields name, summary, cover.image_id, first_release_date, genres.name, total_rating, involved_companies.company.name, involved_companies.developer, platforms.name, videos.video_id, videos.name, websites.*; where id = ${mediaId};`;
                 const [gameData] = await fetchIgdbApi('games', queryBody);
                 if (!gameData) return null;
-                return { ...gameData, developer: gameData.involved_companies?.find(c => c.developer)?.company.name, platforms: gameData.platforms?.map(p => p.name) || [], similar: gameData.similar_games?.map(normalizeGameData).filter(Boolean).slice(0, 10) || [], trailerKey: gameData.videos?.find(v => v.name === "Trailer")?.video_id };
+
+                const storeMap = { 1: "Steam", 2: "GOG", 3: "PSN", 6: "Nintendo", 11: "Humble", 13: "Twitch" };
+                const storeIcons = { "Steam": "S", "GOG": "G", "PSN": "PS", "Nintendo": "N", "Humble": "H", "Twitch": "T" };
+                const stores = gameData.websites?.filter(w => storeMap[w.category]).map(w => ({ name: storeMap[w.category], url: w.url, icon: storeIcons[storeMap[w.category]] })) || [];
+
+                return { ...gameData, developer: gameData.involved_companies?.find(c => c.developer)?.company.name, platforms: gameData.platforms?.map(p => p.name) || [], trailerKey: gameData.videos?.find(v => v.name === "Trailer")?.video_id, stores: stores };
             } catch (err) { console.error(`Error fetching details for game ${mediaId}`, err); return null; }
         } else {
              try { const data = await fetchTMDbApi(`${type}/${mediaId}`, { language: tmdbLanguage, append_to_response: 'credits,videos,watch/providers,similar,recommendations'}); const director = data.credits?.crew?.find(p => p.job === 'Director'); const similarMedia = [...(data.recommendations?.results || []), ...(data.similar?.results || [])].filter((v,i,a) => v.poster_path && a.findIndex(t=>(t.id === v.id))===i).map(r => normalizeMediaData(r, type, genresMap)).filter(Boolean).slice(0, 10); const regionData = data['watch/providers']?.results?.[userRegion]; const watchLink = regionData?.link || `https://www.themoviedb.org/${type}/${mediaId}/watch`; const providers = (regionData?.flatrate || []).map(p => ({ ...p, link: watchLink })); const rentProviders = (regionData?.rent || []).map(p => ({ ...p, link: watchLink })); const buyProviders = (regionData?.buy || []).map(p => ({ ...p, link: watchLink })); const combinedPayProviders = [...rentProviders, ...buyProviders]; const uniquePayProviderIds = new Set(); const uniquePayProviders = combinedPayProviders.filter(p => { if (uniquePayProviderIds.has(p.provider_id)) return false; uniquePayProviderIds.add(p.provider_id); return true; }); return { ...data, duration: data.runtime || (data.episode_run_time ? data.episode_run_time[0] : null), providers, rentalProviders: uniquePayProviders, cast: data.credits?.cast?.slice(0, 10) || [], director, seasons: data.number_of_seasons, trailerKey: (data.videos?.results?.filter(v => v.type === 'Trailer' && v.site === 'YouTube') || [])[0]?.key || null, similar: similarMedia, }; } catch (err) { console.error(`Error fetching details for ${type} ${mediaId}`, err); return null; }
@@ -193,13 +161,12 @@ const App = () => {
     useEffect(() => { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchList)); }, [watchList]);
     
     const handleSurpriseMe = useCallback(async () => {
-        if (mediaType !== 'game' && (!userRegion || !Object.keys(genresMap).length)) return;
+        if (mediaType !== 'game' && (!userRegion || Object.keys(genresMap).length === 0)) return;
         setIsDiscovering(true);
         setError(null);
         if (selectedMedia) setMediaHistory(prev => [...prev, selectedMedia]);
         setSelectedMedia(null);
         setHasSearched(true);
-
         try {
             let fetchedMedia = [];
             if (mediaType === 'game') {
@@ -224,14 +191,10 @@ const App = () => {
                 const data = randomPage === 1 ? initialData : await fetchTMDbApi(`discover/${mediaType}`, { ...queryParams, page: randomPage });
                 fetchedMedia = data.results.map(m => normalizeMediaData(m, mediaType, genresMap)).filter(Boolean);
             }
-            
             const unwatchedMedia = fetchedMedia.filter(m => !watchedMedia[m.id]);
             setAllMedia(unwatchedMedia);
-            if (unwatchedMedia.length > 0) { const newMedia = unwatchedMedia[Math.floor(Math.random() * unwatchedMedia.length)]; setSelectedMedia(newMedia); } 
-            else { setSelectedMedia(null); }
-
-        } catch (err) { console.error("Error discovering media:", err); setError(err.message); } 
-        finally { setIsDiscovering(false); }
+            if (unwatchedMedia.length > 0) { const newMedia = unwatchedMedia[Math.floor(Math.random() * unwatchedMedia.length)]; setSelectedMedia(newMedia); } else { setSelectedMedia(null); }
+        } catch (err) { console.error("Error discovering media:", err); setError(err.message); } finally { setIsDiscovering(false); }
     }, [filters, language, tmdbLanguage, mediaType, userRegion, genresMap, watchedMedia, selectedMedia, fetchTMDbApi, fetchIgdbApi, durationOptions, ageRatingOptions]);
     
     const handleRegionChange = (newRegion) => { setUserRegion(newRegion); resetAllState(); setFilters(initialFilters); setShowRegionSelector(false); };
