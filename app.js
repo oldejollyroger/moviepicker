@@ -1,4 +1,4 @@
-// app.js (v0.0.5 - Stable Rollback)
+// app.js (v0.0.7 - Final Corrected)
 
 const App = () => {
     const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -9,10 +9,12 @@ const App = () => {
     const [tmdbLanguage, setTmdbLanguage] = useLocalStorageState('tmdbContentLang', 'en-US');
     const [userRegion, setUserRegion] = useLocalStorageState('movieRandomizerRegion', null);
     const [mediaType, setMediaType] = useLocalStorageState('mediaPickerType_v1', 'movie');
-    const [showRegionSelector, setShowRegionSelector] = useState(false);
+    const [showRegionSelector, setShowRegionSelector] = useState(() => !localStorage.getItem('movieRandomizerRegion'));
     
     const initialFilters = { genre: [], excludeGenres: [], decade: 'todos', platform: [], minRating: 0, actor: null, creator: null, duration: 0, ageRating: 0 };
     const [filters, setFilters] = useLocalStorageState('mediaPickerFilters_v4', initialFilters);
+    const [cookieConsent, setCookieConsent] = useLocalStorageState('cookieConsent_v1', false);
+
     const WATCHED_KEY = 'mediaPickerWatched_v2';
     const WATCHLIST_KEY = 'mediaPickerWatchlist_v2';
     const [watchedMedia, setWatchedMedia] = useLocalStorageState(WATCHED_KEY, {});
@@ -61,10 +63,15 @@ const App = () => {
     const resetAllState = useCallback(() => { setAllMedia([]); setSelectedMedia(null); setHasSearched(false); setMediaHistory([]); }, []);
     const resetAndClearFilters = () => { resetAllState(); setFilters(initialFilters); };
     
-    useEffect(() => { document.documentElement.classList.toggle('light-mode', mode === 'light'); }, [mode]);
+    useEffect(() => {
+        const doc = document.documentElement;
+        doc.classList.remove('light-mode', 'dark-mode');
+        doc.classList.add(`${mode}-mode`);
+    }, [mode]);
+
     useEffect(() => { const r = document.documentElement; r.style.setProperty('--color-accent', accent.color); r.style.setProperty('--color-accent-text', accent.text); r.style.setProperty('--color-accent-gradient-from', accent.from); r.style.setProperty('--color-accent-gradient-to', accent.to); }, [accent]);
     useEffect(() => { resetAllState(); }, [language, tmdbLanguage]);
-    useEffect(() => { if (userRegion) localStorage.setItem('movieRandomizerRegion', userRegion); }, [userRegion]);
+    useEffect(() => { if (userRegion) localStorage.setItem('movieRandomizerRegion', JSON.stringify(userRegion)); }, [userRegion]);
     useEffect(() => { localStorage.setItem('mediaPickerFilters_v4', JSON.stringify(filters)); }, [filters]);
     useEffect(() => { const i = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream; setIsIos(i); if (window.matchMedia?.('(display-mode: standalone)').matches) setIsStandalone(true); const p = (e) => { e.preventDefault(); setInstallPrompt(e); }; window.addEventListener('beforeinstallprompt', p); return () => window.removeEventListener('beforeinstallprompt', p);}, []);
 
@@ -75,6 +82,7 @@ const App = () => {
     useEffect(() => { const bootstrapApp = async () => { setIsLoading(true); setError(null); try { const regionsData = await fetchApi('configuration/countries', {}); setAvailableRegions(regionsData.filter(r => CURATED_COUNTRY_LIST.has(r.iso_3166_1)).sort((a,b)=>a.english_name.localeCompare(b.english_name))); } catch (err) { console.error("Error bootstrapping:", err); setError(err.message); } finally { setIsLoading(false); } }; bootstrapApp(); }, [fetchApi]);
     useEffect(() => { const fetchLanguageData = async () => { if (!tmdbLanguage) return; try { const d = await fetchApi(`genre/${mediaType}/list`, { language: tmdbLanguage }); setGenresMap(d.genres.reduce((a, g) => ({ ...a, [g.id]: g.name }), {})); } catch (e) { console.error("Error fetching language data:", e); } }; fetchLanguageData(); }, [language, tmdbLanguage, mediaType, fetchApi]);
     useEffect(() => { if (!userRegion) return; const fetchPlatforms = async () => { try { const data = await fetchApi(`watch/providers/${mediaType}`, { watch_region: userRegion }); const sorted = data.results.sort((a, b) => (a.display_priorities?.[userRegion] ?? 100) - (b.display_priorities?.[userRegion] ?? 100)); setQuickPlatformOptions(sorted.slice(0, 6).map(p => ({ id: p.provider_id.toString(), name: p.provider_name }))); setAllPlatformOptions(sorted.map(p => ({ id: p.provider_id.toString(), name: p.provider_name }))); } catch (err) { console.error("Error fetching providers", err); }}; fetchPlatforms();}, [userRegion, mediaType, fetchApi]);
+    
     useEffect(() => {
         if (debouncedSearchQuery.trim() === '') {
             setSearchResults([]);
@@ -88,7 +96,7 @@ const App = () => {
                     .filter(r => r.media_type === 'movie' || r.media_type === 'tv' || (r.media_type === 'person' && r.profile_path))
                     .map(r => {
                         if (r.media_type === 'person') {
-                            return { id: r.id, title: r.name, year: t.person, poster: r.profile_path, resultType: 'person' };
+                            return { id: r.id, title: r.name, year: r.known_for_department, poster: r.profile_path, resultType: 'person' };
                         }
                         return { ...normalizeMediaData(r, r.media_type, genresMap), resultType: 'media' };
                     })
@@ -99,7 +107,7 @@ const App = () => {
             finally { setIsSearching(false); }
         };
         search();
-    }, [debouncedSearchQuery, tmdbLanguage, mediaType, genresMap, fetchApi, t.person]);
+    }, [debouncedSearchQuery, tmdbLanguage, mediaType, genresMap, fetchApi]);
 
     const fetchFullMediaDetails = useCallback(async (mediaId, type) => {
         if (!mediaId || !type) return null;
@@ -126,9 +134,9 @@ const App = () => {
 
     useEffect(() => { if (!selectedMedia) return; setIsFetchingDetails(true); setMediaDetails({}); fetchFullMediaDetails(selectedMedia.id, selectedMedia.mediaType).then(details => { if (details) setMediaDetails(details); setIsFetchingDetails(false); }); }, [selectedMedia, fetchFullMediaDetails]);
     
-    useEffect(() => { const wm = localStorage.getItem(WATCHED_KEY); const wl = localStorage.getItem(WATCHLIST_KEY); if (wm) { try { setWatchedMedia(JSON.parse(wm)); } catch(e){} } if (wl) { try { setWatchList(JSON.parse(wl)); } catch(e){} } }, []);
-    useEffect(() => { localStorage.setItem(WATCHED_KEY, JSON.stringify(watchedMedia)); }, [watchedMedia]);
-    useEffect(() => { localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchList)); }, [watchList]);
+    useEffect(() => { if(cookieConsent) {const wm = localStorage.getItem(WATCHED_KEY); const wl = localStorage.getItem(WATCHLIST_KEY); if (wm) { try { setWatchedMedia(JSON.parse(wm)); } catch(e){} } if (wl) { try { setWatchList(JSON.parse(wl)); } catch(e){} }} }, [cookieConsent]);
+    useEffect(() => { if(cookieConsent) localStorage.setItem(WATCHED_KEY, JSON.stringify(watchedMedia)); }, [watchedMedia, cookieConsent]);
+    useEffect(() => { if(cookieConsent) localStorage.setItem(WATCHLIST_KEY, JSON.stringify(watchList)); }, [watchList, cookieConsent]);
     
     const handleSurpriseMe = useCallback(async () => {
         if (!userRegion || !Object.keys(genresMap).length) return;
@@ -273,8 +281,8 @@ const App = () => {
             
             <TrailerModal isOpen={isTrailerModalOpen} close={() => closeModal()} trailerKey={modalTrailerKey} />
             <FilterModal isOpen={isFilterModalOpen} close={()=>setIsFilterModalOpen(false)} handleClearFilters={resetAndClearFilters} filters={filters} handleGenreChangeInModal={handleGenreChangeInModal} handlePlatformChange={handlePlatformChange} genresMap={genresMap} allPlatformOptions={allPlatformOptions} platformSearchQuery={platformSearchQuery} setPlatformSearchQuery={setPlatformSearchQuery} t={t} />
-            <WatchedMediaModal isOpen={isWatchedModalOpen} close={()=>setIsWatchedModalOpen(false)} watchedMedia={watchedMedia} handleUnwatchMedia={handleUnwatchMedia} mediaType={mediaType} t={t}/>
-            <WatchlistModal isOpen={isWatchlistModalOpen} close={()=>setIsWatchlistModalOpen(false)} watchlist={watchList} handleToggleWatchlist={handleToggleWatchlist} mediaType={mediaType} t={t} />
+            <WatchedMediaModal isOpen={isWatchedModalOpen} close={()=>setIsWatchedModalOpen(false)} watchedMedia={watchedMedia} handleUnwatchMedia={handleUnwatchMedia} mediaType={mediaType} t={t} cookieConsent={cookieConsent}/>
+            <WatchlistModal isOpen={isWatchlistModalOpen} close={()=>setIsWatchlistModalOpen(false)} watchlist={watchList} handleToggleWatchlist={handleToggleWatchlist} mediaType={mediaType} t={t} cookieConsent={cookieConsent}/>
             <ActorDetailsModal isOpen={isActorModalOpen} close={()=>closeModal()} actorDetails={actorDetails} isFetching={isFetchingActorDetails} t={t}/>
             <SimilarMediaModal media={modalMedia} close={()=>closeModal()} fetchFullMediaDetails={fetchFullMediaDetails} handleActorClick={handleActorClick} handleSimilarMediaClick={handleSimilarMediaClick} t={t} userRegion={userRegion} openTrailerModal={openTrailerModal} />
             <CookieConsentModal isOpen={userRegion && !cookieConsent} onAccept={() => setCookieConsent(true)} t={t} />
