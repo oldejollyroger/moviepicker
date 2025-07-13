@@ -1,4 +1,4 @@
-// app.js (v0.0.7 - Final Corrected)
+// app.js (v0.0.6 - Corrected)
 
 const App = () => {
     const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -8,9 +8,8 @@ const App = () => {
     const [language, setLanguage] = useLocalStorageState('movieRandomizerLang', 'en');
     const [tmdbLanguage, setTmdbLanguage] = useLocalStorageState('tmdbContentLang', 'en-US');
     const [userRegion, setUserRegion] = useLocalStorageState('movieRandomizerRegion', null);
-
-    // --- FIXED: Initialize based on localStorage ---
-    const [showRegionSelector, setShowRegionSelector] = useState(() => !localStorage.getItem('movieRandomizerRegion'));
+    const [mediaType, setMediaType] = useLocalStorageState('mediaPickerType_v1', 'movie');
+    const [showRegionSelector, setShowRegionSelector] = useState(false);
     
     const initialFilters = { genre: [], excludeGenres: [], decade: 'todos', platform: [], minRating: 0, actor: null, creator: null, duration: 0, ageRating: 0 };
     const [filters, setFilters] = useLocalStorageState('mediaPickerFilters_v4', initialFilters);
@@ -65,14 +64,12 @@ const App = () => {
     const resetAndClearFilters = () => { resetAllState(); setFilters(initialFilters); };
     
     useEffect(() => {
-        const doc = document.documentElement;
-        doc.classList.remove('light-mode', 'dark-mode');
-        doc.classList.add(`${mode}-mode`);
+        document.documentElement.className = mode + "-mode";
     }, [mode]);
 
     useEffect(() => { const r = document.documentElement; r.style.setProperty('--color-accent', accent.color); r.style.setProperty('--color-accent-text', accent.text); r.style.setProperty('--color-accent-gradient-from', accent.from); r.style.setProperty('--color-accent-gradient-to', accent.to); }, [accent]);
     useEffect(() => { resetAllState(); }, [language, tmdbLanguage]);
-    useEffect(() => { if (userRegion) localStorage.setItem('movieRandomizerRegion', JSON.stringify(userRegion)); }, [userRegion]);
+    useEffect(() => { if (userRegion) localStorage.setItem('movieRandomizerRegion', userRegion); }, [userRegion]);
     useEffect(() => { localStorage.setItem('mediaPickerFilters_v4', JSON.stringify(filters)); }, [filters]);
     useEffect(() => { const i = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream; setIsIos(i); if (window.matchMedia?.('(display-mode: standalone)').matches) setIsStandalone(true); const p = (e) => { e.preventDefault(); setInstallPrompt(e); }; window.addEventListener('beforeinstallprompt', p); return () => window.removeEventListener('beforeinstallprompt', p);}, []);
 
@@ -288,8 +285,8 @@ const App = () => {
             <SimilarMediaModal media={modalMedia} close={()=>closeModal()} fetchFullMediaDetails={fetchFullMediaDetails} handleActorClick={handleActorClick} handleSimilarMediaClick={handleSimilarMediaClick} t={t} userRegion={userRegion} openTrailerModal={openTrailerModal} />
             <CookieConsentModal isOpen={userRegion && !cookieConsent} onAccept={() => setCookieConsent(true)} t={t} />
             
-            {(showRegionSelector || !userRegion) && ( <div className="fixed inset-0 modal-backdrop flex items-center justify-center p-4 z-40"><div className="modal-content text-center max-w-md p-8 shadow-2xl"><h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-4">{t.selectRegionPrompt}</h1>{availableRegions.length > 0 ? (<select id="initial-region-filter" onChange={(e) => handleRegionChange(e.target.value)} defaultValue="" className="w-full p-3 bg-white/10 dark:bg-black/20 border border-slate-200 dark:border-slate-800 rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"><option value="" disabled>-- {t.region} --</option>{availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}</select>) : (<div className="loader"></div>)}</div></div>)}
+            {(showRegionSelector || !userRegion) && ( <div className="fixed inset-0 modal-backdrop flex items-center justify-center p-4 z-40"><div className="modal-content text-center max-w-md p-8 shadow-2xl"><h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[var(--color-accent-gradient-from)] to-[var(--color-accent-gradient-to)] mb-4">{t.selectRegionPrompt}</h1>{availableRegions.length > 0 ? (<select id="initial-region-filter" onChange={(e) => handleRegionChange(e.target.value)} defaultValue="" className="w-full p-3 bg-black/100 dark:bg-black/100 border border-slate-200 dark:border-slate-800 rounded-lg focus:ring-[var(--color-accent)] focus:border-[var(--color-accent)] text-[var(--color-text-primary)]"><option value="" disabled>-- {t.region} --</option>{availableRegions.map(region => (<option key={region.iso_3166_1} value={region.iso_3166_1}>{region.english_name}</option>))}</select>) : (<div className="loader"></div>)}</div></div>)}
             <footer className="text-center mt-auto py-4 text-sm text-[var(--color-text-subtle)]">{showInstallButton && <InstallPwaButton t={t} handleInstallClick={handleInstallClick}/>}{showIosInstallInstructions && <InstallPwaInstructions t={t}/>}<p className="pt-4">{t.footer} <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer" className="text-[var(--color-accent-text)] hover:underline">TMDb</a>.</p></footer>
         </div>
     );
-};
+};  
