@@ -1,9 +1,9 @@
-/* --- v0.0.6: "Neon Noir" Theme (Stable) --- */
+/* --- v0.0.5: "Neon Noir" Theme (Stable) --- */
 :root {
     --color-bg: #000000;
-    --color-text-primary: #f9fafb;
-    --color-text-secondary: #a1a1aa;
-    --color-text-subtle: #52525b;
+    --color-text-primary: #e5e7eb;
+    --color-text-secondary: #9ca3af;
+    --color-text-subtle: #4b5563;
     --color-card-bg: radial-gradient(circle at 100% 0%, rgba(100, 116, 139, 0.1), transparent 40%);
     --color-card-border: rgba(100, 116, 139, 0.2);
     --color-card-hover-border: rgba(168, 85, 247, 0.5);
