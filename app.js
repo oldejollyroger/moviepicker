@@ -9,9 +9,10 @@ const App = () => {
     const [tmdbLanguage, setTmdbLanguage] = useLocalStorageState('tmdbContentLang', 'en-US');
     const [userRegion, setUserRegion] = useLocalStorageState('movieRandomizerRegion', null);
     const [mediaType, setMediaType] = useLocalStorageState('mediaPickerType_v1', 'movie');
-    const [showRegionSelector, setShowRegionSelector] = useState(() => !JSON.parse(localStorage.getItem('movieRandomizerRegion')));
+    const [showRegionSelector, setShowRegionSelector] = useState(() => !localStorage.getItem('movieRandomizerRegion')?.replace(/"/g, ''));
     
-    const initialFilters = { genre: [], excludeGenres: [], decade: 'todos', platform: [], minRating: 0, actor: null, creator: null, duration: 0, minAge: 0, maxAge: 4 };
+    // --- UPDATED: New age rating filter state ---
+    const initialFilters = { genre: [], excludeGenres: [], decade: 'todos', platform: [], minRating: 0, actor: null, creator: null, duration: 0, minAge: 0, maxAge: 5 };
     const [filters, setFilters] = useLocalStorageState('mediaPickerFilters_v5', initialFilters);
     const [cookieConsent, setCookieConsent] = useLocalStorageState('cookieConsent_v1', false);
 
@@ -56,14 +57,23 @@ const App = () => {
     const searchRef = useRef(null);
     
     const durationOptions = useMemo(() => [ { label: t.any, gte: 0, lte: 999 }, { label: "< 90 min", gte: 0, lte: 90 }, { label: "90-120 min", gte: 90, lte: 120 }, { label: "> 120 min", gte: 120, lte: 999 } ], [t]);
-    const ageRatingOptions = useMemo(() => ( userRegion === 'US' ? ['G', 'PG', 'PG-13', 'R', 'NC-17'] : ['U', 'PG', '12', '15', '18'] ), [userRegion]);
+    
+    // --- UPDATED: Age ratings are now a fixed list ---
+    const ageRatingOptions = useMemo(() => (
+        userRegion === 'US' ? ['G', 'PG', 'PG-13', 'R', 'NC-17'] : ['U', 'PG', '12', '15', '18']
+    ), [userRegion]);
 
     const fetchApi = useCallback(async (path, query) => { if (typeof TMDB_API_KEY === 'undefined' || !TMDB_API_KEY) { throw new Error("API Key is missing."); } const params = new URLSearchParams(query); const url = `${TMDB_BASE_URL}/${path}?api_key=${TMDB_API_KEY}&${params.toString()}`; const response = await fetch(url); if (!response.ok) { const err = await response.json(); throw new Error(err.status_message || `API error: ${response.status}`); } return response.json(); }, []);
     
     const resetAllState = useCallback(() => { setAllMedia([]); setSelectedMedia(null); setHasSearched(false); setMediaHistory([]); }, []);
     const resetAndClearFilters = () => { resetAllState(); setFilters(initialFilters); };
     
-    useEffect(() => { document.documentElement.className = mode === 'light' ? 'light-mode' : 'dark-mode'; }, [mode]);
+    useEffect(() => {
+        const doc = document.documentElement;
+        doc.classList.remove('light-mode', 'dark-mode');
+        doc.classList.add(`${mode}-mode`);
+    }, [mode]);
+
     useEffect(() => { const r = document.documentElement; r.style.setProperty('--color-accent', accent.color); r.style.setProperty('--color-accent-text', accent.text); r.style.setProperty('--color-accent-gradient-from', accent.from); r.style.setProperty('--color-accent-gradient-to', accent.to); }, [accent]);
     useEffect(() => { resetAllState(); }, [language, tmdbLanguage]);
     useEffect(() => { if (userRegion) localStorage.setItem('movieRandomizerRegion', JSON.stringify(userRegion)); }, [userRegion]);
@@ -147,14 +157,15 @@ const App = () => {
             const selectedDuration = durationOptions[filters.duration];
             
             const ageRatingParams = {};
+            // If minAge is higher than maxAge, swap them for a valid query
             const minAgeIndex = Math.min(filters.minAge, filters.maxAge);
             const maxAgeIndex = Math.max(filters.minAge, filters.maxAge);
-            
+
             if (minAgeIndex > 0 || maxAgeIndex < ageRatingOptions.length - 1) {
-                const allowedRatings = ageRatingOptions.slice(minAgeIndex, maxAgeIndex + 1);
+                const allowedRatings = ageRatingOptions.slice(minAgeIndex, maxAgeIndex + 1).join('|');
                 ageRatingParams.certification_country = userRegion;
-                ageRatingParams['certification.lte'] = allowedRatings[allowedRatings.length - 1];
-                ageRatingParams['certification.gte'] = allowedRatings[0];
+                ageRatingParams['certification.lte'] = ageRatingOptions[maxAgeIndex];
+                ageRatingParams['certification.gte'] = ageRatingOptions[minAgeIndex];
             }
             
             const queryParams = { language: tmdbLanguage, 'vote_count.gte': mediaType === 'movie' ? 200 : 100, watch_region: userRegion, ...filters.platform.length > 0 && { with_watch_providers: filters.platform.join('|') }, ...filters.genre.length > 0 && { with_genres: filters.genre.join(',') }, ...filters.excludeGenres.length > 0 && { without_genres: filters.excludeGenres.join(',') }, ...filters.minRating > 0 && { 'vote_average.gte': filters.minRating }, ...filters.decade !== 'todos' && { [`${dateParam}.gte`]: `${parseInt(filters.decade)}-01-01`, [`${dateParam}.lte`]: `${parseInt(filters.decade) + 9}-12-31` }, ...(filters.actor && { with_cast: filters.actor.id }), ...(filters.creator && { with_crew: filters.creator.id }), ...(filters.duration > 0 && { [`${runtimeParam}.gte`]: selectedDuration.gte, [`${runtimeParam}.lte`]: selectedDuration.lte }), ...ageRatingParams, sort_by: 'popularity.desc' };
@@ -221,7 +232,7 @@ const App = () => {
     
     return (
         <div className="min-h-screen p-4 font-sans app-container">
-            {/* ... (rest of the JSX, identical to v0.0.6) ... */}
+            {/* ... (rest of the JSX) ... */}
         </div>
     );
 };
